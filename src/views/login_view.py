@@ -4,6 +4,7 @@ from tkinter import messagebox
 from PIL import Image
 import os
 from utils.image_utils import load_image_as_ctk_image
+from .painel_administrador_view import PainelAdministradorFrame
 
 class LoginFrame(customtkinter.CTkFrame):
     def __init__(self, master, show_iniciar_callback, *args, **kwargs):
@@ -78,12 +79,26 @@ class LoginFrame(customtkinter.CTkFrame):
                                                 command=lambda t=texto: self.tecla(t))
                     btn.grid(row=i, column=j, padx=10, pady=10)
 
+    def verificar_login(self):
+        usuario = self.usuario_entry.get()
+        senha = self.senha_entry.get()
+        
+        if usuario == "administrador" and senha == "1234":
+            self.abrir_painel_administrador()
+        else:
+            messagebox.showerror("Erro", "Usuário ou senha incorretos!")
+
+    def abrir_painel_administrador(self):
+        for widget in self.master.winfo_children():
+            widget.destroy()
+        PainelAdministradorFrame(self.master, finalizar_sessao_callback=self.show_iniciar_callback)
+
     def tecla(self, valor):
         if valor == "Apagar":
             self.senha_entry.delete(len(self.senha_entry.get()) - 1, tk.END)
         elif valor == "Cancelar":
             self.senha_entry.delete(0, tk.END)
         elif valor == "Confirmar":
-            messagebox.showinfo("Confirmado", "Senha confirmada!")
+            self.verificar_login()
         else:
             self.senha_entry.insert(tk.END, valor) 
