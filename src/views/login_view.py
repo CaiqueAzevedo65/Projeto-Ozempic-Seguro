@@ -5,6 +5,7 @@ from PIL import Image
 import os
 from utils.image_utils import load_image_as_ctk_image
 from .painel_administrador_view import PainelAdministradorFrame
+from .components import Header, ImageCache
 
 class LoginFrame(customtkinter.CTkFrame):
     def __init__(self, master, show_iniciar_callback, *args, **kwargs):
@@ -16,18 +17,7 @@ class LoginFrame(customtkinter.CTkFrame):
         self.criar_teclado_numerico()
 
     def criar_topo(self):
-        top_frame = customtkinter.CTkFrame(self, fg_color="white", corner_radius=0, height=80)
-        top_frame.pack(fill="x", side="top")
-        titulo = customtkinter.CTkLabel(top_frame, text="Login", font=("Arial", 24, "bold"), text_color="black")
-        titulo.pack(side="left", padx=20)
-        try:
-            imagem = Image.open(os.path.join("src", "assets", "logo.jpg"))
-            self.logo_img = customtkinter.CTkImage(imagem, size=(60, 60))
-            logo = customtkinter.CTkLabel(top_frame, image=self.logo_img, text="", bg_color="white")
-            logo.pack(side="right", padx=20)
-        except:
-            fallback = customtkinter.CTkLabel(top_frame, text="▲", font=("Arial", 24), text_color="black", bg_color="white")
-            fallback.pack(side="right", padx=20)
+        Header(self, "Login")
 
     def criar_interface_login(self):
         frame_login = customtkinter.CTkFrame(self, fg_color="#2F6073")
@@ -39,9 +29,8 @@ class LoginFrame(customtkinter.CTkFrame):
         self.senha_entry = customtkinter.CTkEntry(frame_login, width=300, height=40, show="*")
         self.senha_entry.pack(pady=10)
         try:
-            digital = Image.open(os.path.join("src", "assets", "digital.png"))
-            self.digital_img = customtkinter.CTkImage(digital, size=(70, 70))
-            digital_label = customtkinter.CTkLabel(frame_login, image=self.digital_img, text="", bg_color="#2F6073")
+            digital_img = ImageCache.get_digital()
+            digital_label = customtkinter.CTkLabel(frame_login, image=digital_img, text="", bg_color="#2F6073")
             digital_label.pack(pady=30)
         except:
             digital_label = customtkinter.CTkLabel(frame_login, text="🔒", font=("Arial", 40), text_color="white", bg_color="#2F6073")
