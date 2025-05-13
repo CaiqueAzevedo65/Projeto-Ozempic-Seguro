@@ -1,8 +1,8 @@
 import customtkinter
-from views.tela_toque_view import TelaToqueFrame
-from views.tela_logo_view import TelaLogoFrame
-from views.iniciar_sessao_view import IniciarSessaoFrame
-from views.login_view import LoginFrame
+from .views.tela_toque_view import TelaToqueFrame
+from .views.tela_logo_view import TelaLogoFrame
+from .views.iniciar_sessao_view import IniciarSessaoFrame
+from .views.login_view import LoginFrame
 
 class MainApp(customtkinter.CTk):
     def __init__(self):

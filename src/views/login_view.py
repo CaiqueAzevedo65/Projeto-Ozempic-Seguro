@@ -3,14 +3,16 @@ import tkinter as tk
 from tkinter import messagebox
 from PIL import Image
 import os
-from utils.image_utils import load_image_as_ctk_image
+from ..utils.image_utils import load_image_as_ctk_image
 from .painel_administrador_view import PainelAdministradorFrame
 from .components import Header, ImageCache
+from ..auth import AuthManager
 
 class LoginFrame(customtkinter.CTkFrame):
     def __init__(self, master, show_iniciar_callback, *args, **kwargs):
         super().__init__(master, fg_color="#346172", *args, **kwargs)
         self.show_iniciar_callback = show_iniciar_callback
+        self.auth_manager = AuthManager()
         self.pack(fill="both", expand=True)
         self.criar_topo()
         self.criar_interface_login()
@@ -71,9 +73,13 @@ class LoginFrame(customtkinter.CTkFrame):
     def verificar_login(self):
         usuario = self.usuario_entry.get()
         senha = self.senha_entry.get()
-        
-        if usuario == "administrador" and senha == "1234":
-            self.abrir_painel_administrador()
+        user = self.auth_manager.autenticar(usuario, senha)
+        if user:
+            if user.get('tipo') == 'administrador':
+                self.abrir_painel_administrador()
+            else:
+                messagebox.showinfo("Sucesso", f"Login realizado como {user.get('tipo','usuário')}!")
+                # Aqui você pode redirecionar para outras telas conforme o tipo
         else:
             messagebox.showerror("Erro", "Usuário ou senha incorretos!")
 

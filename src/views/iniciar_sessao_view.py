@@ -2,7 +2,7 @@ import customtkinter
 from tkinter import messagebox
 from PIL import Image
 import os
-from utils.image_utils import load_image_as_ctk_image
+from ..utils.image_utils import load_image_as_ctk_image
 
 class IniciarSessaoFrame(customtkinter.CTkFrame):
     def __init__(self, master, show_login_callback, *args, **kwargs):
