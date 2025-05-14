@@ -11,15 +11,49 @@ class MainApp(customtkinter.CTk):
         self.geometry("1000x600")
         customtkinter.set_appearance_mode("light")
         customtkinter.set_default_color_theme("blue")
+        
+        # Container principal para todas as telas
+        self.container = customtkinter.CTkFrame(self)
+        self.container.pack(fill="both", expand=True)
+        
+        # Cache de frames
+        self.frames = {}
         self.current_frame = None
         self.tela_index = 0
         self.telas = [self.show_tela_toque, self.show_tela_logo]
+        
+        # Pré-carregar frames comuns
+        self.preload_frames()
+        
         self.show_tela_toque()
         self.after_id = None
         self.start_alternancia()
 
+    def preload_frames(self):
+        """Pré-carrega os frames mais comuns para melhor performance"""
+        self.frames['toque'] = TelaToqueFrame(self.container, on_click_callback=self.show_iniciar_sessao)
+        self.frames['logo'] = TelaLogoFrame(self.container, on_click_callback=self.show_iniciar_sessao)
+        self.frames['iniciar'] = IniciarSessaoFrame(self.container, show_login_callback=self.show_login)
+        self.frames['login'] = LoginFrame(self.container, show_iniciar_callback=self.show_iniciar_sessao)
+        
+        # Esconde todos os frames inicialmente
+        for frame in self.frames.values():
+            frame.pack_forget()
+
+    def show_frame(self, frame_name):
+        """Mostra um frame com transição suave"""
+        if self.current_frame:
+            self.current_frame.pack_forget()
+        
+        frame = self.frames.get(frame_name)
+        if frame:
+            frame.pack(fill="both", expand=True)
+            self.current_frame = frame
+        else:
+            print(f"Frame {frame_name} não encontrado no cache")
+
     def start_alternancia(self):
-        self.after_id = self.after(2000, self.next_tela)  # alterna a cada 2 segundos
+        self.after_id = self.after(2000, self.next_tela)
 
     def next_tela(self):
         self.tela_index = (self.tela_index + 1) % len(self.telas)
@@ -27,26 +61,18 @@ class MainApp(customtkinter.CTk):
         self.start_alternancia()
 
     def show_tela_toque(self):
-        if self.current_frame:
-            self.current_frame.destroy()
-        self.current_frame = TelaToqueFrame(self, on_click_callback=self.show_iniciar_sessao)
+        self.show_frame('toque')
 
     def show_tela_logo(self):
-        if self.current_frame:
-            self.current_frame.destroy()
-        self.current_frame = TelaLogoFrame(self, on_click_callback=self.show_iniciar_sessao)
+        self.show_frame('logo')
 
     def show_iniciar_sessao(self):
         if self.after_id:
             self.after_cancel(self.after_id)
-        if self.current_frame:
-            self.current_frame.destroy()
-        self.current_frame = IniciarSessaoFrame(self, show_login_callback=self.show_login)
+        self.show_frame('iniciar')
 
     def show_login(self):
-        if self.current_frame:
-            self.current_frame.destroy()
-        self.current_frame = LoginFrame(self, show_iniciar_callback=self.show_iniciar_sessao)
+        self.show_frame('login')
 
 if __name__ == "__main__":
     app = MainApp()
