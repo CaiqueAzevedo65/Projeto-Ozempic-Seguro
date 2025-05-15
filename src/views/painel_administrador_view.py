@@ -43,8 +43,7 @@ class PainelAdministradorFrame(customtkinter.CTkFrame):
 
     def finalizar_sessao(self):
         if self.finalizar_sessao_callback:
-            for widget in self.master.winfo_children():
-                widget.destroy()
+            self.pack_forget()  # Apenas esconde o frame atual ao invés de destruí-lo
             self.finalizar_sessao_callback()
         else:
             messagebox.showinfo("Sessão", "Sessão finalizada!")

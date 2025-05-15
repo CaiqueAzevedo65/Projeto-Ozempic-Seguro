@@ -69,6 +69,9 @@ class MainApp(customtkinter.CTk):
     def show_iniciar_sessao(self):
         if self.after_id:
             self.after_cancel(self.after_id)
+        # Recria o frame de iniciar sessão se ele não existir mais
+        if 'iniciar' not in self.frames or not self.frames['iniciar'].winfo_exists():
+            self.frames['iniciar'] = IniciarSessaoFrame(self.container, show_login_callback=self.show_login)
         self.show_frame('iniciar')
 
     def show_login(self):
