@@ -1,6 +1,6 @@
 import customtkinter
 from tkinter import messagebox
-from .components import Header, MainButton
+from .components import Header, MainButton, FinalizarSessaoButton
 
 class PainelAdministradorFrame(customtkinter.CTkFrame):
     def __init__(self, master, finalizar_sessao_callback=None, *args, **kwargs):
@@ -36,10 +36,7 @@ class PainelAdministradorFrame(customtkinter.CTkFrame):
         btn5.grid(row=2, column=0, columnspan=2, pady=20)
 
     def criar_botao_finalizar(self):
-        btn_finalizar = customtkinter.CTkButton(self, text="✗", width=60, height=60, corner_radius=30, fg_color="white", text_color="red", font=("Arial", 28, "bold"), command=self.finalizar_sessao)
-        btn_finalizar.place(relx=0.5, rely=0.88, anchor="center")
-        label = customtkinter.CTkLabel(self, text="Finalizar sessão", font=("Arial", 12), text_color="white", fg_color="#3B6A7D")
-        label.place(relx=0.5, rely=0.97, anchor="center")
+        FinalizarSessaoButton(self, self.finalizar_sessao)
 
     def finalizar_sessao(self):
         if self.finalizar_sessao_callback:
