@@ -3,5 +3,11 @@
     "usuario": "adm",
     "senha": "1234",
     "tipo": "administrador"
+  },
+
+  {
+    "usuario": "re",
+    "senha": "1234",
+    "tipo": "repositor"
   }
 ] 

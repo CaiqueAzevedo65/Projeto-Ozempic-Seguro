@@ -7,6 +7,7 @@ from ..utils.image_utils import load_image_as_ctk_image
 from .painel_administrador_view import PainelAdministradorFrame
 from .components import Header, ImageCache
 from ..auth import AuthManager
+from .repositor_view import RepositorFrame
 
 class LoginFrame(customtkinter.CTkFrame):
     def __init__(self, master, show_iniciar_callback, *args, **kwargs):
@@ -77,11 +78,18 @@ class LoginFrame(customtkinter.CTkFrame):
         if user:
             if user.get('tipo') == 'administrador':
                 self.abrir_painel_administrador()
+            elif user.get('tipo') == 'repositor':
+                self.abrir_painel_repositor()
             else:
                 messagebox.showinfo("Sucesso", f"Login realizado como {user.get('tipo','usuário')}!")
                 # Aqui você pode redirecionar para outras telas conforme o tipo
         else:
             messagebox.showerror("Erro", "Usuário ou senha incorretos!")
+
+    def abrir_painel_repositor(self):
+        for widget in self.master.winfo_children():
+            widget.destroy()
+        RepositorFrame(self.master, finalizar_sessao_callback=self.show_iniciar_callback)
 
     def abrir_painel_administrador(self):
         for widget in self.master.winfo_children():
