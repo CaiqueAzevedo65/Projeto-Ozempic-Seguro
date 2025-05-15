@@ -22,7 +22,7 @@ class LoginFrame(customtkinter.CTkFrame):
         Header(self, "Login")
 
     def criar_interface_login(self):
-        frame_login = customtkinter.CTkFrame(self, fg_color="#2F6073")
+        frame_login = customtkinter.CTkFrame(self, fg_color="#346172")
         frame_login.place(x=40, y=100)
         customtkinter.CTkLabel(frame_login, text="Usuário", font=("Arial", 16, "bold"), text_color="white").pack(anchor="w", pady=(0, 5))
         self.usuario_entry = customtkinter.CTkEntry(frame_login, width=300, height=40)
