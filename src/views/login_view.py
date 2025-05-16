@@ -89,18 +89,15 @@ class LoginFrame(customtkinter.CTkFrame):
             messagebox.showerror("Erro", "Usuário ou senha incorretos!")
 
     def abrir_painel_vendedor(self):
-        for widget in self.master.winfo_children():
-            widget.destroy()
+        self.pack_forget()
         VendedorFrame(self.master, finalizar_sessao_callback=self.show_iniciar_callback)
 
     def abrir_painel_repositor(self):
-        for widget in self.master.winfo_children():
-            widget.destroy()
+        self.pack_forget()
         RepositorFrame(self.master, finalizar_sessao_callback=self.show_iniciar_callback)
 
     def abrir_painel_administrador(self):
-        for widget in self.master.winfo_children():
-            widget.destroy()
+        self.pack_forget()
         PainelAdministradorFrame(self.master, finalizar_sessao_callback=self.show_iniciar_callback)
 
     def tecla(self, valor):

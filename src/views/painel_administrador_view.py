@@ -1,6 +1,7 @@
 import customtkinter
 from tkinter import messagebox
 from .components import Header, MainButton, FinalizarSessaoButton
+from .gerenciamento_usuarios_view import GerenciamentoUsuariosFrame
 
 class PainelAdministradorFrame(customtkinter.CTkFrame):
     def __init__(self, master, finalizar_sessao_callback=None, *args, **kwargs):
@@ -46,7 +47,11 @@ class PainelAdministradorFrame(customtkinter.CTkFrame):
             messagebox.showinfo("Sessão", "Sessão finalizada!")
 
     def gerenciar_usuarios(self):
-        messagebox.showinfo("Gerenciar Usuários", "Você clicou em Gerenciar Usuários.")
+        # Remove todos os widgets atuais da tela
+        for widget in self.master.winfo_children():
+            widget.destroy()
+        # Cria e exibe a tela de gerenciamento de usuários
+        GerenciamentoUsuariosFrame(self.master, voltar_callback=self.finalizar_sessao_callback)
 
     def cadastro_usuario(self):
         messagebox.showinfo("Cadastro de Usuário", "Você clicou em Cadastro de Usuário.")
