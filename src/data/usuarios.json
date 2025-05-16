@@ -9,5 +9,10 @@
     "usuario": "re",
     "senha": "1234",
     "tipo": "repositor"
+  },
+  {
+    "usuario": "ve",
+    "senha": "1234",
+    "tipo": "vendedor"
   }
 ] 

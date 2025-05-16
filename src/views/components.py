@@ -115,7 +115,8 @@ class PastaButtonGrid(customtkinter.CTkFrame):
                 btn = PastaButton(
                     master=cell_frame,
                     text=btn_data['text'],
-                    command=btn_data['command']
+                    command=btn_data['command'],
+                    name=btn_data['name']
                 )
                 
                 self.buttons.append(btn)
@@ -123,13 +124,13 @@ class PastaButtonGrid(customtkinter.CTkFrame):
 
 
 class PastaButton:
-    def __init__(self, master, text, command=None):
+    def __init__(self, master, text, command=None, name=None):
         """Componente de botão de pasta para a grade"""
         self.frame = customtkinter.CTkFrame(master, fg_color="transparent")
         self.frame.pack(expand=True, fill="both")
         
         # Caminho para a imagem (ajuste conforme sua estrutura de arquivos)
-        pasta_path = os.path.join("src", "assets", "pasta.png")
+        pasta_path = os.path.join("src", "assets", name)
         
         # Carregar imagem redimensionada
         self.pasta_img = customtkinter.CTkImage(
