@@ -46,7 +46,7 @@ class FinalizarSessaoButton:
         
         # Caminho para a imagem da elipse
         elipse_path = os.path.join("src", "assets", "elipse.png")
-        size = (56, 56) # Tamanho da imagem
+        size = (40, 40) # Tamanho da imagem
         
         self.elipse_img = customtkinter.CTkImage(
             Image.open(elipse_path),
@@ -57,8 +57,8 @@ class FinalizarSessaoButton:
         self.btn_finalizar = customtkinter.CTkButton(
             self.frame,
             text="",  # Sem texto, só imagem
-            width=56,
-            height=56,
+            width=40,
+            height=40,
             image=self.elipse_img,
             fg_color="transparent",  # Ou outra cor sólida
             hover_color="#3B6A7D",
@@ -76,3 +76,85 @@ class FinalizarSessaoButton:
         )
         self.label.pack(pady=(5, 0))
 
+# Componente de botão com imagem de pasta
+class PastaButtonGrid(customtkinter.CTkFrame):
+    def __init__(self, master, button_data):
+        super().__init__(master, fg_color="transparent")
+        # Aumentamos o pady do frame principal para empurrar o conteúdo para o centro
+        self.pack(expand=True, fill="both", padx=30, pady=(50, 150))  # Aumentado pady para 100
+        
+        # Configuração da grade
+        rows = 2
+        cols = 4
+        
+        # Verificar se temos dados suficientes
+        if len(button_data) < rows * cols:
+            raise ValueError(f"Precisa de {rows*cols} itens em button_data")
+        
+        # Configurar grid layout
+        for i in range(rows):
+            self.rowconfigure(i, weight=1, uniform="rows")
+        for j in range(cols):
+            self.columnconfigure(j, weight=1, uniform="cols")
+        
+        # Criar os botões
+        self.buttons = []
+        index = 0
+        for i in range(rows):
+            for j in range(cols):
+                if index >= len(button_data):
+                    break
+                    
+                # Frame para cada célula
+                cell_frame = customtkinter.CTkFrame(self, fg_color="transparent")
+                # Reduzimos o pady do grid para aproximar as linhas
+                cell_frame.grid(row=i, column=j, padx=30, pady=10, sticky="nsew")
+                
+                # Criar o botão de pasta
+                btn_data = button_data[index]
+                btn = PastaButton(
+                    master=cell_frame,
+                    text=btn_data['text'],
+                    command=btn_data['command']
+                )
+                
+                self.buttons.append(btn)
+                index += 1
+
+
+class PastaButton:
+    def __init__(self, master, text, command=None):
+        """Componente de botão de pasta para a grade"""
+        self.frame = customtkinter.CTkFrame(master, fg_color="transparent")
+        self.frame.pack(expand=True, fill="both")
+        
+        # Caminho para a imagem (ajuste conforme sua estrutura de arquivos)
+        pasta_path = os.path.join("src", "assets", "pasta.png")
+        
+        # Carregar imagem redimensionada
+        self.pasta_img = customtkinter.CTkImage(
+            Image.open(pasta_path),
+            size=(120, 120)  # Tamanho ajustado para a grade
+        )
+
+        # Botão principal
+        self.btn_pasta = customtkinter.CTkButton(
+            self.frame,
+            text="",  # Texto vazio no botão
+            width=120,
+            height=120,
+            image=self.pasta_img,
+            fg_color="transparent",
+            hover_color="#3B6A7D",
+            command=command
+        )
+        self.btn_pasta.pack(pady=(0, 5))
+
+        # Label com o texto
+        self.label = customtkinter.CTkLabel(
+            self.frame,
+            text=text,
+            font=("Arial", 12),
+            text_color="white"
+        )
+        self.label.pack()
