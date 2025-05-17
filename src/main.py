@@ -1,6 +1,6 @@
 import customtkinter
-from .views.tela_toque_view import TelaToqueFrame
-from .views.tela_logo_view import TelaLogoFrame
+from .views.pages_iniciais.tela_toque_view import TelaToqueFrame
+from .views.pages_iniciais.tela_logo_view import TelaLogoFrame
 from .views.iniciar_sessao_view import IniciarSessaoFrame
 from .views.login_view import LoginFrame
 
@@ -29,11 +29,21 @@ class MainApp(customtkinter.CTk):
         self.after_id = None
         self.start_alternancia()
 
+    def voltar_para_tela_inicial(self):
+        if self.current_frame:
+            self.current_frame.pack_forget()
+        self.show_tela_toque()
+        self.start_alternancia()
+
     def preload_frames(self):
-        """Pré-carrega os frames mais comuns para melhor performance"""
+        # Pré-carrega os frames mais comuns
         self.frames['toque'] = TelaToqueFrame(self.container, on_click_callback=self.show_iniciar_sessao)
         self.frames['logo'] = TelaLogoFrame(self.container, on_click_callback=self.show_iniciar_sessao)
-        self.frames['iniciar'] = IniciarSessaoFrame(self.container, show_login_callback=self.show_login)
+        self.frames['iniciar'] = IniciarSessaoFrame(
+            self.container, 
+            show_login_callback=self.show_login,
+            voltar_callback=self.voltar_para_tela_inicial
+            )
         self.frames['login'] = LoginFrame(self.container, show_iniciar_callback=self.show_iniciar_sessao)
         
         # Esconde todos os frames inicialmente
@@ -41,7 +51,7 @@ class MainApp(customtkinter.CTk):
             frame.pack_forget()
 
     def show_frame(self, frame_name):
-        """Mostra um frame com transição suave"""
+        #Mostra um frame com transição suave
         if self.current_frame:
             self.current_frame.pack_forget()
         
@@ -72,19 +82,27 @@ class MainApp(customtkinter.CTk):
         
         # Recria o frame de iniciar sessão se ele não existir mais
         if 'iniciar' not in self.frames or not self.frames['iniciar'].winfo_exists():
-            self.frames['iniciar'] = IniciarSessaoFrame(self.container, show_login_callback=self.show_login)
-        
-        # Recria o frame de login se ele não existir mais
-        if 'login' not in self.frames or not self.frames['login'].winfo_exists():
-            self.frames['login'] = LoginFrame(self.container, show_iniciar_callback=self.show_iniciar_sessao)
-        else:
-            # Limpa os campos do login
-            self.frames['login'].usuario_entry.delete(0, 'end')
-            self.frames['login'].senha_entry.delete(0, 'end')
+            self.frames['iniciar'] = IniciarSessaoFrame(
+                self.container, 
+                show_login_callback=self.show_login,
+                voltar_callback=self.voltar_para_tela_inicial
+            )
         
         self.show_frame('iniciar')
 
     def show_login(self):
+        #Mostra a tela de login e limpa os campos
+        if 'login' in self.frames and self.frames['login'].winfo_exists():
+            # Limpa os campos do login
+            self.frames['login'].usuario_entry.delete(0, 'end')
+            self.frames['login'].senha_entry.delete(0, 'end')
+        else:
+            # Recria o frame de login se ele não existir mais
+            self.frames['login'] = LoginFrame(
+                self.container, 
+                show_iniciar_callback=self.show_iniciar_sessao
+            )
+        
         self.show_frame('login')
 
 if __name__ == "__main__":

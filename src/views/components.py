@@ -76,7 +76,7 @@ class FinalizarSessaoButton:
         )
         self.label.pack(pady=(5, 0))
 
-# Componente de botão com imagem de pasta
+# Componente de grade de botões com imagens de pastas
 class PastaButtonGrid(customtkinter.CTkFrame):
     def __init__(self, master, button_data):
         super().__init__(master, fg_color="transparent")
@@ -122,7 +122,7 @@ class PastaButtonGrid(customtkinter.CTkFrame):
                 self.buttons.append(btn)
                 index += 1
 
-
+# Componente de botão com imagem de pasta
 class PastaButton:
     def __init__(self, master, text, command=None, name=None):
         """Componente de botão de pasta para a grade"""
@@ -159,3 +159,30 @@ class PastaButton:
             text_color="white"
         )
         self.label.pack()
+
+# Componente de botão de voltar
+class VoltarButton:
+    def __init__(self, master, command):
+        # Frame para agrupar o botão e o label
+        self.frame = customtkinter.CTkFrame(master, fg_color="transparent")
+        self.frame.place(relx=0.5, rely=0.88, anchor="center")
+        
+        voltar_path = os.path.join("src", "assets", "botao_voltar.png")
+        size = (40, 40) # Tamanho da imagem
+        
+        self.elipse_img = customtkinter.CTkImage(
+            Image.open(voltar_path),
+            size=size
+        )
+
+        self.btn_voltar = customtkinter.CTkButton(
+            self.frame,
+            text="",  # Sem texto, só imagem
+            width=40,
+            height=40,
+            image=self.elipse_img,
+            fg_color="transparent",  # Ou outra cor sólida
+            hover_color="#3B6A7D",
+            command=command
+        )
+        self.btn_voltar.pack()

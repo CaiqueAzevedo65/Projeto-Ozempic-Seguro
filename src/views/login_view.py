@@ -1,14 +1,11 @@
 import customtkinter
 import tkinter as tk
 from tkinter import messagebox
-from PIL import Image
-import os
-from ..utils.image_utils import load_image_as_ctk_image
-from .painel_administrador_view import PainelAdministradorFrame
+from .pages_adm.painel_administrador_view import PainelAdministradorFrame
 from .components import Header, ImageCache
 from ..auth import AuthManager
 from .repositor_view import RepositorFrame
-from .vendedor_view import VendedorFrame
+from .pages_vendedor.vendedor_view import VendedorFrame
 
 class LoginFrame(customtkinter.CTkFrame):
     def __init__(self, master, show_iniciar_callback, *args, **kwargs):

@@ -1,6 +1,6 @@
 import customtkinter
 from tkinter import messagebox
-from .components import Header, MainButton, FinalizarSessaoButton
+from ..components import Header, MainButton, FinalizarSessaoButton
 from .gerenciamento_usuarios_view import GerenciamentoUsuariosFrame
 
 class PainelAdministradorFrame(customtkinter.CTkFrame):

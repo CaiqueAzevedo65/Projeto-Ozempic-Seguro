@@ -1,6 +1,6 @@
 import customtkinter
 from tkinter import messagebox
-from .components import Header, FinalizarSessaoButton, PastaButtonGrid
+from ..components import Header, FinalizarSessaoButton, PastaButtonGrid
 
 class VendedorFrame(customtkinter.CTkFrame):
     def __init__(self, master, finalizar_sessao_callback=None, *args, **kwargs):
