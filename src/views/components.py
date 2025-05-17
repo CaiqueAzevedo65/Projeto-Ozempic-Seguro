@@ -1,4 +1,5 @@
 import customtkinter
+from tkinter import messagebox
 from PIL import Image
 import os
 from .pasta_state_manager import PastaStateManager
@@ -179,20 +180,95 @@ class PastaButton:
 
     def manipular_estado(self):
         """Manipula o estado da pasta baseado no tipo de usuário"""
-        if self.tipo_usuario == 'repositor':
-            # Repositor só pode fechar pastas
-            if self.state_manager.get_estado(self.pasta_id):  # Se estiver aberta
-                self.state_manager.fechar_pasta(self.pasta_id)
-                self.btn_pasta.configure(image=self.pasta_fechada)
-                if self.command_original:
-                    self.command_original()
+        estado_atual = self.state_manager.get_estado(self.pasta_id)
+        
+        if self.tipo_usuario == 'administrador':
+            # Administrador pode tanto abrir quanto fechar
+            novo_estado = not estado_atual  # Inverte o estado atual
+            if novo_estado:
+                self.state_manager.abrir_pasta(self.pasta_id, self.tipo_usuario)
+                mensagem = f"Pasta {self.pasta_id} aberta com sucesso!"
+            else:
+                self.state_manager.fechar_pasta(self.pasta_id, self.tipo_usuario)
+                mensagem = f"Pasta {self.pasta_id} fechada com sucesso!"
+            
+            messagebox.showinfo("Sucesso", mensagem)
+        
         elif self.tipo_usuario == 'vendedor':
-            # Vendedor só pode abrir pastas
-            if not self.state_manager.get_estado(self.pasta_id):  # Se estiver fechada
-                self.state_manager.abrir_pasta(self.pasta_id)
-                self.btn_pasta.configure(image=self.pasta_aberta)
-                if self.command_original:
-                    self.command_original()
+            # Vendedor só pode abrir pastas fechadas
+            if not estado_atual:
+                self.state_manager.abrir_pasta(self.pasta_id, self.tipo_usuario)
+                messagebox.showinfo("Sucesso", f"Pasta {self.pasta_id} aberta com sucesso!")
+            else:
+                messagebox.showwarning("Aviso", "Você não tem permissão para fechar pastas")
+                return
+        
+        elif self.tipo_usuario == 'repositor':
+            # Repositório só pode fechar pastas abertas
+            if estado_atual:
+                self.state_manager.fechar_pasta(self.pasta_id, self.tipo_usuario)
+                messagebox.showinfo("Sucesso", f"Pasta {self.pasta_id} fechada com sucesso!")
+            else:
+                messagebox.showwarning("Aviso", "Você não tem permissão para abrir pastas")
+                return
+        else:
+            messagebox.showerror("Erro", "Tipo de usuário desconhecido")
+            return
+        
+        # Atualiza a imagem do botão
+        self.atualizar_imagem()
+        
+        # Executa o comando original, se houver
+        if hasattr(self, 'command_original') and self.command_original is not None:
+            self.command_original()
+
+    def mostrar_historico(self):
+        """Mostra o histórico de alterações da pasta"""
+        historico = self.state_manager.get_historico(self.pasta_id)
+        
+        if not historico:
+            messagebox.showinfo("Histórico", "Nenhum registro de histórico para esta pasta.")
+            return
+        
+        # Formata o histórico para exibição
+        historico_formatado = []
+        for acao, usuario, data in historico:
+            acao_texto = "Aberta" if acao == "aberta" else "Fechada"
+            historico_formatado.append(f"{data} - {acao_texto} por {usuario}")
+        
+        # Cria uma janela para exibir o histórico
+        janela_historico = customtkinter.CTkToplevel()
+        janela_historico.title(f"Histórico - Pasta {self.pasta_id}")
+        janela_historico.geometry("500x300")
+        
+        frame = customtkinter.CTkFrame(janela_historico)
+        frame.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        label_titulo = customtkinter.CTkLabel(
+            frame, 
+            text=f"Histórico - Pasta {self.pasta_id}",
+            font=("Arial", 14, "bold")
+        )
+        label_titulo.pack(pady=(0, 10))
+        
+        # Área de texto para exibir o histórico
+        texto_historico = customtkinter.CTkTextbox(frame, wrap="word")
+        texto_historico.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # Insere os itens do histórico
+        for item in historico_formatado:
+            texto_historico.insert("end", item + "\n")
+        
+        # Desabilita a edição do texto
+        texto_historico.configure(state="disabled")
+        
+        # Botão para fechar
+        btn_fechar = customtkinter.CTkButton(
+            frame,
+            text="Fechar",
+            command=janela_historico.destroy
+        )
+        btn_fechar.pack(pady=(10, 0))
 
 # Componente de botão de voltar
 class VoltarButton:
@@ -220,3 +296,10 @@ class VoltarButton:
             command=command
         )
         self.btn_voltar.pack()
+
+__all__ = [
+    'Header', 'FinalizarSessaoButton', 'PastaButtonGrid', 
+    'PastaButton', 'VoltarButton', 'MainButton', 'ImageCache'
+]
+
+

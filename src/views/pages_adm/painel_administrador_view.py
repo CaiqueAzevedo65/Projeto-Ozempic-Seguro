@@ -1,11 +1,12 @@
 import customtkinter
 from tkinter import messagebox
-from ..components import Header, MainButton, FinalizarSessaoButton
+from ..components import Header, FinalizarSessaoButton
 from .gerenciamento_usuarios_view import GerenciamentoUsuariosFrame
 from .cadastro_usuario_view import CadastroUsuarioFrame
 from .diagnostico_view import DiagnosticoFrame
 from .parametro_sistemas_view import ParametroSistemasFrame
 from .estado_terminal_view import EstadoTerminalFrame
+from ..historico_view import HistoricoView
 
 class PainelAdministradorFrame(customtkinter.CTkFrame):
     def __init__(self, master, finalizar_sessao_callback=None, *args, **kwargs):
@@ -20,25 +21,46 @@ class PainelAdministradorFrame(customtkinter.CTkFrame):
         Header(self, "Administrador")
 
     def criar_botoes(self):
-        botoes_frame = customtkinter.CTkFrame(self, fg_color="#3B6A7D")
-        botoes_frame.pack(expand=True)
+        # Frame principal para centralizar os botões
+        main_frame = customtkinter.CTkFrame(self, fg_color="transparent")
+        main_frame.pack(expand=True)
+        
         botoes = [
-            ("Gerenciar Usuários", self.gerenciar_usuarios),
-            ("Cadastro de Usuário", self.cadastro_usuario),
-            ("Diagnóstico", self.diagnostico),
-            ("Parâmetro de Sistemas", self.parametro_sistemas),
-            ("Estado Terminal", self.estado_terminal)
+            {"texto": "Gerenciar Usuários", "comando": self.gerenciar_usuarios},
+            {"texto": "Cadastro de Usuário", "comando": self.cadastro_usuario},
+            {"texto": "Diagnóstico", "comando": self.diagnostico},
+            {"texto": "Parâmetros de Sistema", "comando": self.parametro_sistemas},
+            {"texto": "Estado do Terminal", "comando": self.estado_terminal},
+            {"texto": "Histórico", "comando": self.mostrar_historico}
         ]
-        btn1 = MainButton(botoes_frame, text=botoes[0][0], command=botoes[0][1])
-        btn1.grid(row=0, column=0, padx=30, pady=20)
-        btn2 = MainButton(botoes_frame, text=botoes[1][0], command=botoes[1][1])
-        btn2.grid(row=0, column=1, padx=30, pady=20)
-        btn3 = MainButton(botoes_frame, text=botoes[2][0], command=botoes[2][1])
-        btn3.grid(row=1, column=0, padx=30, pady=20)
-        btn4 = MainButton(botoes_frame, text=botoes[3][0], command=botoes[3][1])
-        btn4.grid(row=1, column=1, padx=30, pady=20)
-        btn5 = MainButton(botoes_frame, text=botoes[4][0], command=botoes[4][1])
-        btn5.grid(row=2, column=0, columnspan=2, pady=20)
+        
+        # Adiciona os botões em duas colunas
+        for i, btn_info in enumerate(botoes):
+            row = i // 2
+            col = i % 2
+            btn = customtkinter.CTkButton(
+                main_frame,
+                text=btn_info["texto"],
+                font=("Arial", 16, "bold"),
+                width=250,
+                height=50,
+                corner_radius=15,
+                fg_color="white",
+                text_color="black",
+                hover_color="#e0e0e0",
+                command=btn_info["comando"]
+            )
+            btn.grid(row=row, column=col, padx=20, pady=15, sticky="nsew")
+
+        # Configura o grid para centralizar
+        main_frame.grid_columnconfigure(0, weight=1)
+        main_frame.grid_columnconfigure(1, weight=1)
+        main_frame.grid_rowconfigure(tuple(range((len(botoes) + 1) // 2)), weight=1)
+
+    def mostrar_historico(self):
+        for widget in self.master.winfo_children():
+            widget.destroy()
+        HistoricoView(self.master, voltar_callback=self.voltar_para_painel)
 
     def criar_botao_finalizar(self):
         FinalizarSessaoButton(self, self.finalizar_sessao)
@@ -51,44 +73,31 @@ class PainelAdministradorFrame(customtkinter.CTkFrame):
             messagebox.showinfo("Sessão", "Sessão finalizada!")
 
     def gerenciar_usuarios(self):
-        # Remove todos os widgets atuais da tela
         for widget in self.master.winfo_children():
             widget.destroy()
-        # Cria e exibe a tela de gerenciamento de usuários
         GerenciamentoUsuariosFrame(self.master, voltar_callback=self.voltar_para_painel)
 
     def cadastro_usuario(self):
-        # Remove todos os widgets atuais da tela
         for widget in self.master.winfo_children():
             widget.destroy()
-        # Cria e exibe a tela de cadastro de usuário
         CadastroUsuarioFrame(self.master, voltar_callback=self.voltar_para_painel)
 
     def diagnostico(self):
-        # Remove todos os widgets atuais da tela
         for widget in self.master.winfo_children():
             widget.destroy()
-        # Cria e exibe a tela de diagnóstico
         DiagnosticoFrame(self.master, voltar_callback=self.voltar_para_painel)
 
     def parametro_sistemas(self):
-        # Remove todos os widgets atuais da tela
         for widget in self.master.winfo_children():
             widget.destroy()
-        # Cria e exibe a tela de parâmetros de sistemas
         ParametroSistemasFrame(self.master, voltar_callback=self.voltar_para_painel)
 
     def estado_terminal(self):
-        # Remove todos os widgets atuais da tela
         for widget in self.master.winfo_children():
             widget.destroy()
-        # Cria e exibe a tela de estado do terminal
         EstadoTerminalFrame(self.master, voltar_callback=self.voltar_para_painel)
 
     def voltar_para_painel(self):
-        # Volta para o painel do administrador
-        # Remove todos os widgets atuais da tela
         for widget in self.master.winfo_children():
             widget.destroy()
-        # Recria o painel do administrador
         PainelAdministradorFrame(self.master, finalizar_sessao_callback=self.finalizar_sessao_callback)
