@@ -1,4 +1,3 @@
-# src/views/gerenciamento_usuarios_view.py
 import customtkinter
 from ..components import Header, VoltarButton
 

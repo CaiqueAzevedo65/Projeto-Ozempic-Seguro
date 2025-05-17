@@ -1,6 +1,7 @@
 import customtkinter
 from PIL import Image
 import os
+from .pasta_state_manager import PastaStateManager
 
 # Lazy loading de imagens
 class ImageCache:
@@ -80,8 +81,7 @@ class FinalizarSessaoButton:
 class PastaButtonGrid(customtkinter.CTkFrame):
     def __init__(self, master, button_data):
         super().__init__(master, fg_color="transparent")
-        # Aumentamos o pady do frame principal para empurrar o conteúdo para o centro
-        self.pack(expand=True, fill="both", padx=30, pady=(50, 150))  # Aumentado pady para 100
+        self.pack(expand=True, fill="both", padx=30, pady=(50, 150))
         
         # Configuração da grade
         rows = 2
@@ -107,7 +107,6 @@ class PastaButtonGrid(customtkinter.CTkFrame):
                     
                 # Frame para cada célula
                 cell_frame = customtkinter.CTkFrame(self, fg_color="transparent")
-                # Reduzimos o pady do grid para aproximar as linhas
                 cell_frame.grid(row=i, column=j, padx=30, pady=10, sticky="nsew")
                 
                 # Criar o botão de pasta
@@ -116,7 +115,8 @@ class PastaButtonGrid(customtkinter.CTkFrame):
                     master=cell_frame,
                     text=btn_data['text'],
                     command=btn_data['command'],
-                    name=btn_data['name']
+                    name=btn_data['name'],
+                    tipo_usuario=btn_data['tipo_usuario']
                 )
                 
                 self.buttons.append(btn)
@@ -124,18 +124,23 @@ class PastaButtonGrid(customtkinter.CTkFrame):
 
 # Componente de botão com imagem de pasta
 class PastaButton:
-    def __init__(self, master, text, command=None, name=None):
+    def __init__(self, master, text, command=None, name=None, tipo_usuario=None):
         """Componente de botão de pasta para a grade"""
         self.frame = customtkinter.CTkFrame(master, fg_color="transparent")
         self.frame.pack(expand=True, fill="both")
         
-        # Caminho para a imagem (ajuste conforme sua estrutura de arquivos)
-        pasta_path = os.path.join("src", "assets", name)
+        # Obter o gerenciador de estado
+        self.state_manager = PastaStateManager.get_instance()
+        self.tipo_usuario = tipo_usuario  # 'repositor' ou 'vendedor'
         
-        # Carregar imagem redimensionada
-        self.pasta_img = customtkinter.CTkImage(
-            Image.open(pasta_path),
-            size=(120, 120)  # Tamanho ajustado para a grade
+        # Carregar ambas as imagens
+        self.pasta_aberta = customtkinter.CTkImage(
+            Image.open(os.path.join("src", "assets", "pasta.png")),
+            size=(120, 120)
+        )
+        self.pasta_fechada = customtkinter.CTkImage(
+            Image.open(os.path.join("src", "assets", "pasta_black.png")),
+            size=(120, 120)
         )
 
         # Botão principal
@@ -144,10 +149,10 @@ class PastaButton:
             text="",  # Texto vazio no botão
             width=120,
             height=120,
-            image=self.pasta_img,
+            image=self.pasta_fechada,  # Começa com a pasta fechada
             fg_color="transparent",
             hover_color="#3B6A7D",
-            command=command
+            command=self.manipular_estado
         )
         self.btn_pasta.pack(pady=(0, 5))
 
@@ -159,6 +164,35 @@ class PastaButton:
             text_color="white"
         )
         self.label.pack()
+        
+        # Guardar o comando original e o ID da pasta
+        self.command_original = command
+        self.pasta_id = text  # Usando o texto como ID da pasta
+        
+        # Atualizar a imagem inicial baseada no estado atual
+        self.atualizar_imagem()
+
+    def atualizar_imagem(self):
+        """Atualiza a imagem do botão baseado no estado atual"""
+        estado = self.state_manager.get_estado(self.pasta_id)
+        self.btn_pasta.configure(image=self.pasta_aberta if estado else self.pasta_fechada)
+
+    def manipular_estado(self):
+        """Manipula o estado da pasta baseado no tipo de usuário"""
+        if self.tipo_usuario == 'repositor':
+            # Repositor só pode fechar pastas
+            if self.state_manager.get_estado(self.pasta_id):  # Se estiver aberta
+                self.state_manager.fechar_pasta(self.pasta_id)
+                self.btn_pasta.configure(image=self.pasta_fechada)
+                if self.command_original:
+                    self.command_original()
+        elif self.tipo_usuario == 'vendedor':
+            # Vendedor só pode abrir pastas
+            if not self.state_manager.get_estado(self.pasta_id):  # Se estiver fechada
+                self.state_manager.abrir_pasta(self.pasta_id)
+                self.btn_pasta.configure(image=self.pasta_aberta)
+                if self.command_original:
+                    self.command_original()
 
 # Componente de botão de voltar
 class VoltarButton:
