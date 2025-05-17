@@ -1,6 +1,6 @@
 import customtkinter
-from .components import Header, VoltarButton, PastaButtonGrid
-from src.views.pasta_state_manager import PastaStateManager
+from ..components import Header, VoltarButton
+from ..pasta_state_manager import PastaStateManager
 
 class HistoricoView(customtkinter.CTkFrame):
     def __init__(self, master, voltar_callback=None, tipo_usuario="administrador", **kwargs):
@@ -24,119 +24,100 @@ class HistoricoView(customtkinter.CTkFrame):
         
         # Frame para o conteúdo
         self.content_frame = customtkinter.CTkFrame(self, fg_color="transparent")
-        self.content_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        self.content_frame.pack(fill="both", expand=True, padx=40, pady=20)
         
         # Título
         titulo = customtkinter.CTkLabel(
             self.content_frame,
             text="Histórico de Ações nas Pastas",
-            font=("Arial", 20, "bold")
+            font=("Arial", 20, "bold"),
+            text_color="white"
         )
         titulo.pack(pady=(0, 20))
         
-        # Área de rolagem para o histórico
-        self.scrollable_frame = customtkinter.CTkScrollableFrame(
+        # Frame branco para a tabela
+        self.tabela_frame = customtkinter.CTkFrame(
             self.content_frame,
-            fg_color="transparent",
+            fg_color="white",
+            corner_radius=15
+        )
+        self.tabela_frame.pack(fill="both", expand=True, pady=10)
+        
+        # Cabeçalhos da tabela
+        self.criar_cabecalhos()
+        
+        # Linhas da tabela
+        self.carregar_dados()
+    
+    def criar_cabecalhos(self):
+        # Frame para os cabeçalhos
+        cabecalho_frame = customtkinter.CTkFrame(
+            self.tabela_frame,
+            fg_color="#f0f0f0",
             corner_radius=10
         )
-        self.scrollable_frame.pack(fill="both", expand=True)
+        cabecalho_frame.pack(fill="x", padx=10, pady=10)
         
-        # Carregar o histórico
-        self.carregar_historico()
+        # Cabeçalhos
+        cabecalhos = ["Data/Hora", "Pasta", "Ação", "Usuário"]
+        larguras = [0.3, 0.2, 0.25, 0.25]  # Proporções de largura
+        
+        for i, (texto, largura) in enumerate(zip(cabecalhos, larguras)):
+            lbl = customtkinter.CTkLabel(
+                cabecalho_frame,
+                text=texto,
+                font=("Arial", 14, "bold"),
+                text_color="black",
+                anchor="w"
+            )
+            lbl.pack(side="left", padx=10, pady=5, fill="x", expand=True)
     
-    def carregar_historico(self):
-        """Carrega o histórico de todas as pastas"""
-        # Limpa o frame de rolagem
-        for widget in self.scrollable_frame.winfo_children():
-            widget.destroy()
-        
-        # Obtém o histórico de todas as pastas
-        historico = self.state_manager.get_todo_historico()
-        
-        if not historico:
-            # Se não houver histórico, mostra mensagem
-            sem_historico = customtkinter.CTkLabel(
-                self.scrollable_frame,
-                text="Nenhum registro de histórico encontrado.",
-                font=("Arial", 14)
-            )
-            sem_historico.pack(pady=20)
-            return
-        
-        # Cabeçalho da tabela
-        cabecalho_frame = customtkinter.CTkFrame(
-            self.scrollable_frame,
-            fg_color="#2C4A57",
-            corner_radius=5
+    def carregar_dados(self):
+        # Frame rolável para os itens
+        scrollable_frame = customtkinter.CTkScrollableFrame(
+            self.tabela_frame,
+            fg_color="white"
         )
-        cabecalho_frame.pack(fill="x", pady=(0, 5), padx=5)
+        scrollable_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
         
-        # Colunas do cabeçalho
-        customtkinter.CTkLabel(
-            cabecalho_frame,
-            text="Data/Hora",
-            font=("Arial", 12, "bold"),
-            width=150
-        ).pack(side="left", padx=5, pady=5)
+        try:
+            # Obter histórico do gerenciador de estado
+            historico = self.state_manager.get_todo_historico()
+            
+            # Adicionar itens
+            for idx, (data_hora, pasta_id, acao, usuario) in enumerate(historico):
+                self.adicionar_linha(
+                    scrollable_frame,
+                    data_hora,
+                    pasta_id,
+                    acao,
+                    usuario,
+                    idx % 2 == 0  # Alternar cor de fundo
+                )
+        except Exception as e:
+            print(f"Erro ao carregar histórico: {e}")
+    
+    def adicionar_linha(self, parent, data_hora, pasta_id, acao, usuario, par):
+        # Frame para uma linha da tabela
+        linha_frame = customtkinter.CTkFrame(
+            parent,
+            fg_color="#f9f9f9" if par else "white",
+            corner_radius=8
+        )
+        linha_frame.pack(fill="x", padx=5, pady=2)
         
-        customtkinter.CTkLabel(
-            cabecalho_frame,
-            text="Pasta",
-            font=("Arial", 12, "bold"),
-            width=100
-        ).pack(side="left", padx=5, pady=5)
+        # Dados da linha
+        dados = [data_hora, pasta_id, acao, usuario]
         
-        customtkinter.CTkLabel(
-            cabecalho_frame,
-            text="Ação",
-            font=("Arial", 12, "bold"),
-            width=100
-        ).pack(side="left", padx=5, pady=5)
-        
-        customtkinter.CTkLabel(
-            cabecalho_frame,
-            text="Usuário",
-            font=("Arial", 12, "bold"),
-            width=150
-        ).pack(side="left", padx=5, pady=5)
-        
-        # Adiciona cada item do histórico
-        for acao, pasta_id, usuario, data in historico:
-            item_frame = customtkinter.CTkFrame(
-                self.scrollable_frame,
-                fg_color="#3A5A6B",
-                corner_radius=5
+        for texto in dados:
+            lbl = customtkinter.CTkLabel(
+                linha_frame,
+                text=str(texto),
+                font=("Arial", 12),
+                text_color="black",
+                anchor="w"
             )
-            item_frame.pack(fill="x", pady=2, padx=5)
-            
-            # Formata os dados
-            acao_text = "Aberta" if acao == "aberta" else "Fechada"
-            
-            # Adiciona as colunas
-            customtkinter.CTkLabel(
-                item_frame,
-                text=data,
-                width=150
-            ).pack(side="left", padx=5, pady=5)
-            
-            customtkinter.CTkLabel(
-                item_frame,
-                text=pasta_id,
-                width=100
-            ).pack(side="left", padx=5, pady=5)
-            
-            customtkinter.CTkLabel(
-                item_frame,
-                text=acao_text,
-                width=100
-            ).pack(side="left", padx=5, pady=5)
-            
-            customtkinter.CTkLabel(
-                item_frame,
-                text=usuario,
-                width=150
-            ).pack(side="left", padx=5, pady=5)
+            lbl.pack(side="left", padx=10, pady=8, fill="x", expand=True)
     
     def voltar(self):
         """Volta para a tela anterior"""

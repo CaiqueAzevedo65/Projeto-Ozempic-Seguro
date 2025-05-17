@@ -6,7 +6,7 @@ from .cadastro_usuario_view import CadastroUsuarioFrame
 from .diagnostico_view import DiagnosticoFrame
 from .parametro_sistemas_view import ParametroSistemasFrame
 from .estado_terminal_view import EstadoTerminalFrame
-from ..historico_view import HistoricoView
+from .historico_view import HistoricoView
 
 class PainelAdministradorFrame(customtkinter.CTkFrame):
     def __init__(self, master, finalizar_sessao_callback=None, *args, **kwargs):
