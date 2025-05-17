@@ -2,7 +2,7 @@ import customtkinter
 import tkinter as tk
 from tkinter import messagebox
 from .pages_adm.painel_administrador_view import PainelAdministradorFrame
-from .components import Header, ImageCache
+from .components import Header, ImageCache, VoltarButton
 from ..auth import AuthManager
 from .repositor_view import RepositorFrame
 from .pages_vendedor.vendedor_view import VendedorFrame
@@ -16,6 +16,7 @@ class LoginFrame(customtkinter.CTkFrame):
         self.criar_topo()
         self.criar_interface_login()
         self.criar_teclado_numerico()
+        self.criar_botao_voltar()
 
     def criar_topo(self):
         Header(self, "Login")
@@ -37,19 +38,8 @@ class LoginFrame(customtkinter.CTkFrame):
             digital_label = customtkinter.CTkLabel(frame_login, text="🔒", font=("Arial", 40), text_color="white", bg_color="#2F6073")
             digital_label.pack(pady=30)
 
-        # Botão circular voltar
-        btn_voltar = customtkinter.CTkButton(
-            self,
-            text="←",
-            width=50,
-            height=50,
-            corner_radius=25,
-            fg_color="white",
-            text_color="black",
-            hover_color="#e0e0e0",
-            command=self.show_iniciar_callback
-        )
-        btn_voltar.place(x=420, y=480)
+    def criar_botao_voltar(self):
+        VoltarButton(self, self.show_iniciar_callback)
 
     def criar_teclado_numerico(self):
         teclado_frame = customtkinter.CTkFrame(self, fg_color="white", corner_radius=20)

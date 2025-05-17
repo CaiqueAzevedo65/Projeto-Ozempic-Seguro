@@ -91,7 +91,7 @@ class MainApp(customtkinter.CTk):
         self.show_frame('iniciar')
 
     def show_login(self):
-        #Mostra a tela de login e limpa os campos
+        # Mostra a tela de login e limpa os campos
         if 'login' in self.frames and self.frames['login'].winfo_exists():
             # Limpa os campos do login
             self.frames['login'].usuario_entry.delete(0, 'end')

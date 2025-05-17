@@ -51,7 +51,15 @@ class PainelAdministradorFrame(customtkinter.CTkFrame):
         for widget in self.master.winfo_children():
             widget.destroy()
         # Cria e exibe a tela de gerenciamento de usuários
-        GerenciamentoUsuariosFrame(self.master, voltar_callback=self.finalizar_sessao_callback)
+        GerenciamentoUsuariosFrame(self.master, voltar_callback=self.voltar_para_painel)
+
+    def voltar_para_painel(self):
+        # Volta para o painel do administrador
+        # Remove todos os widgets atuais da tela
+        for widget in self.master.winfo_children():
+            widget.destroy()
+        # Recria o painel do administrador
+        PainelAdministradorFrame(self.master, finalizar_sessao_callback=self.finalizar_sessao_callback)
 
     def cadastro_usuario(self):
         messagebox.showinfo("Cadastro de Usuário", "Você clicou em Cadastro de Usuário.")
