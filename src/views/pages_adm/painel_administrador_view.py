@@ -2,6 +2,10 @@ import customtkinter
 from tkinter import messagebox
 from ..components import Header, MainButton, FinalizarSessaoButton
 from .gerenciamento_usuarios_view import GerenciamentoUsuariosFrame
+from .cadastro_usuario_view import CadastroUsuarioFrame
+from .diagnostico_view import DiagnosticoFrame
+from .parametro_sistemas_view import ParametroSistemasFrame
+from .estado_terminal_view import EstadoTerminalFrame
 
 class PainelAdministradorFrame(customtkinter.CTkFrame):
     def __init__(self, master, finalizar_sessao_callback=None, *args, **kwargs):
@@ -41,7 +45,7 @@ class PainelAdministradorFrame(customtkinter.CTkFrame):
 
     def finalizar_sessao(self):
         if self.finalizar_sessao_callback:
-            self.pack_forget()  # Apenas esconde o frame atual ao invés de destruí-lo
+            self.pack_forget()
             self.finalizar_sessao_callback()
         else:
             messagebox.showinfo("Sessão", "Sessão finalizada!")
@@ -53,6 +57,34 @@ class PainelAdministradorFrame(customtkinter.CTkFrame):
         # Cria e exibe a tela de gerenciamento de usuários
         GerenciamentoUsuariosFrame(self.master, voltar_callback=self.voltar_para_painel)
 
+    def cadastro_usuario(self):
+        # Remove todos os widgets atuais da tela
+        for widget in self.master.winfo_children():
+            widget.destroy()
+        # Cria e exibe a tela de cadastro de usuário
+        CadastroUsuarioFrame(self.master, voltar_callback=self.voltar_para_painel)
+
+    def diagnostico(self):
+        # Remove todos os widgets atuais da tela
+        for widget in self.master.winfo_children():
+            widget.destroy()
+        # Cria e exibe a tela de diagnóstico
+        DiagnosticoFrame(self.master, voltar_callback=self.voltar_para_painel)
+
+    def parametro_sistemas(self):
+        # Remove todos os widgets atuais da tela
+        for widget in self.master.winfo_children():
+            widget.destroy()
+        # Cria e exibe a tela de parâmetros de sistemas
+        ParametroSistemasFrame(self.master, voltar_callback=self.voltar_para_painel)
+
+    def estado_terminal(self):
+        # Remove todos os widgets atuais da tela
+        for widget in self.master.winfo_children():
+            widget.destroy()
+        # Cria e exibe a tela de estado do terminal
+        EstadoTerminalFrame(self.master, voltar_callback=self.voltar_para_painel)
+
     def voltar_para_painel(self):
         # Volta para o painel do administrador
         # Remove todos os widgets atuais da tela
@@ -60,15 +92,3 @@ class PainelAdministradorFrame(customtkinter.CTkFrame):
             widget.destroy()
         # Recria o painel do administrador
         PainelAdministradorFrame(self.master, finalizar_sessao_callback=self.finalizar_sessao_callback)
-
-    def cadastro_usuario(self):
-        messagebox.showinfo("Cadastro de Usuário", "Você clicou em Cadastro de Usuário.")
-
-    def diagnostico(self):
-        messagebox.showinfo("Diagnóstico", "Você clicou em Diagnóstico.")
-
-    def parametro_sistemas(self):
-        messagebox.showinfo("Parâmetro de Sistemas", "Você clicou em Parâmetro de Sistemas.")
-
-    def estado_terminal(self):
-        messagebox.showinfo("Estado Terminal", "Você clicou em Estado Terminal.") 
