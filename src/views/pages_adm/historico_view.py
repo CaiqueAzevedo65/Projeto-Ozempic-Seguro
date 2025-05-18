@@ -16,16 +16,9 @@ class HistoricoView(customtkinter.CTkFrame):
         # Cabeçalho
         self.header = Header(self, "Histórico de Ações nas Pastas")
         
-        # Botão voltar
-        self.voltar_btn = VoltarButton(
-            self, 
-            command=self.voltar
-        )
-        
         # Frame para o conteúdo
         self.content_frame = customtkinter.CTkFrame(self, fg_color="transparent")
-        self.content_frame.pack(fill="both", expand=True, padx=40, pady=20)
-        
+        self.content_frame.pack(fill="both", expand=True, padx=40, pady=(20, 100))
         
         # Frame branco para a tabela
         self.tabela_frame = customtkinter.CTkFrame(
@@ -40,6 +33,12 @@ class HistoricoView(customtkinter.CTkFrame):
         
         # Linhas da tabela
         self.carregar_dados()
+
+        # Botão voltar (adicionado por último para ficar por cima)
+        self.voltar_btn = VoltarButton(
+            self, 
+            command=self.voltar
+        )
     
     def criar_cabecalhos(self):
         # Frame para os cabeçalhos

@@ -217,10 +217,6 @@ class PastaButton:
         
         # Atualiza a imagem do botão
         self.atualizar_imagem()
-        
-        # Executa o comando original, se houver
-        if hasattr(self, 'command_original') and self.command_original is not None:
-            self.command_original()
 
     def mostrar_historico(self):
         """Mostra o histórico de alterações da pasta"""

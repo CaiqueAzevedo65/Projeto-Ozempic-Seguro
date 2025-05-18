@@ -16,64 +16,118 @@ class MainApp(customtkinter.CTk):
         self.container = customtkinter.CTkFrame(self)
         self.container.pack(fill="both", expand=True)
         
-        # Cache de frames
+        # Dicionário para armazenar os frames
         self.frames = {}
         self.current_frame = None
         self.tela_index = 0
+        
+        # Lista de métodos para alternar entre telas
         self.telas = [self.show_tela_toque, self.show_tela_logo]
         
-        # Pré-carregar frames comuns
+        # Carrega os frames iniciais
         self.preload_frames()
         
+        # Inicia com a primeira tela
         self.show_tela_toque()
         self.after_id = None
         self.start_alternancia()
 
-    def voltar_para_tela_inicial(self):
-        if self.current_frame:
-            self.current_frame.pack_forget()
-        self.show_tela_toque()
-        self.start_alternancia()
-
     def preload_frames(self):
-        # Pré-carrega os frames mais comuns
-        self.frames['toque'] = TelaToqueFrame(self.container, on_click_callback=self.show_iniciar_sessao)
-        self.frames['logo'] = TelaLogoFrame(self.container, on_click_callback=self.show_iniciar_sessao)
+        # Carrega os frames iniciais
+        self.frames['toque'] = TelaToqueFrame(
+            self.container, 
+            on_click_callback=self.show_iniciar_sessao
+        )
+        self.frames['logo'] = TelaLogoFrame(
+            self.container, 
+            on_click_callback=self.show_iniciar_sessao
+        )
         self.frames['iniciar'] = IniciarSessaoFrame(
             self.container, 
             show_login_callback=self.show_login,
             voltar_callback=self.voltar_para_tela_inicial
-            )
-        self.frames['login'] = LoginFrame(self.container, show_iniciar_callback=self.show_iniciar_sessao)
+        )
+        self.frames['login'] = LoginFrame(
+            self.container, 
+            show_iniciar_callback=self.show_iniciar_sessao
+        )
         
         # Esconde todos os frames inicialmente
         for frame in self.frames.values():
             frame.pack_forget()
 
     def show_frame(self, frame_name):
-        #Mostra um frame com transição suave
+        """Mostra um frame, criando-o se não existir"""
         if self.current_frame:
             self.current_frame.pack_forget()
         
+        # Verifica se o frame já existe e está válido
+        if frame_name not in self.frames or not hasattr(self.frames[frame_name], 'winfo_exists') or not self.frames[frame_name].winfo_exists():
+            # Recria o frame se não existir ou não for válido
+            if frame_name == 'toque':
+                self.frames[frame_name] = TelaToqueFrame(
+                    self.container, 
+                    on_click_callback=self.show_iniciar_sessao
+                )
+            elif frame_name == 'logo':
+                self.frames[frame_name] = TelaLogoFrame(
+                    self.container, 
+                    on_click_callback=self.show_iniciar_sessao
+                )
+            elif frame_name == 'iniciar':
+                self.frames[frame_name] = IniciarSessaoFrame(
+                    self.container,
+                    show_login_callback=self.show_login,
+                    voltar_callback=self.voltar_para_tela_inicial
+                )
+            elif frame_name == 'login':
+                self.frames[frame_name] = LoginFrame(
+                    self.container,
+                    show_iniciar_callback=self.show_iniciar_sessao
+                )
+        
+        # Mostra o frame
         frame = self.frames.get(frame_name)
         if frame:
             frame.pack(fill="both", expand=True)
             self.current_frame = frame
-        else:
-            print(f"Frame {frame_name} não encontrado no cache")
+            return True
+        return False
 
     def start_alternancia(self):
+        """Inicia a alternância entre as telas iniciais"""
+        if self.after_id:
+            self.after_cancel(self.after_id)
         self.after_id = self.after(2000, self.next_tela)
 
     def next_tela(self):
+        """Vai para a próxima tela na sequência"""
+        if not hasattr(self, 'telas') or not self.telas:
+            return
+            
         self.tela_index = (self.tela_index + 1) % len(self.telas)
-        self.telas[self.tela_index]()
+        if self.tela_index < len(self.telas):
+            self.telas[self.tela_index]()
+        self.start_alternancia()
+
+    def voltar_para_tela_inicial(self):
+        """Volta para a tela inicial"""
+        if self.after_id:
+            self.after_cancel(self.after_id)
+        
+        if self.current_frame:
+            self.current_frame.pack_forget()
+        
+        # Mostra a tela de toque e reinicia a alternância
+        self.show_tela_toque()
         self.start_alternancia()
 
     def show_tela_toque(self):
+        """Mostra a tela de toque"""
         self.show_frame('toque')
 
     def show_tela_logo(self):
+        """Mostra a tela do logo"""
         self.show_frame('logo')
 
     def show_iniciar_sessao(self):
