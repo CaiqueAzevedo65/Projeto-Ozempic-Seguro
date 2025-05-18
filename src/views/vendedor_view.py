@@ -38,7 +38,6 @@ class VendedorFrame(customtkinter.CTkFrame):
             tipo_usuario='vendedor'
         )
         temp_button.mostrar_historico()
-        temp_button.destroy()  # Remove o botão temporário
 
     def criar_botao_finalizar(self):
         FinalizarSessaoButton(self, self.finalizar_sessao)
