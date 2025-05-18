@@ -88,3 +88,4 @@ Desktop.ini
 !/src/assets/*.jpg
 !/src/assets/*.jpeg
 !/src/assets/*.pdf 
+src/data/ozempic_seguro.db
