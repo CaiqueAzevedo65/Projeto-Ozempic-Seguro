@@ -39,12 +39,7 @@ class PastaStateManager:
     def get_todo_historico(self):
         """Retorna todo o histórico de todas as pastas"""
         try:
-            self.cursor.execute("""
-                SELECT acao, pasta_id, usuario, data_hora 
-                FROM historico_pastas 
-                ORDER BY data_hora DESC
-            """)
-            return self.cursor.fetchall()
+            return self._db.get_todo_historico()
         except Exception as e:
             print(f"Erro ao buscar histórico: {e}")
             return []

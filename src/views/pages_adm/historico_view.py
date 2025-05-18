@@ -14,7 +14,7 @@ class HistoricoView(customtkinter.CTkFrame):
     
     def criar_interface(self):
         # Cabeçalho
-        self.header = Header(self, "Histórico de Pastas")
+        self.header = Header(self, "Histórico de Ações nas Pastas")
         
         # Botão voltar
         self.voltar_btn = VoltarButton(
@@ -26,14 +26,6 @@ class HistoricoView(customtkinter.CTkFrame):
         self.content_frame = customtkinter.CTkFrame(self, fg_color="transparent")
         self.content_frame.pack(fill="both", expand=True, padx=40, pady=20)
         
-        # Título
-        titulo = customtkinter.CTkLabel(
-            self.content_frame,
-            text="Histórico de Ações nas Pastas",
-            font=("Arial", 20, "bold"),
-            text_color="white"
-        )
-        titulo.pack(pady=(0, 20))
         
         # Frame branco para a tabela
         self.tabela_frame = customtkinter.CTkFrame(
@@ -57,20 +49,33 @@ class HistoricoView(customtkinter.CTkFrame):
             corner_radius=10
         )
         cabecalho_frame.pack(fill="x", padx=10, pady=10)
-        
+
         # Cabeçalhos
         cabecalhos = ["Data/Hora", "Pasta", "Ação", "Usuário"]
         larguras = [0.3, 0.2, 0.25, 0.25]  # Proporções de largura
         
         for i, (texto, largura) in enumerate(zip(cabecalhos, larguras)):
-            lbl = customtkinter.CTkLabel(
+            # Cria um frame para cada cabeçalho para melhor controle
+            header_cell = customtkinter.CTkFrame(
                 cabecalho_frame,
+                fg_color="transparent"
+            )
+            header_cell.pack(side="left", fill="x", expand=True)
+            
+            # Configura o padding apenas para o cabeçalho "Pasta"
+            padx_left = 65 if texto == "Pasta" else 0
+            
+            lbl = customtkinter.CTkLabel(
+                header_cell,
                 text=texto,
                 font=("Arial", 14, "bold"),
                 text_color="black",
                 anchor="w"
             )
-            lbl.pack(side="left", padx=10, pady=5, fill="x", expand=True)
+            lbl.pack(side="left", padx=(padx_left, 0), pady=5)
+            
+            # Define o peso da coluna
+            cabecalho_frame.columnconfigure(i, weight=int(largura * 100))
     
     def carregar_dados(self):
         # Frame rolável para os itens
