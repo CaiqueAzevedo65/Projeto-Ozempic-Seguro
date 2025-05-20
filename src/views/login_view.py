@@ -43,7 +43,7 @@ class LoginFrame(customtkinter.CTkFrame):
 
     def criar_teclado_numerico(self):
         teclado_frame = customtkinter.CTkFrame(self, fg_color="white", corner_radius=20)
-        teclado_frame.place(x=520, y=100)
+        teclado_frame.place(x=500, y=100)
         botoes = [
             ["1", "2", "3", "Confirmar"],
             ["4", "5", "6", "Apagar"],

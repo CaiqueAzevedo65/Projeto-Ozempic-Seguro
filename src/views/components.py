@@ -293,9 +293,97 @@ class VoltarButton:
         )
         self.btn_voltar.pack()
 
+class TecladoVirtual(customtkinter.CTkFrame):
+    def __init__(self, master, entrada_atual=None, comando_salvar=None, **kwargs):
+        super().__init__(master, fg_color="#f0f0f0", corner_radius=10, **kwargs)
+        self.entrada_atual = entrada_atual
+        self.comando_salvar = comando_salvar
+        self.criar_teclado()
+        
+    def criar_teclado(self):
+        # Layout do teclado
+        linhas = [
+            ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '⌫'],
+            ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
+            ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'ç'],
+            ['z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', ' '],
+            ['MAIÚSCULAS', 'LIMPAR', 'APAGAR', 'SALVAR']
+        ]
+        
+        # Configuração do grid
+        for i, linha in enumerate(linhas):
+            self.grid_rowconfigure(i, weight=1, uniform="teclado")
+            
+            # Ajusta o espaçamento entre os botões na última linha
+            padx_value = 20 if i == len(linhas) - 1 else 2
+            
+            for j, tecla in enumerate(linha):
+                self.grid_columnconfigure(j, weight=1, uniform="teclado")
+                
+                # Configuração especial para algumas teclas
+                largura = 1
+                if tecla in ['MAIÚSCULAS', 'LIMPAR', 'APAGAR', 'SALVAR']:
+                    if tecla == 'MAIÚSCULAS':
+                        largura = 3
+                    elif tecla == 'SALVAR':
+                        largura = 3
+                        btn_fg_color = "#2ecc71"  # Verde para o botão salvar
+                        btn_text_color = "white"
+                    else:
+                        largura = 2
+                    
+                # Configuração do botão
+                btn = customtkinter.CTkButton(
+                    self,
+                    text=tecla,
+                    width=40 * largura,
+                    height=40,
+                    font=("Arial", 12, "bold"),
+                    fg_color=btn_fg_color if 'btn_fg_color' in locals() else "#ffffff",
+                    text_color=btn_text_color if 'btn_text_color' in locals() else "#000000",
+                    hover_color="#27ae60" if tecla == 'SALVAR' else "#e0e0e0",
+                    corner_radius=5,
+                    command=lambda t=tecla: self.tecla_pressionada(t)
+                )
+                
+                # Posiciona o botão no grid
+                btn.grid(
+                    row=i,
+                    column=j,
+                    columnspan=largura,
+                    padx=padx_value,
+                    pady=2,
+                    sticky="nsew"
+                )
+                
+                # Ajusta a coluna para pular os espaços ocupados
+                j += largura - 1
+    
+    def tecla_pressionada(self, tecla):
+        if not self.entrada_atual:
+            return
+            
+        if tecla == '⌫':
+            texto_atual = self.entrada_atual.get()
+            self.entrada_atual.delete(0, 'end')
+            self.entrada_atual.insert(0, texto_atual[:-1])
+        elif tecla == 'LIMPAR':
+            self.entrada_atual.delete(0, 'end')
+        elif tecla == 'APAGAR':
+            self.entrada_atual.delete(0, 'end')
+        elif tecla == 'SALVAR' and self.comando_salvar:
+            self.comando_salvar()
+        elif tecla == 'MAIÚSCULAS':
+            pass
+        else:
+            self.entrada_atual.insert('end', tecla)
+            
+    def definir_entrada(self, entrada):
+        self.entrada_atual = entrada
+
+# Atualizar a lista __all__ para incluir o novo componente
 __all__ = [
     'Header', 'FinalizarSessaoButton', 'PastaButtonGrid', 
-    'PastaButton', 'VoltarButton', 'MainButton', 'ImageCache'
+    'PastaButton', 'VoltarButton', 'MainButton', 'ImageCache',
+    'TecladoVirtual'
 ]
-
-
