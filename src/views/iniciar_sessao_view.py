@@ -9,25 +9,29 @@ class IniciarSessaoFrame(customtkinter.CTkFrame):
         self.voltar_callback = voltar_callback
         self.pack(fill="both", expand=True)
         self.criar_topo()
-        self.criar_botoes()
+        self.criar_botao_login()
         self.criar_botao_voltar()
 
     def criar_topo(self):
         Header(self, "Iniciar Sessão")
 
-    def criar_botoes(self):
+    def criar_botao_login(self):
         main_frame = customtkinter.CTkFrame(self, fg_color="#346172")
-        main_frame.pack(expand=True)
-        btn_login = customtkinter.CTkButton(main_frame, text="Login", font=("Arial", 16, "bold"),
-                                            width=200, height=50, corner_radius=15,
-                                            fg_color="white", text_color="black",
-                                            hover_color="#e0e0e0", command=self.show_login_callback)
-        btn_login.grid(row=0, column=0, padx=50, pady=20)
-        btn_cadastro = customtkinter.CTkButton(main_frame, text="Cadastro de Funcionário", font=("Arial", 16, "bold"),
-                                            width=250, height=50, corner_radius=15,
-                                            fg_color="white", text_color="black",
-                                            hover_color="#e0e0e0", command=self.cadastro_funcionario)
-        btn_cadastro.grid(row=0, column=1, padx=50, pady=20)
+        main_frame.place(relx=0.5, rely=0.5, anchor="center")
+        
+        btn_login = customtkinter.CTkButton(
+            main_frame, 
+            text="Iniciar Sessão", 
+            font=("Arial", 16, "bold"),
+            width=300, 
+            height=60, 
+            corner_radius=15,
+            fg_color="white", 
+            text_color="black",
+            hover_color="#e0e0e0", 
+            command=self.show_login_callback
+        )
+        btn_login.pack(pady=20)
 
     def criar_botao_voltar(self):
         VoltarButton(self, self.voltar_callback)

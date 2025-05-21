@@ -312,52 +312,78 @@ class TecladoVirtual(customtkinter.CTkFrame):
         
         # Configuração do grid
         for i, linha in enumerate(linhas):
-            self.grid_rowconfigure(i, weight=1, uniform="teclado")
+            self.grid_rowconfigure(i, weight=1)
             
-            # Ajusta o espaçamento entre os botões na última linha
-            padx_value = 20 if i == len(linhas) - 1 else 2
-            
-            for j, tecla in enumerate(linha):
-                self.grid_columnconfigure(j, weight=1, uniform="teclado")
+            # Configuração especial para a última linha
+            if i == len(linhas) - 1:
+                # Configura 8 colunas (2 para cada botão)
+                for j in range(8):
+                    self.grid_columnconfigure(j, weight=1)
                 
-                # Configuração especial para algumas teclas
-                largura = 1
-                if tecla in ['MAIÚSCULAS', 'LIMPAR', 'APAGAR', 'SALVAR']:
-                    if tecla == 'MAIÚSCULAS':
-                        largura = 3
-                    elif tecla == 'SALVAR':
-                        largura = 3
-                        btn_fg_color = "#2ecc71"  # Verde para o botão salvar
-                        btn_text_color = "white"
-                    else:
-                        largura = 2
+                # Mapeia cada botão para sua coluna e configura o columnspan
+                for tecla in linha:
+                    btn_fg_color = "#2ecc71" if tecla == 'SALVAR' else "#ffffff"
+                    btn_text_color = "white" if tecla == 'SALVAR' else "#000000"
+                    hover_color = "#27ae60" if tecla == 'SALVAR' else "#e0e0e0"
                     
-                # Configuração do botão
-                btn = customtkinter.CTkButton(
-                    self,
-                    text=tecla,
-                    width=40 * largura,
-                    height=40,
-                    font=("Arial", 12, "bold"),
-                    fg_color=btn_fg_color if 'btn_fg_color' in locals() else "#ffffff",
-                    text_color=btn_text_color if 'btn_text_color' in locals() else "#000000",
-                    hover_color="#27ae60" if tecla == 'SALVAR' else "#e0e0e0",
-                    corner_radius=5,
-                    command=lambda t=tecla: self.tecla_pressionada(t)
-                )
-                
-                # Posiciona o botão no grid
-                btn.grid(
-                    row=i,
-                    column=j,
-                    columnspan=largura,
-                    padx=padx_value,
-                    pady=2,
-                    sticky="nsew"
-                )
-                
-                # Ajusta a coluna para pular os espaços ocupados
-                j += largura - 1
+                    btn = customtkinter.CTkButton(
+                        self,
+                        text=tecla,
+                        height=40,
+                        font=("Arial", 12, "bold"),
+                        fg_color=btn_fg_color,
+                        text_color=btn_text_color,
+                        hover_color=hover_color,
+                        corner_radius=5,
+                        command=lambda t=tecla: self.tecla_pressionada(t)
+                    )
+                    
+                    # Ajusta o columnspan e a posição baseado no botão
+                    if tecla == 'MAIÚSCULAS':
+                        columnspan = 2
+                        column = 0
+                    elif tecla == 'LIMPAR':
+                        columnspan = 2
+                        column = 2
+                    elif tecla == 'APAGAR':
+                        columnspan = 2
+                        column = 4
+                    elif tecla == 'SALVAR':
+                        columnspan = 2
+                        column = 6
+                    
+                    btn.grid(
+                        row=i,
+                        column=column,
+                        columnspan=columnspan,
+                        padx=2,
+                        pady=2,
+                        sticky="nsew"
+                    )
+            else:
+                # Configuração normal para as outras linhas
+                for j, tecla in enumerate(linha):
+                    self.grid_columnconfigure(j, weight=1, uniform="teclado")
+                    
+                    btn = customtkinter.CTkButton(
+                        self,
+                        text=tecla,
+                        height=40,
+                        font=("Arial", 12, "bold"),
+                        fg_color="#ffffff",
+                        text_color="#000000",
+                        hover_color="#e0e0e0",
+                        corner_radius=5,
+                        command=lambda t=tecla: self.tecla_pressionada(t)
+                    )
+                    
+                    btn.grid(
+                        row=i,
+                        column=j,
+                        padx=2,
+                        pady=2,
+                        sticky="nsew"
+                    )
     
     def tecla_pressionada(self, tecla):
         if not self.entrada_atual:
