@@ -7,12 +7,21 @@ from .diagnostico_view import DiagnosticoFrame
 from .parametro_sistemas_view import ParametroSistemasFrame
 from .estado_terminal_view import EstadoTerminalFrame
 from .historico_view import HistoricoView
+from .admin_pastas_view import AdminPastasFrame
 
 class PainelAdministradorFrame(customtkinter.CTkFrame):
     def __init__(self, master, finalizar_sessao_callback=None, *args, **kwargs):
         super().__init__(master, fg_color="#3B6A7D", *args, **kwargs)
         self.finalizar_sessao_callback = finalizar_sessao_callback
         self.pack(fill="both", expand=True)
+        self.criar_tela_principal()
+
+    def criar_tela_principal(self):
+        """Cria a tela principal do administrador"""
+        # Limpa o frame atual
+        for widget in self.winfo_children():
+            widget.destroy()
+            
         self.criar_topo()
         self.criar_botoes()
         self.criar_botao_finalizar()
@@ -27,6 +36,7 @@ class PainelAdministradorFrame(customtkinter.CTkFrame):
         
         botoes = [
             {"texto": "Gerenciar Usuários", "comando": self.gerenciar_usuarios},
+            {"texto": "Gerenciar Pastas", "comando": self.gerenciar_pastas},
             {"texto": "Cadastro de Usuário", "comando": self.cadastro_usuario},
             {"texto": "Diagnóstico", "comando": self.diagnostico},
             {"texto": "Parâmetros de Sistema", "comando": self.parametro_sistemas},
@@ -57,10 +67,16 @@ class PainelAdministradorFrame(customtkinter.CTkFrame):
         main_frame.grid_columnconfigure(1, weight=1)
         main_frame.grid_rowconfigure(tuple(range((len(botoes) + 1) // 2)), weight=1)
 
-    def mostrar_historico(self):
-        for widget in self.master.winfo_children():
+    def gerenciar_pastas(self):
+        """Abre a tela de gerenciamento de pastas"""
+        for widget in self.winfo_children():
             widget.destroy()
-        HistoricoView(self.master, voltar_callback=self.voltar_para_painel)
+        AdminPastasFrame(self, voltar_callback=self.criar_tela_principal)
+
+    def mostrar_historico(self):
+        for widget in self.winfo_children():
+            widget.destroy()
+        HistoricoView(self, voltar_callback=self.criar_tela_principal)
 
     def criar_botao_finalizar(self):
         FinalizarSessaoButton(self, self.finalizar_sessao)
@@ -73,31 +89,26 @@ class PainelAdministradorFrame(customtkinter.CTkFrame):
             messagebox.showinfo("Sessão", "Sessão finalizada!")
 
     def gerenciar_usuarios(self):
-        for widget in self.master.winfo_children():
+        for widget in self.winfo_children():
             widget.destroy()
-        GerenciamentoUsuariosFrame(self.master, voltar_callback=self.voltar_para_painel)
+        GerenciamentoUsuariosFrame(self, voltar_callback=self.criar_tela_principal)
 
     def cadastro_usuario(self):
-        for widget in self.master.winfo_children():
+        for widget in self.winfo_children():
             widget.destroy()
-        CadastroUsuarioFrame(self.master, voltar_callback=self.voltar_para_painel)
+        CadastroUsuarioFrame(self, voltar_callback=self.criar_tela_principal)
 
     def diagnostico(self):
-        for widget in self.master.winfo_children():
+        for widget in self.winfo_children():
             widget.destroy()
-        DiagnosticoFrame(self.master, voltar_callback=self.voltar_para_painel)
+        DiagnosticoFrame(self, voltar_callback=self.criar_tela_principal)
 
     def parametro_sistemas(self):
-        for widget in self.master.winfo_children():
+        for widget in self.winfo_children():
             widget.destroy()
-        ParametroSistemasFrame(self.master, voltar_callback=self.voltar_para_painel)
+        ParametroSistemasFrame(self, voltar_callback=self.criar_tela_principal)
 
     def estado_terminal(self):
-        for widget in self.master.winfo_children():
+        for widget in self.winfo_children():
             widget.destroy()
-        EstadoTerminalFrame(self.master, voltar_callback=self.voltar_para_painel)
-
-    def voltar_para_painel(self):
-        for widget in self.master.winfo_children():
-            widget.destroy()
-        PainelAdministradorFrame(self.master, finalizar_sessao_callback=self.finalizar_sessao_callback)
+        EstadoTerminalFrame(self, voltar_callback=self.criar_tela_principal)
