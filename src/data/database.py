@@ -206,12 +206,16 @@ class DatabaseManager:
         
         return self.cursor.fetchall()
     
+    def get_usuarios(self):
+        """Obtém a lista de todos os usuários"""
+        self.cursor.execute('''
+            SELECT id, username, nome_completo, tipo, ativo, data_criacao 
+            FROM usuarios
+            ORDER BY data_criacao DESC
+        ''')
+        return self.cursor.fetchall()
+
     def close(self):
         """Fecha a conexão com o banco de dados"""
         if hasattr(self, 'conn'):
             self.conn.close()
-
-
-
-
-

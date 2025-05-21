@@ -1,27 +1,24 @@
 import customtkinter
 from ..components import Header, VoltarButton
-from ...data.database import DatabaseManager
+from data.database import DatabaseManager
 
-class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
-    def __init__(self, master, voltar_callback=None, *args, **kwargs):
+class UsuariosView(customtkinter.CTkFrame):
+    def __init__(self, master, voltar_callback=None, **kwargs):
+        super().__init__(master, fg_color="#3B6A7D", **kwargs)
         self.voltar_callback = voltar_callback
-        super().__init__(master, fg_color="#3B6A7D", *args, **kwargs)
         self.db = DatabaseManager()
-        self.pack(fill="both", expand=True)
         
-        self.criar_topo()
-        self.criar_tabela_usuarios()
-        self.criar_botao_voltar()
-
-    def criar_topo(self):
+        self.pack(fill="both", expand=True)
+        self.criar_interface()
+    
+    def criar_interface(self):
         # Cabeçalho
         self.header = Header(self, "Gerenciamento de Usuários")
         
         # Frame para o conteúdo
         self.content_frame = customtkinter.CTkFrame(self, fg_color="transparent")
         self.content_frame.pack(fill="both", expand=True, padx=40, pady=(20, 100))
-
-    def criar_tabela_usuarios(self):
+        
         # Frame branco para a tabela
         self.tabela_frame = customtkinter.CTkFrame(
             self.content_frame,
@@ -35,6 +32,12 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         
         # Linhas da tabela
         self.carregar_dados()
+
+        # Botão voltar (adicionado por último para ficar por cima)
+        self.voltar_btn = VoltarButton(
+            self, 
+            command=self.voltar
+        )
     
     def criar_cabecalhos(self):
         # Frame para os cabeçalhos
@@ -65,6 +68,9 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
                 anchor="w"
             )
             lbl.pack(side="left", padx=10, pady=5)
+            
+            # Define o peso da coluna
+            cabecalho_frame.columnconfigure(i, weight=int(largura * 100))
     
     def carregar_dados(self):
         # Frame rolável para os itens
@@ -125,10 +131,8 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
                 anchor="w"
             )
             lbl.pack(side="left", padx=10, pady=8, fill="x", expand=True)
-
-    def criar_botao_voltar(self):
-        # Botão voltar (adicionado por último para ficar por cima)
-        self.voltar_btn = VoltarButton(
-            self, 
-            command=self.voltar_callback
-        )
+    
+    def voltar(self):
+        """Volta para a tela anterior"""
+        if self.voltar_callback:
+            self.voltar_callback()
