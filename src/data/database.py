@@ -215,6 +215,62 @@ class DatabaseManager:
         ''')
         return self.cursor.fetchall()
 
+    def excluir_usuario(self, usuario_id):
+        """
+        Exclui um usuário do banco de dados.
+        
+        Args:
+            usuario_id (int): ID do usuário a ser excluído
+            
+        Returns:
+            bool: True se o usuário foi excluído com sucesso, False caso contrário
+        """
+        try:
+            # Primeiro, verifica se existe um usuário com o ID fornecido
+            self.cursor.execute('SELECT id FROM usuarios WHERE id = ?', (usuario_id,))
+            if not self.cursor.fetchone():
+                return False
+                
+            # Verifica se o usuário é o único administrador
+            if self.eh_unico_administrador(usuario_id):
+                return False  # Não permite excluir o único administrador
+            
+            # Exclui o usuário
+            self.cursor.execute('DELETE FROM usuarios WHERE id = ?', (usuario_id,))
+            self.conn.commit()
+            return self.cursor.rowcount > 0
+        except sqlite3.Error as e:
+            print(f"Erro ao excluir usuário: {e}")
+            return False
+
+    def eh_unico_administrador(self, usuario_id):
+        """
+        Verifica se o usuário é o único administrador no sistema.
+        
+        Args:
+            usuario_id (int): ID do usuário a ser verificado
+            
+        Returns:
+            bool: True se for o único administrador, False caso contrário
+        """
+        try:
+            # Primeiro, verifica se o usuário é administrador
+            self.cursor.execute('SELECT tipo FROM usuarios WHERE id = ?', (usuario_id,))
+            resultado = self.cursor.fetchone()
+            
+            if not resultado or resultado[0] != 'administrador':
+                return False  # Se não for admin, não precisa bloquear a exclusão
+                
+            # Conta quantos administradores existem
+            self.cursor.execute("SELECT COUNT(*) FROM usuarios WHERE tipo = 'administrador'")
+            total_admins = self.cursor.fetchone()[0]
+            
+            return total_admins <= 1
+            
+        except Exception as e:
+            print(f"Erro ao verificar se é único administrador: {e}")
+            return True  # Em caso de erro, previne a exclusão por segurança
+
     def close(self):
         """Fecha a conexão com o banco de dados"""
         if hasattr(self, 'conn'):

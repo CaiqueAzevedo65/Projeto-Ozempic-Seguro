@@ -10,11 +10,15 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         self.usuario_selecionado = None  # Armazenará o ID do usuário selecionado
         self.pack(fill="both", expand=True)
         
+        # Variáveis para controle de estado
+        self.confirmando_exclusao = False
+        self.mensagem_visivel = False
+        
         self.criar_topo()
         self.criar_tabela_usuarios()
         self.criar_painel_direito()
         self.criar_botao_voltar()
-
+        
     def criar_topo(self):
         # Cabeçalho
         self.header = Header(self, "Gerenciamento de Usuários")
@@ -162,7 +166,7 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
             text="Selecione um usuário para visualizar e editar",
             font=("Arial", 14, "bold"),
             text_color="#666666",
-            wraplength=300  # Largura máxima para o texto
+            wraplength=300
         )
         self.lbl_instrucao.grid(row=0, column=0, pady=50, padx=20, sticky="n")
         
@@ -174,6 +178,12 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         
         # Frame para os botões de ação
         self.frame_botoes = customtkinter.CTkFrame(
+            self.painel_direito,
+            fg_color="white"
+        )
+        
+        # Frame para mensagens (inicialmente vazio)
+        self.frame_mensagem = customtkinter.CTkFrame(
             self.painel_direito,
             fg_color="white"
         )
@@ -339,73 +349,138 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         if not self.usuario_selecionado:
             return
             
-        # Criar janela de confirmação
-        confirm = customtkinter.CTkToplevel(self)
-        confirm.title("Confirmar Exclusão")
-        confirm.geometry("400x150")
-        confirm.grab_set()  # Torna a janela modal
-        
-        # Centralizar a janela
-        window_width = 400
-        window_height = 150
-        screen_width = confirm.winfo_screenwidth()
-        screen_height = confirm.winfo_screenheight()
-        x = (screen_width // 2) - (window_width // 2)
-        y = (screen_height // 2) - (window_height // 2)
-        confirm.geometry(f'{window_width}x{window_height}+{x}+{y}')
-        
-        # Frame principal
-        frame = customtkinter.CTkFrame(confirm, fg_color="white")
-        frame.pack(fill="both", expand=True, padx=20, pady=20)
-        
-        # Mensagem de confirmação
-        lbl_mensagem = customtkinter.CTkLabel(
-            frame,
-            text="Tem certeza que deseja excluir este usuário?\nEsta ação não pode ser desfeita.",
-            font=("Arial", 12),
-            justify="center"
-        )
-        lbl_mensagem.pack(pady=(0, 20))
-        
-        # Frame para os botões
-        frame_botoes = customtkinter.CTkFrame(frame, fg_color="white")
-        frame_botoes.pack()
-        
-        # Botão Confirmar
-        btn_confirmar = customtkinter.CTkButton(
-            frame_botoes,
-            text="Confirmar",
-            fg_color="#dc3545",
-            hover_color="#c82333",
-            command=lambda: self.excluir_usuario(confirm)
-        )
-        btn_confirmar.pack(side="left", padx=5)
-        
-        # Botão Cancelar
-        btn_cancelar = customtkinter.CTkButton(
-            frame_botoes,
-            text="Cancelar",
-            fg_color="#6c757d",
-            hover_color="#5a6268",
-            command=confirm.destroy
-        )
-        btn_cancelar.pack(side="left", padx=5)
+        if not self.confirmando_exclusao:
+            # Primeiro clique - Mostrar confirmação
+            self.confirmando_exclusao = True
+            
+            # Limpar frame de mensagem
+            for widget in self.frame_mensagem.winfo_children():
+                widget.destroy()
+                
+            # Configurar frame de mensagem
+            self.frame_mensagem.grid(row=3, column=0, padx=20, pady=(0, 10), sticky="nsew")
+            
+            # Mensagem de confirmação
+            lbl_confirmacao = customtkinter.CTkLabel(
+                self.frame_mensagem,
+                text="Tem certeza que deseja excluir este usuário?\nEsta ação não pode ser desfeita.",
+                text_color="#333333",
+                font=("Arial", 12),
+                justify="left"
+            )
+            lbl_confirmacao.pack(side="left", padx=(0, 10))
+            
+            # Botão Confirmar
+            btn_confirmar = customtkinter.CTkButton(
+                self.frame_mensagem,
+                text="Confirmar",
+                fg_color="#dc3545",
+                hover_color="#c82333",
+                command=self.excluir_usuario,
+                width=100
+            )
+            btn_confirmar.pack(side="left", padx=(0, 5))
+            
+            # Botão Cancelar
+            btn_cancelar = customtkinter.CTkButton(
+                self.frame_mensagem,
+                text="Cancelar",
+                fg_color="#6c757d",
+                hover_color="#5a6268",
+                command=self.cancelar_exclusao,
+                width=100
+            )
+            btn_cancelar.pack(side="left")
+            
+            # Desabilitar botão de excluir
+            for widget in self.frame_botoes.winfo_children():
+                if widget.cget("text") == "Excluir Usuário":
+                    widget.configure(state="disabled")
     
-    def excluir_usuario(self, dialog):
+    def cancelar_exclusao(self):
+        """Cancela a confirmação de exclusão"""
+        self.confirmando_exclusao = False
+        self.frame_mensagem.grid_forget()
+        
+        # Reativar botão de excluir
+        for widget in self.frame_botoes.winfo_children():
+            if widget.cget("text") == "Excluir Usuário":
+                widget.configure(state="normal")
+    
+    def excluir_usuario(self):
+        """Exclui o usuário selecionado"""
+        if not self.usuario_selecionado:
+            return
+            
         try:
-            # Aqui você deve implementar a lógica para excluir o usuário do banco de dados
-            # Exemplo: self.db.excluir_usuario(self.usuario_selecionado)
-            dialog.destroy()
-            self.mostrar_mensagem_sucesso("Usuário excluído com sucesso!")
+            # Verifica se é o único administrador
+            if self.db.eh_unico_administrador(self.usuario_selecionado):
+                self.mostrar_mensagem_erro(
+                    "Não é possível excluir o único administrador do sistema.\n"
+                    "Promova outro usuário a administrador antes de remover este."
+                )
+                self.cancelar_exclusao()
+                return
+                
+            # Chama o método do banco de dados para excluir o usuário
+            sucesso = self.db.excluir_usuario(self.usuario_selecionado)
             
-            # Atualizar a tabela
-            self.carregar_dados()
-            
-            # Limpar painel de detalhes
-            self.limpar_painel_detalhes()
-            
+            # Limpar frame de mensagem
+            for widget in self.frame_mensagem.winfo_children():
+                widget.destroy()
+                
+            if sucesso:
+                # Mostrar mensagem de sucesso
+                lbl_sucesso = customtkinter.CTkLabel(
+                    self.frame_mensagem,
+                    text="Usuário excluído com sucesso!",
+                    text_color="#28a745",
+                    font=("Arial", 12, "bold")
+                )
+                lbl_sucesso.pack(pady=5)
+                
+                # Atualizar a tabela de usuários após 1.5 segundos
+                self.after(1500, self.atualizar_apos_exclusao)
+            else:
+                # Mostrar mensagem de erro
+                lbl_erro = customtkinter.CTkLabel(
+                    self.frame_mensagem,
+                    text="Não foi possível excluir o usuário.",
+                    text_color="#dc3545",
+                    font=("Arial", 12, "bold")
+                )
+                lbl_erro.pack(pady=5)
+                
+                # Reativar botão de excluir após 2 segundos
+                self.after(2000, self.reiniciar_estado_exclusao)
+                
         except Exception as e:
+            print(f"Erro ao excluir usuário: {e}")
             self.mostrar_mensagem_erro(f"Erro ao excluir usuário: {str(e)}")
+    
+    def atualizar_apos_exclusao(self):
+        """Atualiza a interface após a exclusão bem-sucedida"""
+        self.confirmando_exclusao = False
+        self.frame_mensagem.grid_forget()
+        
+        # Atualizar a tabela
+        self.carregar_dados()
+        
+        # Limpar painel de detalhes
+        self.limpar_painel_detalhes()
+        
+        # Mostrar instrução novamente
+        self.lbl_instrucao.grid(row=0, column=0, pady=50, padx=20, sticky="n")
+    
+    def reiniciar_estado_exclusao(self):
+        """Reinicia o estado dos botões após uma tentativa de exclusão"""
+        self.confirmando_exclusao = False
+        self.frame_mensagem.grid_forget()
+        
+        # Reativar botão de excluir
+        for widget in self.frame_botoes.winfo_children():
+            if widget.cget("text") == "Excluir Usuário":
+                widget.configure(state="normal")
     
     def limpar_painel_detalhes(self):
         # Esconder frames de detalhes e botões
