@@ -271,6 +271,29 @@ class DatabaseManager:
             print(f"Erro ao verificar se é único administrador: {e}")
             return True  # Em caso de erro, previne a exclusão por segurança
 
+    def atualizar_senha(self, usuario_id, nova_senha):
+        """
+        Atualiza a senha de um usuário.
+        
+        Args:
+            usuario_id (int): ID do usuário
+            nova_senha (str): Nova senha em texto plano
+            
+        Returns:
+            bool: True se a senha foi atualizada com sucesso, False caso contrário
+        """
+        try:
+            senha_hash = self._hash_senha(nova_senha)
+            self.cursor.execute(
+                'UPDATE usuarios SET senha_hash = ? WHERE id = ?',
+                (senha_hash, usuario_id)
+            )
+            self.conn.commit()
+            return self.cursor.rowcount > 0
+        except Exception as e:
+            print(f"Erro ao atualizar senha: {e}")
+            return False
+
     def close(self):
         """Fecha a conexão com o banco de dados"""
         if hasattr(self, 'conn'):

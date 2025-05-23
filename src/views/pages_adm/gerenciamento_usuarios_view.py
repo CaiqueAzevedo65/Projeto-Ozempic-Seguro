@@ -267,23 +267,24 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
             return
             
         # Criar janela de diálogo
-        dialog = customtkinter.CTkToplevel(self)
-        dialog.title("Alterar Senha")
-        dialog.geometry("400x250")
-        dialog.grab_set()  # Torna a janela modal
+        self.dialog = customtkinter.CTkToplevel(self)
+        self.dialog.title("Alterar Senha")
+        self.dialog.geometry("400x350")  # Aumentei a altura para acomodar a mensagem
+        self.dialog.grab_set()  # Torna a janela modal
         
         # Centralizar a janela
         window_width = 400
-        window_height = 250
-        screen_width = dialog.winfo_screenwidth()
-        screen_height = dialog.winfo_screenheight()
+        window_height = 350
+        screen_width = self.dialog.winfo_screenwidth()
+        screen_height = self.dialog.winfo_screenheight()
         x = (screen_width // 2) - (window_width // 2)
         y = (screen_height // 2) - (window_height // 2)
-        dialog.geometry(f'{window_width}x{window_height}+{x}+{y}')
+        self.dialog.geometry(f'{window_width}x{window_height}+{x}+{y}')
         
         # Frame principal
-        frame = customtkinter.CTkFrame(dialog, fg_color="white")
+        frame = customtkinter.CTkFrame(self.dialog, fg_color="white")
         frame.pack(fill="both", expand=True, padx=20, pady=20)
+        frame.columnconfigure(0, weight=1)  # Configura a coluna para expandir
         
         # Título
         lbl_titulo = customtkinter.CTkLabel(
@@ -291,59 +292,102 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
             text="Alterar Senha",
             font=("Arial", 16, "bold")
         )
-        lbl_titulo.pack(pady=(0, 20))
+        lbl_titulo.grid(row=0, column=0, pady=(0, 20), sticky="n")
+        
+        # Frame para campos de senha
+        campos_frame = customtkinter.CTkFrame(frame, fg_color="transparent")
+        campos_frame.grid(row=1, column=0, sticky="nsew")
         
         # Campo Nova Senha
-        lbl_nova_senha = customtkinter.CTkLabel(frame, text="Nova Senha:", anchor="w")
-        lbl_nova_senha.pack(fill="x", pady=(0, 5))
+        lbl_nova_senha = customtkinter.CTkLabel(campos_frame, text="Nova Senha:", anchor="w")
+        lbl_nova_senha.grid(row=0, column=0, sticky="w", pady=(0, 5))
         
-        self.entry_nova_senha = customtkinter.CTkEntry(frame, show="•", width=300)
-        self.entry_nova_senha.pack(pady=(0, 15))
+        self.entry_nova_senha = customtkinter.CTkEntry(campos_frame, show="•", width=300)
+        self.entry_nova_senha.grid(row=1, column=0, pady=(0, 10), sticky="ew")
         
         # Campo Confirmar Senha
-        lbl_confirmar_senha = customtkinter.CTkLabel(frame, text="Confirmar Senha:", anchor="w")
-        lbl_confirmar_senha.pack(fill="x", pady=(0, 5))
+        lbl_confirmar_senha = customtkinter.CTkLabel(campos_frame, text="Confirmar Senha:", anchor="w")
+        lbl_confirmar_senha.grid(row=2, column=0, sticky="w", pady=(10, 5))
         
-        self.entry_confirmar_senha = customtkinter.CTkEntry(frame, show="•", width=300)
-        self.entry_confirmar_senha.pack(pady=(0, 20))
+        self.entry_confirmar_senha = customtkinter.CTkEntry(campos_frame, show="•", width=300)
+        self.entry_confirmar_senha.grid(row=3, column=0, pady=(0, 10), sticky="ew")
+        
+        # Rótulo para mensagens de erro/sucesso
+        self.lbl_mensagem = customtkinter.CTkLabel(
+            campos_frame,
+            text="",
+            text_color="red",
+            wraplength=300,
+            justify="left"
+        )
+        self.lbl_mensagem.grid(row=4, column=0, pady=(5, 10), sticky="w")
+        
+        # Frame para botões
+        botoes_frame = customtkinter.CTkFrame(frame, fg_color="transparent")
+        botoes_frame.grid(row=2, column=0, sticky="nsew", pady=(10, 0))
         
         # Botão Salvar
         btn_salvar = customtkinter.CTkButton(
-            frame,
+            botoes_frame,
             text="Salvar",
-            command=lambda: self.salvar_nova_senha(dialog)
+            command=lambda: self.salvar_nova_senha()
         )
-        btn_salvar.pack(pady=5)
+        btn_salvar.pack(side="left", padx=5, pady=10, fill="x", expand=True)
         
         # Botão Cancelar
         btn_cancelar = customtkinter.CTkButton(
-            frame,
+            botoes_frame,
             text="Cancelar",
             fg_color="#6c757d",
             hover_color="#5a6268",
-            command=dialog.destroy
+            command=self.dialog.destroy
         )
-        btn_cancelar.pack(pady=5)
+        btn_cancelar.pack(side="left", padx=5, pady=10, fill="x", expand=True)
+        
+        # Configurar o grid para expandir corretamente
+        frame.grid_rowconfigure(1, weight=1)
+        frame.grid_columnconfigure(0, weight=1)
+        
+        # Focar no primeiro campo
+        self.entry_nova_senha.focus_set()
     
-    def salvar_nova_senha(self, dialog):
+    def salvar_nova_senha(self):
         nova_senha = self.entry_nova_senha.get()
         confirmar_senha = self.entry_confirmar_senha.get()
         
+        # Limpar mensagem anterior
+        self.lbl_mensagem.configure(text="", text_color="red")
+        
         if not nova_senha or not confirmar_senha:
-            self.mostrar_mensagem_erro("Por favor, preencha todos os campos.")
-            return
+            self.lbl_mensagem.configure(text="Por favor, preencha todos os campos.")
+            return False
             
         if nova_senha != confirmar_senha:
-            self.mostrar_mensagem_erro("As senhas não coincidem.")
-            return
+            self.lbl_mensagem.configure(text="As senhas não coincidem.")
+            return False
+            
+        if len(nova_senha) < 4:
+            self.lbl_mensagem.configure(text="A senha deve ter pelo menos 4 caracteres.")
+            return False
             
         try:
-            # Aqui você deve implementar a lógica para atualizar a senha no banco de dados
-            # Exemplo: self.db.atualizar_senha(self.usuario_selecionado, nova_senha)
-            dialog.destroy()
-            self.mostrar_mensagem_sucesso("Senha alterada com sucesso!")
+            # Atualiza a senha no banco de dados
+            sucesso = self.db.atualizar_senha(self.usuario_selecionado, nova_senha)
+            
+            if sucesso:
+                self.lbl_mensagem.configure(
+                    text="Senha alterada com sucesso!", 
+                    text_color="green"
+                )
+                # Fechar a janela após 1.5 segundos
+                self.dialog.after(1500, self.dialog.destroy)
+                return True
+            else:
+                self.lbl_mensagem.configure(text="Erro ao alterar a senha. Tente novamente.")
+                return False
         except Exception as e:
-            self.mostrar_mensagem_erro(f"Erro ao alterar senha: {str(e)}")
+            self.lbl_mensagem.configure(text=f"Erro ao alterar senha: {str(e)}")
+            return False
     
     def confirmar_exclusao(self):
         if not self.usuario_selecionado:
