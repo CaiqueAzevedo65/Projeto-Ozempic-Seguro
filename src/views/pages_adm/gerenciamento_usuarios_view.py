@@ -538,9 +538,72 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         self.usuario_selecionado = None
     
     def mostrar_mensagem_erro(self, mensagem):
-        # Implemente a exibição de mensagem de erro conforme sua aplicação
-        print(f"ERRO: {mensagem}")
+        """
+        Exibe uma mensagem de erro em uma janela de diálogo personalizada.
         
+        Args:
+            mensagem (str): Mensagem de erro a ser exibida
+        """
+        # Cria uma janela de diálogo personalizada
+        janela_erro = customtkinter.CTkToplevel(self)
+        janela_erro.title("Aviso")
+        janela_erro.geometry("500x200")
+        janela_erro.grab_set()  # Torna a janela modal
+        
+        # Centraliza a janela na tela
+        largura_janela = 500
+        altura_janela = 200
+        largura_tela = self.winfo_screenwidth()
+        altura_tela = self.winfo_screenheight()
+        pos_x = (largura_tela // 2) - (largura_janela // 2)
+        pos_y = (altura_tela // 2) - (altura_janela // 2)
+        janela_erro.geometry(f'{largura_janela}x{altura_janela}+{pos_x}+{pos_y}')
+        
+        # Frame principal
+        frame_principal = customtkinter.CTkFrame(janela_erro, fg_color="#f8d7da", corner_radius=10)
+        frame_principal.pack(padx=20, pady=20, fill="both", expand=True)
+        
+        # Ícone de aviso
+        icone_aviso = customtkinter.CTkLabel(
+            frame_principal, 
+            text="⚠️", 
+            font=("Arial", 24)
+        )
+        icone_aviso.pack(pady=(20, 10))
+        
+        # Mensagem de erro
+        lbl_mensagem = customtkinter.CTkLabel(
+            frame_principal,
+            text=mensagem,
+            text_color="#721c24",
+            font=("Arial", 12),
+            wraplength=400,
+            justify="center"
+        )
+        lbl_mensagem.pack(padx=20, pady=10)
+        
+        # Botão OK
+        btn_ok = customtkinter.CTkButton(
+            frame_principal,
+            text="OK",
+            fg_color="#dc3545",
+            hover_color="#c82333",
+            command=janela_erro.destroy,
+            width=100,
+            height=35,
+            corner_radius=8
+        )
+        btn_ok.pack(pady=(10, 20))
+        
+        # Foca na janela de erro
+        janela_erro.focus_set()
+        
+        # Configura o que acontece quando a janela é fechada
+        janela_erro.protocol("WM_DELETE_WINDOW", janela_erro.destroy)
+        
+        # Espera até que a janela seja fechada
+        self.wait_window(janela_erro)
+    
     def mostrar_mensagem_sucesso(self, mensagem):
         # Implemente a exibição de mensagem de sucesso conforme sua aplicação
         print(f"SUCESSO: {mensagem}")
