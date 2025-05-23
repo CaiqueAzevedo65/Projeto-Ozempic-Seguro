@@ -298,11 +298,12 @@ class TecladoVirtual(customtkinter.CTkFrame):
         super().__init__(master, fg_color="#f0f0f0", corner_radius=10, **kwargs)
         self.entrada_atual = entrada_atual
         self.comando_salvar = comando_salvar
+        self.maiusculas_ativado = False  # Estado inicial: minúsculas
         self.criar_teclado()
         
     def criar_teclado(self):
         # Layout do teclado
-        linhas = [
+        self.linhas = [
             ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '⌫'],
             ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
             ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'ç'],
@@ -311,20 +312,20 @@ class TecladoVirtual(customtkinter.CTkFrame):
         ]
         
         # Configuração do grid
-        for i, linha in enumerate(linhas):
+        for i, linha in enumerate(self.linhas):
             self.grid_rowconfigure(i, weight=1)
             
             # Configuração especial para a última linha
-            if i == len(linhas) - 1:
+            if i == len(self.linhas) - 1:
                 # Configura 8 colunas (2 para cada botão)
                 for j in range(8):
                     self.grid_columnconfigure(j, weight=1)
                 
                 # Mapeia cada botão para sua coluna e configura o columnspan
                 for tecla in linha:
-                    btn_fg_color = "#2ecc71" if tecla == 'SALVAR' else "#ffffff"
+                    btn_fg_color = "#2ecc71" if tecla == 'SALVAR' else "#f0f0f0" if tecla == 'MAIÚSCULAS' and self.maiusculas_ativado else "#ffffff"
                     btn_text_color = "white" if tecla == 'SALVAR' else "#000000"
-                    hover_color = "#27ae60" if tecla == 'SALVAR' else "#e0e0e0"
+                    hover_color = "#27ae60" if tecla == 'SALVAR' else "#d5d5d5" if tecla == 'MAIÚSCULAS' else "#e0e0e0"
                     
                     btn = customtkinter.CTkButton(
                         self,
@@ -342,6 +343,7 @@ class TecladoVirtual(customtkinter.CTkFrame):
                     if tecla == 'MAIÚSCULAS':
                         columnspan = 2
                         column = 0
+                        self.btn_maiusculas = btn  # Referência ao botão de maiúsculas
                     elif tecla == 'LIMPAR':
                         columnspan = 2
                         column = 2
@@ -362,12 +364,15 @@ class TecladoVirtual(customtkinter.CTkFrame):
                     )
             else:
                 # Configuração normal para as outras linhas
-                for j, tecla in enumerate(linha):
+                for j, tecla in enumerate(self.linhas[i]):
                     self.grid_columnconfigure(j, weight=1, uniform="teclado")
+                    
+                    # Aplica maiúsculas se estiver ativado
+                    tecla_exibida = tecla.upper() if self.maiusculas_ativado and tecla not in ['⌫', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', ',', '.'] else tecla
                     
                     btn = customtkinter.CTkButton(
                         self,
-                        text=tecla,
+                        text=tecla_exibida,
                         height=40,
                         font=("Arial", 12, "bold"),
                         fg_color="#ffffff",
@@ -400,9 +405,33 @@ class TecladoVirtual(customtkinter.CTkFrame):
         elif tecla == 'SALVAR' and self.comando_salvar:
             self.comando_salvar()
         elif tecla == 'MAIÚSCULAS':
-            pass
+            # Alterna entre maiúsculas e minúsculas
+            self.maiusculas_ativado = not self.maiusculas_ativado
+            
+            # Atualiza a aparência do botão de maiúsculas
+            if hasattr(self, 'btn_maiusculas'):
+                self.btn_maiusculas.configure(
+                    fg_color="#f0f0f0" if self.maiusculas_ativado else "#ffffff",
+                    hover_color="#d5d5d5" if self.maiusculas_ativado else "#e0e0e0"
+                )
+            
+            # Reconstrói o teclado para atualizar as letras
+            for widget in self.winfo_children():
+                widget.destroy()
+            self.criar_teclado()
         else:
-            self.entrada_atual.insert('end', tecla)
+            # Aplica maiúsculas se estiver ativado
+            tecla_inserida = tecla.upper() if self.maiusculas_ativado and tecla.isalpha() else tecla
+            self.entrada_atual.insert('end', tecla_inserida)
+            
+            # Desativa o modo maiúsculas após inserir uma letra (comportamento comum em teclados)
+            if self.maiusculas_ativado and tecla.isalpha():
+                self.maiusculas_ativado = False
+                if hasattr(self, 'btn_maiusculas'):
+                    self.btn_maiusculas.configure(
+                        fg_color="#ffffff",
+                        hover_color="#e0e0e0"
+                    )
             
     def definir_entrada(self, entrada):
         self.entrada_atual = entrada

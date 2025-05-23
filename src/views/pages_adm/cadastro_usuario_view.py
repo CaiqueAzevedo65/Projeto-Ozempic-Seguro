@@ -9,6 +9,10 @@ class CadastroUsuarioFrame(customtkinter.CTkFrame):
         self.auth_manager = AuthManager()
         super().__init__(master, fg_color="#3B6A7D", *args, **kwargs)
         self.pack(fill="both", expand=True)
+        
+        # Configuração da validação de entrada
+        self.vcmd = (self.register(self.validar_entrada_numerica), '%P')
+        
         self.criar_topo()
         self.criar_interface_cadastro()
         self.criar_botao_voltar()
@@ -17,17 +21,23 @@ class CadastroUsuarioFrame(customtkinter.CTkFrame):
         # Variável para controlar qual campo está ativo
         self.campo_entrada_atual = None
 
+    def validar_entrada_numerica(self, valor):
+        """Valida se a entrada contém apenas números"""
+        if valor == "":  # Permite campo vazio para poder apagar
+            return True
+        return valor.isdigit()
+
     def criar_topo(self):
         Header(self, "Cadastro de Usuário")
 
     def criar_interface_cadastro(self):
         # Frame principal que contém o formulário
         frame_principal = customtkinter.CTkFrame(self, fg_color="transparent")
-        frame_principal.pack(side="left", fill="both", expand=True, padx=20, pady=20)
+        frame_principal.pack(side="left", fill="both", expand=True, padx=20, pady=(10, 20))
         
         # Frame para o formulário de cadastro
         frame_cadastro = customtkinter.CTkFrame(frame_principal, fg_color="#3B6A7D")
-        frame_cadastro.pack(pady=20, padx=20, fill="x")
+        frame_cadastro.pack(pady=(0, 20), padx=20, fill="x")
         
         # Função para definir o campo de entrada atual quando clicado
         def definir_campo_atual(entry):
@@ -35,51 +45,82 @@ class CadastroUsuarioFrame(customtkinter.CTkFrame):
             if hasattr(self, 'teclado'):
                 self.teclado.definir_entrada(entry)
         
-        # Campos de entrada
-        campos = [
-            ("Nome", "nome_entry"),
-            ("Usuário", "usuario_entry"),
-            ("Senha", "senha_entry")
-        ]
-        
-        for label, attr_name in campos:
-            customtkinter.CTkLabel(
-                frame_cadastro, 
-                text=label, 
-                font=("Arial", 16, "bold"), 
-                text_color="white"
-            ).pack(anchor="w", pady=(10, 5), padx=20)
-            
-            # Configuração especial para o campo de senha
-            if attr_name == "senha_entry":
-                entry = customtkinter.CTkEntry(
-                    frame_cadastro, 
-                    width=300, 
-                    height=40,
-                    font=("Arial", 14),
-                    show="•"  # Mostra bolinhas no lugar dos caracteres
-                )
-            else:
-                entry = customtkinter.CTkEntry(
-                    frame_cadastro, 
-                    width=300, 
-                    height=40,
-                    font=("Arial", 14)
-                )
-            
-            # Configura o evento de clique para definir o campo atual
-            entry.bind("<Button-1>", lambda e, entry=entry: definir_campo_atual(entry))
-            
-            entry.pack(pady=(0, 10), padx=20)
-            setattr(self, attr_name, entry)
-        
-        # Tipo de usuário
+        # Campo de Nome (aceita letras)
         customtkinter.CTkLabel(
             frame_cadastro, 
-            text="Tipo de Usuário", 
+            text="Nome", 
             font=("Arial", 16, "bold"), 
             text_color="white"
         ).pack(anchor="w", pady=(10, 5), padx=20)
+        
+        self.nome_entry = customtkinter.CTkEntry(
+            frame_cadastro, 
+            width=300, 
+            height=40,
+            font=("Arial", 14)
+        )
+        self.nome_entry.pack(pady=(0, 10), padx=20)
+        self.nome_entry.bind("<Button-1>", lambda e: definir_campo_atual(self.nome_entry))
+        
+        # Campo de Usuário (aceita apenas números)
+        customtkinter.CTkLabel(
+            frame_cadastro, 
+            text="Usuário", 
+            font=("Arial", 16, "bold"), 
+            text_color="white"
+        ).pack(anchor="w", pady=(10, 5), padx=20)
+        
+        self.usuario_entry = customtkinter.CTkEntry(
+            frame_cadastro, 
+            width=300, 
+            height=40,
+            font=("Arial", 14),
+            validate="key",
+            validatecommand=self.vcmd
+        )
+        self.usuario_entry.pack(pady=(0, 10), padx=20)
+        self.usuario_entry.bind("<Button-1>", lambda e: definir_campo_atual(self.usuario_entry))
+        
+        # Campo de senha com mensagem de erro abaixo
+        customtkinter.CTkLabel(
+            frame_cadastro, 
+            text="Senha", 
+            font=("Arial", 16, "bold"), 
+            text_color="white"
+        ).pack(anchor="w", pady=(10, 5), padx=20)
+        
+        self.senha_entry = customtkinter.CTkEntry(
+            frame_cadastro, 
+            width=300, 
+            height=40,
+            font=("Arial", 14),
+            show="•",  # Mostra bolinhas no lugar dos caracteres
+            validate="key",
+            validatecommand=self.vcmd
+        )
+        self.senha_entry.pack(pady=(0, 5), padx=20)
+        self.senha_entry.bind("<Button-1>", lambda e: definir_campo_atual(self.senha_entry))
+        
+        # Label para mensagem de erro (inicialmente vazia)
+        self.lbl_erro_senha = customtkinter.CTkLabel(
+            frame_cadastro,
+            text="",
+            text_color="red",
+            font=("Arial", 12, "bold"),
+            fg_color="transparent"
+        )
+        self.lbl_erro_senha.pack(anchor="w", padx=20, pady=(0, 5))  # Reduzido o padding vertical inferior
+        
+        # Tipo de usuário
+        tipo_usuario_frame = customtkinter.CTkFrame(frame_cadastro, fg_color="transparent")
+        tipo_usuario_frame.pack(anchor="w", fill="x", padx=20, pady=(0, 10))  # Ajustado o padding vertical
+        
+        customtkinter.CTkLabel(
+            tipo_usuario_frame, 
+            text="Tipo de Usuário", 
+            font=("Arial", 16, "bold"), 
+            text_color="white"
+        ).pack(anchor="w", pady=(0, 5), padx=20)
         
         self.tipo_var = customtkinter.StringVar(value="vendedor")
         tipos_usuarios = [
@@ -91,14 +132,14 @@ class CadastroUsuarioFrame(customtkinter.CTkFrame):
         
         for texto, valor in tipos_usuarios:
             customtkinter.CTkRadioButton(
-                frame_cadastro, 
+                tipo_usuario_frame, 
                 text=texto, 
                 variable=self.tipo_var, 
                 value=valor, 
                 text_color="white"
             ).pack(anchor="w", padx=20, pady=2)
         
-        # Mensagem de status
+        # Mensagem de status (para mensagens de sucesso/informação)
         self.mensagem_label = customtkinter.CTkLabel(
             frame_cadastro, 
             text="", 
@@ -146,8 +187,26 @@ class CadastroUsuarioFrame(customtkinter.CTkFrame):
         senha = self.senha_entry.get()
         tipo = self.tipo_var.get()
         
+        # Limpa mensagens de erro anteriores
+        self.lbl_erro_senha.configure(text="")
+        
+        # Validação dos campos obrigatórios
         if not all([nome, usuario, senha]):
             self.mostrar_mensagem("Preencha todos os campos!", "erro")
+            return
+            
+        # Validação do tamanho da senha
+        if len(senha) < 4:
+            self.mostrar_mensagem("A senha deve ter no mínimo 4 caracteres!", "erro")
+            return
+            
+        # Validação de campos numéricos
+        if not usuario.isdigit():
+            self.mostrar_mensagem("O usuário deve conter apenas números!", "erro")
+            return
+            
+        if not senha.isdigit():
+            self.mostrar_mensagem("A senha deve conter apenas números!", "erro")
             return
         
         # Chama o método de cadastro do AuthManager
@@ -170,8 +229,16 @@ class CadastroUsuarioFrame(customtkinter.CTkFrame):
             "sucesso": "green",
             "info": "yellow"
         }
-        self.mensagem_label.configure(text=mensagem, text_color=cores.get(tipo, "white"))
-        self.after(5000, lambda: self.mensagem_label.configure(text=""))
+        
+        if tipo == "erro":
+            # Exibe mensagens de erro abaixo do campo de senha
+            self.lbl_erro_senha.configure(text=mensagem, text_color=cores[tipo])
+            # Remove a mensagem após 5 segundos
+            self.after(5000, lambda: self.lbl_erro_senha.configure(text=""))
+        else:
+            # Para outros tipos de mensagem, usa o label normal
+            self.mensagem_label.configure(text=mensagem, text_color=cores.get(tipo, "white"))
+            self.after(5000, lambda: self.mensagem_label.configure(text=""))
     
     def limpar_campos(self):
         self.nome_entry.delete(0, tk.END)
