@@ -24,12 +24,22 @@ class LoginFrame(customtkinter.CTkFrame):
     def criar_interface_login(self):
         frame_login = customtkinter.CTkFrame(self, fg_color="#346172")
         frame_login.place(x=40, y=100)
+        
+        # Campo de usuário
         customtkinter.CTkLabel(frame_login, text="Usuário", font=("Arial", 16, "bold"), text_color="white").pack(anchor="w", pady=(0, 5))
         self.usuario_entry = customtkinter.CTkEntry(frame_login, width=300, height=40)
         self.usuario_entry.pack(pady=10)
+        self.usuario_entry.bind("<Button-1>", lambda e: self.definir_campo_ativo(self.usuario_entry))
+        
+        # Campo de senha
         customtkinter.CTkLabel(frame_login, text="Senha", font=("Arial", 16, "bold"), text_color="white").pack(anchor="w", pady=(20, 5))
         self.senha_entry = customtkinter.CTkEntry(frame_login, width=300, height=40, show="*")
         self.senha_entry.pack(pady=10)
+        self.senha_entry.bind("<Button-1>", lambda e: self.definir_campo_ativo(self.senha_entry))
+        
+        # Campo ativo por padrão
+        self.campo_ativo = self.usuario_entry
+        
         try:
             digital_img = ImageCache.get_digital()
             digital_label = customtkinter.CTkLabel(frame_login, image=digital_img, text="", bg_color="#2F6073")
@@ -87,12 +97,22 @@ class LoginFrame(customtkinter.CTkFrame):
         self.pack_forget()
         PainelAdministradorFrame(self.master, finalizar_sessao_callback=self.show_iniciar_callback)
 
+    def definir_campo_ativo(self, campo):
+        """Define qual campo está ativo para receber entrada do teclado"""
+        self.campo_ativo = campo
+
     def tecla(self, valor):
         if valor == "Apagar":
-            self.senha_entry.delete(len(self.senha_entry.get()) - 1, tk.END)
+            if self.campo_ativo == self.usuario_entry:
+                self.usuario_entry.delete(len(self.usuario_entry.get()) - 1, tk.END)
+            else:
+                self.senha_entry.delete(len(self.senha_entry.get()) - 1, tk.END)
         elif valor == "Cancelar":
-            self.senha_entry.delete(0, tk.END)
+            if self.campo_ativo == self.usuario_entry:
+                self.usuario_entry.delete(0, tk.END)
+            else:
+                self.senha_entry.delete(0, tk.END)
         elif valor == "Confirmar":
             self.verificar_login()
         else:
-            self.senha_entry.insert(tk.END, valor) 
+            self.campo_ativo.insert(tk.END, valor) 

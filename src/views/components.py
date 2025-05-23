@@ -308,7 +308,7 @@ class TecladoVirtual(customtkinter.CTkFrame):
             ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
             ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'ç'],
             ['z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', ' '],
-            ['MAIÚSCULAS', 'LIMPAR', 'APAGAR', 'SALVAR']
+            ['MAIÚSCULAS', 'LIMPAR', 'SALVAR']  # Removido o botão APAGAR
         ]
         
         # Configuração do grid
@@ -317,8 +317,8 @@ class TecladoVirtual(customtkinter.CTkFrame):
             
             # Configuração especial para a última linha
             if i == len(self.linhas) - 1:
-                # Configura 8 colunas (2 para cada botão)
-                for j in range(8):
+                # Configura 6 colunas (2 para cada botão)
+                for j in range(6):
                     self.grid_columnconfigure(j, weight=1)
                 
                 # Mapeia cada botão para sua coluna e configura o columnspan
@@ -347,12 +347,9 @@ class TecladoVirtual(customtkinter.CTkFrame):
                     elif tecla == 'LIMPAR':
                         columnspan = 2
                         column = 2
-                    elif tecla == 'APAGAR':
-                        columnspan = 2
-                        column = 4
                     elif tecla == 'SALVAR':
                         columnspan = 2
-                        column = 6
+                        column = 4
                     
                     btn.grid(
                         row=i,
@@ -399,8 +396,6 @@ class TecladoVirtual(customtkinter.CTkFrame):
             self.entrada_atual.delete(0, 'end')
             self.entrada_atual.insert(0, texto_atual[:-1])
         elif tecla == 'LIMPAR':
-            self.entrada_atual.delete(0, 'end')
-        elif tecla == 'APAGAR':
             self.entrada_atual.delete(0, 'end')
         elif tecla == 'SALVAR' and self.comando_salvar:
             self.comando_salvar()
