@@ -184,39 +184,105 @@ class PastaButton:
         
         if self.tipo_usuario == 'administrador':
             # Administrador pode tanto abrir quanto fechar
-            novo_estado = not estado_atual  # Inverte o estado atual
-            if novo_estado:
-                self.state_manager.abrir_pasta(self.pasta_id, self.tipo_usuario)
-                mensagem = f"Pasta {self.pasta_id} aberta com sucesso!"
+            if not estado_atual:  # Se a pasta estiver fechada, abre com confirmação
+                self._abrir_pasta_com_confirmacao()
             else:
-                self.state_manager.fechar_pasta(self.pasta_id, self.tipo_usuario)
-                mensagem = f"Pasta {self.pasta_id} fechada com sucesso!"
-            
-            messagebox.showinfo("Sucesso", mensagem)
+                sucesso, mensagem = self.state_manager.fechar_pasta(self.pasta_id, self.tipo_usuario)
+                messagebox.showinfo("Sucesso" if sucesso else "Aviso", mensagem)
+                if sucesso:
+                    self.atualizar_imagem()
         
         elif self.tipo_usuario == 'vendedor':
             # Vendedor só pode abrir pastas fechadas
             if not estado_atual:
-                self.state_manager.abrir_pasta(self.pasta_id, self.tipo_usuario)
-                messagebox.showinfo("Sucesso", f"Pasta {self.pasta_id} aberta com sucesso!")
+                self._abrir_pasta_com_confirmacao()
             else:
                 messagebox.showwarning("Aviso", "Você não tem permissão para fechar pastas")
-                return
         
         elif self.tipo_usuario == 'repositor':
             # Repositório só pode fechar pastas abertas
             if estado_atual:
-                self.state_manager.fechar_pasta(self.pasta_id, self.tipo_usuario)
-                messagebox.showinfo("Sucesso", f"Pasta {self.pasta_id} fechada com sucesso!")
+                sucesso, mensagem = self.state_manager.fechar_pasta(self.pasta_id, self.tipo_usuario)
+                messagebox.showinfo("Sucesso" if sucesso else "Aviso", mensagem)
+                if sucesso:
+                    self.atualizar_imagem()
             else:
                 messagebox.showwarning("Aviso", "Você não tem permissão para abrir pastas")
-                return
         else:
             messagebox.showerror("Erro", "Tipo de usuário desconhecido")
-            return
+    
+    def _abrir_pasta_com_confirmacao(self):
+        """Mostra uma janela de confirmação antes de abrir a pasta"""
+        # Cria uma janela de diálogo personalizada
+        dialog = customtkinter.CTkToplevel()
+        dialog.title("Confirmar Abertura")
+        dialog.geometry("500x250")  # Aumentei a largura e altura
+        dialog.resizable(False, False)  # Impede redimensionamento
+        dialog.grab_set()  # Torna a janela modal
         
-        # Atualiza a imagem do botão
-        self.atualizar_imagem()
+        # Centraliza a janela na tela
+        dialog.update_idletasks()
+        width = dialog.winfo_width()
+        height = dialog.winfo_height()
+        x = (dialog.winfo_screenwidth() // 2) - (width // 2)
+        y = (dialog.winfo_screenheight() // 2) - (height // 2)
+        dialog.geometry(f'{width}x{height}+{x}+{y-50}')  # Ajuste vertical
+        
+        # Frame principal para melhor organização
+        main_frame = customtkinter.CTkFrame(dialog, fg_color="transparent")
+        main_frame.pack(expand=True, fill="both", padx=20, pady=20)
+        
+        # Adiciona o texto de aviso
+        aviso = customtkinter.CTkLabel(
+            main_frame,
+            text=f"Deseja realmente abrir a pasta {self.pasta_id}?\n\n"
+                 "Atenção: O sistema será bloqueado por 5 minutos após a abertura.",
+            font=("Arial", 16, "bold"),  # Fonte maior
+            wraplength=450,  # Largura maior para o texto
+            justify="center"
+        )
+        aviso.pack(pady=(20, 30), padx=10, expand=True, fill="both")
+        
+        # Frame para os botões
+        botoes_frame = customtkinter.CTkFrame(main_frame, fg_color="transparent")
+        botoes_frame.pack(pady=(10, 0))
+        
+        # Botão de confirmar
+        btn_confirmar = customtkinter.CTkButton(
+            botoes_frame,
+            text="Confirmar",
+            command=lambda: self._confirmar_abertura(dialog),
+            fg_color="#4CAF50",
+            hover_color="#45a049",
+            width=140,
+            height=40,
+            font=("Arial", 14, "bold")
+        )
+        btn_confirmar.pack(side="left", padx=15)
+        
+        # Botão de cancelar
+        btn_cancelar = customtkinter.CTkButton(
+            botoes_frame,
+            text="Cancelar",
+            command=dialog.destroy,
+            fg_color="#f44336",
+            hover_color="#d32f2f",
+            width=140,
+            height=40,
+            font=("Arial", 14, "bold")
+        )
+        btn_cancelar.pack(side="right", padx=15)
+        
+        # Focar no botão de cancelar por padrão
+        btn_cancelar.focus_set()
+    
+    def _confirmar_abertura(self, dialog):
+        """Confirma a abertura da pasta e fecha o diálogo"""
+        dialog.destroy()
+        sucesso, mensagem = self.state_manager.abrir_pasta(self.pasta_id, self.tipo_usuario)
+        messagebox.showinfo("Sucesso" if sucesso else "Aviso", mensagem)
+        if sucesso:
+            self.atualizar_imagem()
 
     def mostrar_historico(self):
         """Mostra o histórico de alterações da pasta"""
@@ -304,68 +370,164 @@ class TecladoVirtual(customtkinter.CTkFrame):
     def criar_teclado(self):
         # Layout do teclado
         self.linhas = [
-            ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '⌫'],
+            ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
             ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
             ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'ç'],
-            ['z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', ' '],
-            ['MAIÚSCULAS', 'LIMPAR', 'SALVAR']  # Removido o botão APAGAR
+            ['z', 'x', 'c', 'v', 'b', 'n', 'm'],  # Letras normais
+            ['MAIÚSCULAS', 'LIMPAR', 'ESPAÇO']  # Última linha
         ]
         
         # Configuração do grid
         for i, linha in enumerate(self.linhas):
             self.grid_rowconfigure(i, weight=1)
             
-            # Configuração especial para a última linha
-            if i == len(self.linhas) - 1:
-                # Configura 6 colunas (2 para cada botão)
-                for j in range(6):
-                    self.grid_columnconfigure(j, weight=1)
-                
-                # Mapeia cada botão para sua coluna e configura o columnspan
-                for tecla in linha:
-                    btn_fg_color = "#2ecc71" if tecla == 'SALVAR' else "#f0f0f0" if tecla == 'MAIÚSCULAS' and self.maiusculas_ativado else "#ffffff"
-                    btn_text_color = "white" if tecla == 'SALVAR' else "#000000"
-                    hover_color = "#27ae60" if tecla == 'SALVAR' else "#d5d5d5" if tecla == 'MAIÚSCULAS' else "#e0e0e0"
-                    
+            # Configuração para a penúltima linha (onde adicionaremos SALVAR e ⌫)
+            if i == len(self.linhas) - 2:  # Penúltima linha
+                # Primeiro, adiciona as letras normais
+                for j, tecla in enumerate(linha):
                     btn = customtkinter.CTkButton(
                         self,
-                        text=tecla,
+                        text=tecla.upper() if self.maiusculas_ativado and tecla.isalpha() else tecla,
                         height=40,
                         font=("Arial", 12, "bold"),
-                        fg_color=btn_fg_color,
-                        text_color=btn_text_color,
-                        hover_color=hover_color,
+                        fg_color="#ffffff",
+                        text_color="#000000",
+                        hover_color="#e0e0e0",
                         corner_radius=5,
                         command=lambda t=tecla: self.tecla_pressionada(t)
                     )
-                    
-                    # Ajusta o columnspan e a posição baseado no botão
-                    if tecla == 'MAIÚSCULAS':
-                        columnspan = 2
-                        column = 0
-                        self.btn_maiusculas = btn  # Referência ao botão de maiúsculas
-                    elif tecla == 'LIMPAR':
-                        columnspan = 2
-                        column = 2
-                    elif tecla == 'SALVAR':
-                        columnspan = 2
-                        column = 4
-                    
                     btn.grid(
                         row=i,
-                        column=column,
-                        columnspan=columnspan,
+                        column=j,
                         padx=2,
                         pady=2,
                         sticky="nsew"
                     )
+                
+                # Adiciona o botão SALVAR (colunas 7 e 8)
+                btn_salvar = customtkinter.CTkButton(
+                    self,
+                    text="SALVAR",
+                    height=40,
+                    font=("Arial", 12, "bold"),
+                    fg_color="#2ecc71",
+                    text_color="white",
+                    hover_color="#27ae60",
+                    corner_radius=5,
+                    command=lambda: self.tecla_pressionada('SALVAR')
+                )
+                btn_salvar.grid(
+                    row=i,
+                    column=7,
+                    columnspan=2,
+                    padx=2,
+                    pady=2,
+                    sticky="nsew"
+                )
+                
+                # Adiciona o botão ⌫ (coluna 9)
+                btn_apagar = customtkinter.CTkButton(
+                    self,
+                    text="⌫",
+                    height=40,
+                    font=("Arial", 12, "bold"),
+                    fg_color="#e74c3c",
+                    text_color="white",
+                    hover_color="#c0392b",
+                    corner_radius=5,
+                    command=lambda: self.tecla_pressionada('⌫')
+                )
+                btn_apagar.grid(
+                    row=i,
+                    column=9,
+                    padx=2,
+                    pady=2,
+                    sticky="nsew"
+                )
+                
+                # Configura as colunas para a penúltima linha
+                for j in range(10):
+                    self.grid_columnconfigure(j, weight=1)
+            
+            # Configuração para a última linha (botões de função)
+            elif i == len(self.linhas) - 1:
+                # Configura 10 colunas no total
+                for j in range(10):
+                    self.grid_columnconfigure(j, weight=1)
+                
+                # Botão MAIÚSCULAS (colunas 0-1)
+                btn_maiusculas = customtkinter.CTkButton(
+                    self,
+                    text="MAIÚSCULAS",
+                    height=40,
+                    font=("Arial", 12, "bold"),
+                    fg_color="#f0f0f0" if self.maiusculas_ativado else "#ffffff",
+                    text_color="#000000",
+                    hover_color="#d5d5d5" if self.maiusculas_ativado else "#e0e0e0",
+                    corner_radius=5,
+                    command=lambda: self.tecla_pressionada('MAIÚSCULAS')
+                )
+                btn_maiusculas.grid(
+                    row=i,
+                    column=0,
+                    columnspan=2,
+                    padx=2,
+                    pady=2,
+                    sticky="nsew"
+                )
+                self.btn_maiusculas = btn_maiusculas
+                
+                # Botão LIMPAR (colunas 2-3)
+                btn_limpar = customtkinter.CTkButton(
+                    self,
+                    text="LIMPAR",
+                    height=40,
+                    font=("Arial", 12, "bold"),
+                    fg_color="#ffffff",
+                    text_color="#000000",
+                    hover_color="#e0e0e0",
+                    corner_radius=5,
+                    command=lambda: self.tecla_pressionada('LIMPAR')
+                )
+                btn_limpar.grid(
+                    row=i,
+                    column=2,
+                    columnspan=2,
+                    padx=2,
+                    pady=2,
+                    sticky="nsew"
+                )
+                
+                # Botão ESPAÇO (colunas 4-9)
+                btn_espaco = customtkinter.CTkButton(
+                    self,
+                    text="______",
+                    height=40,
+                    font=("Arial", 12, "bold"),
+                    fg_color="#ffffff",
+                    text_color="#000000",
+                    hover_color="#e0e0e0",
+                    corner_radius=5,
+                    command=lambda: self.tecla_pressionada(' ')
+                )
+                btn_espaco.grid(
+                    row=i,
+                    column=4,
+                    columnspan=6,  # Ocupa 6 colunas (4 a 9)
+                    padx=2,
+                    pady=2,
+                    sticky="nsew"
+                )
+            
+            # Configuração para as linhas superiores (teclas normais)
             else:
-                # Configuração normal para as outras linhas
-                for j, tecla in enumerate(self.linhas[i]):
-                    self.grid_columnconfigure(j, weight=1, uniform="teclado")
-                    
+                # Configura 10 colunas (uma para cada tecla)
+                for j in range(10):
+                    self.grid_columnconfigure(j, weight=1)
+                
+                for j, tecla in enumerate(linha):
                     # Aplica maiúsculas se estiver ativado
-                    tecla_exibida = tecla.upper() if self.maiusculas_ativado and tecla not in ['⌫', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', ',', '.'] else tecla
+                    tecla_exibida = tecla.upper() if self.maiusculas_ativado and tecla not in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'] else tecla
                     
                     btn = customtkinter.CTkButton(
                         self,

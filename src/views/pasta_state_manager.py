@@ -1,4 +1,5 @@
 from src.data.database import DatabaseManager
+from src.session_manager import SessionManager
 
 class PastaStateManager:
     _instance = None
@@ -8,6 +9,7 @@ class PastaStateManager:
         if cls._instance is None:
             cls._instance = super(PastaStateManager, cls).__new__(cls)
             cls._db = DatabaseManager()
+            cls._session_manager = SessionManager.get_instance()
         return cls._instance
 
     @classmethod
@@ -29,8 +31,23 @@ class PastaStateManager:
         return self._db.set_estado_pasta(pasta_id, False, usuario_tipo)
 
     def abrir_pasta(self, pasta_id, usuario_tipo):
-        """Abre uma pasta (usado pelo Vendedor)"""
-        return self._db.set_estado_pasta(pasta_id, True, usuario_tipo)
+        """Abre uma pasta (usado pelo Vendedor e Administrador)"""
+        # Verifica se o sistema está bloqueado
+        if usuario_tipo in ['vendedor', 'administrador'] and self._session_manager.is_blocked():
+            tempo_restante = self._session_manager.get_remaining_time()
+            minutos = tempo_restante // 60
+            segundos = tempo_restante % 60
+            return False, f"Sistema bloqueado por {minutos}:{segundos:02d} minutos após a abertura da pasta."
+        
+        try:
+            # Se não estiver bloqueado, abre a pasta e bloqueia o sistema por 5 minutos
+            resultado = self._db.set_estado_pasta(pasta_id, True, usuario_tipo)
+            if usuario_tipo in ['vendedor', 'administrador']:
+                self._session_manager.block_for_minutes(5)
+                return True, f"Pasta {pasta_id} aberta com sucesso! O sistema será bloqueado por 5 minutos."
+            return resultado, f"Pasta {pasta_id} aberta com sucesso!"
+        except Exception as e:
+            return False, f"Erro ao abrir a pasta: {str(e)}"
     
     def get_historico(self, pasta_id, limite=10):
         """Obtém o histórico de alterações de uma pasta"""

@@ -145,42 +145,46 @@ class DatabaseManager:
     
     def set_estado_pasta(self, numero_pasta, estado, usuario_tipo):
         """Define o estado de uma pasta e registra no histórico"""
-        # Verifica se a pasta já existe
-        self.cursor.execute(
-            'SELECT id, esta_aberta FROM pastas WHERE numero_pasta = ?',
-            (numero_pasta,)
-        )
-        pasta = self.cursor.fetchone()
-        
-        # Se a pasta não existe, insere um novo registro
-        if not pasta:
+        try:
+            # Verifica se a pasta já existe
             self.cursor.execute(
-                'INSERT INTO pastas (numero_pasta, esta_aberta) VALUES (?, ?)',
-                (numero_pasta, estado)
+                'SELECT id, esta_aberta FROM pastas WHERE numero_pasta = ?',
+                (numero_pasta,)
             )
-            pasta_id = self.cursor.lastrowid
-            acao = 'aberta' if estado else 'fechada'
-        else:
-            pasta_id = pasta[0]
-            estado_anterior = bool(pasta[1])
-            acao = 'aberta' if estado and not estado_anterior else 'fechada' if not estado and estado_anterior else None
+            pasta = self.cursor.fetchone()
             
-            # Atualiza apenas se o estado for diferente
+            # Se a pasta não existe, insere um novo registro
+            if not pasta:
+                self.cursor.execute(
+                    'INSERT INTO pastas (numero_pasta, esta_aberta) VALUES (?, ?)',
+                    (numero_pasta, estado)
+                )
+                pasta_id = self.cursor.lastrowid
+                acao = 'aberta' if estado else 'fechada'
+            else:
+                pasta_id = pasta[0]
+                estado_anterior = bool(pasta[1])
+                acao = 'aberta' if estado and not estado_anterior else 'fechada' if not estado and estado_anterior else None
+                
+                # Atualiza apenas se o estado for diferente
+                if acao:
+                    self.cursor.execute(
+                        'UPDATE pastas SET esta_aberta = ?, ultima_atualizacao = CURRENT_TIMESTAMP WHERE id = ?',
+                        (estado, pasta_id)
+                    )
+            
+            # Registra no histórico se houve mudança de estado
             if acao:
                 self.cursor.execute(
-                    'UPDATE pastas SET esta_aberta = ?, ultima_atualizacao = CURRENT_TIMESTAMP WHERE id = ?',
-                    (estado, pasta_id)
+                    'INSERT INTO historico_pastas (pasta_id, acao, usuario_tipo) VALUES (?, ?, ?)',
+                    (pasta_id, acao, usuario_tipo)
                 )
-        
-        # Registra no histórico se houve mudança de estado
-        if acao:
-            self.cursor.execute(
-                'INSERT INTO historico_pastas (pasta_id, acao, usuario_tipo) VALUES (?, ?, ?)',
-                (pasta_id, acao, usuario_tipo)
-            )
-        
-        self.conn.commit()
-        return estado
+            
+            self.conn.commit()
+            return True, f"Pasta {numero_pasta} {acao} com sucesso!"
+        except Exception as e:
+            self.conn.rollback()
+            return False, f"Erro ao atualizar o estado da pasta: {str(e)}"
     
     def get_historico_pasta(self, numero_pasta, limite=10):
         """Obtém o histórico de alterações de uma pasta"""
