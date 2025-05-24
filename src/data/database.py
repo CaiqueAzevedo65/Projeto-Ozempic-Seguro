@@ -265,6 +265,42 @@ class DatabaseManager:
         
         return self.cursor.fetchall()
     
+    def get_todo_historico_paginado(self, offset=0, limit=20):
+        """
+        Obtém o histórico de todas as pastas com paginação
+        
+        Args:
+            offset (int): Número de registros a pular
+            limit (int): Número máximo de registros a retornar
+            
+        Returns:
+            list: Lista de tuplas (data_hora, numero_pasta, acao, usuario)
+        """
+        self.cursor.execute('''
+            SELECT 
+                strftime('%d/%m/%Y %H:%M:%S', h.data_hora) as data_hora, 
+                p.numero_pasta, 
+                h.acao, 
+                COALESCE(u.nome_completo, u.username, 'Sistema') as usuario
+            FROM historico_pastas h
+            JOIN pastas p ON h.pasta_id = p.id
+            LEFT JOIN usuarios u ON h.usuario_id = u.id
+            ORDER BY h.data_hora DESC
+            LIMIT ? OFFSET ?
+        ''', (limit, offset))
+        
+        return self.cursor.fetchall()
+    
+    def get_total_todo_historico(self):
+        """
+        Retorna o número total de registros de histórico de todas as pastas
+        
+        Returns:
+            int: Número total de registros
+        """
+        self.cursor.execute('SELECT COUNT(*) FROM historico_pastas')
+        return self.cursor.fetchone()[0]
+    
     def get_usuarios(self):
         """Obtém a lista de todos os usuários"""
         self.cursor.execute('''

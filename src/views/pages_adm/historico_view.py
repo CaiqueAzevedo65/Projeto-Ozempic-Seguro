@@ -8,6 +8,8 @@ class HistoricoView(customtkinter.CTkFrame):
         self.voltar_callback = voltar_callback
         self.tipo_usuario = tipo_usuario
         self.state_manager = PastaStateManager.get_instance()
+        self.current_page = 1
+        self.items_per_page = 20
         
         self.pack(fill="both", expand=True)
         self.criar_interface()
@@ -30,6 +32,37 @@ class HistoricoView(customtkinter.CTkFrame):
         
         # Cabeçalhos da tabela
         self.criar_cabecalhos()
+        
+        # Frame para os controles de paginação
+        self.paginacao_frame = customtkinter.CTkFrame(
+            self.content_frame,
+            fg_color="transparent"
+        )
+        self.paginacao_frame.pack(fill="x", pady=(10, 0))
+        
+        # Botões de navegação
+        self.btn_anterior = customtkinter.CTkButton(
+            self.paginacao_frame,
+            text="Anterior",
+            command=self.pagina_anterior,
+            width=100,
+            state="disabled"
+        )
+        self.btn_anterior.pack(side="left", padx=5)
+        
+        self.lbl_pagina = customtkinter.CTkLabel(
+            self.paginacao_frame,
+            text="Página 1"
+        )
+        self.lbl_pagina.pack(side="left", padx=5)
+        
+        self.btn_proximo = customtkinter.CTkButton(
+            self.paginacao_frame,
+            text="Próximo",
+            command=self.proxima_pagina,
+            width=100
+        )
+        self.btn_proximo.pack(side="left", padx=5)
         
         # Linhas da tabela
         self.carregar_dados()
@@ -77,6 +110,11 @@ class HistoricoView(customtkinter.CTkFrame):
             cabecalho_frame.columnconfigure(i, weight=int(largura * 100))
     
     def carregar_dados(self):
+        # Limpa a tabela atual
+        for widget in self.tabela_frame.winfo_children():
+            if widget != self.tabela_frame.winfo_children()[0]:  # Mantém o cabeçalho
+                widget.destroy()
+        
         # Frame rolável para os itens
         scrollable_frame = customtkinter.CTkScrollableFrame(
             self.tabela_frame,
@@ -85,8 +123,15 @@ class HistoricoView(customtkinter.CTkFrame):
         scrollable_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
         
         try:
-            # Obter histórico do gerenciador de estado
-            historico = self.state_manager.get_todo_historico()
+            # Calcula o offset com base na página atual
+            offset = (self.current_page - 1) * self.items_per_page
+            
+            # Obtém os dados paginados
+            historico = self.state_manager.get_todo_historico_paginado(offset, self.items_per_page)
+            total_itens = self.state_manager.get_total_todo_historico()
+            
+            # Atualiza controles de paginação
+            self.atualizar_controles_paginacao(total_itens)
             
             # Adicionar itens
             for idx, (data_hora, pasta_id, acao, usuario) in enumerate(historico):
@@ -100,6 +145,26 @@ class HistoricoView(customtkinter.CTkFrame):
                 )
         except Exception as e:
             print(f"Erro ao carregar histórico: {e}")
+    
+    def atualizar_controles_paginacao(self, total_itens):
+        # Atualiza o texto da página
+        total_paginas = (total_itens + self.items_per_page - 1) // self.items_per_page
+        self.lbl_pagina.configure(text=f"Página {self.current_page} de {max(1, total_paginas)}")
+        
+        # Habilita/desabilita botões de navegação
+        self.btn_anterior.configure(state="normal" if self.current_page > 1 else "disabled")
+        self.btn_proximo.configure(
+            state="normal" if self.current_page * self.items_per_page < total_itens else "disabled"
+        )
+    
+    def proxima_pagina(self):
+        self.current_page += 1
+        self.carregar_dados()
+    
+    def pagina_anterior(self):
+        if self.current_page > 1:
+            self.current_page -= 1
+            self.carregar_dados()
     
     def adicionar_linha(self, parent, data_hora, pasta_id, acao, usuario, par):
         # Frame para uma linha da tabela

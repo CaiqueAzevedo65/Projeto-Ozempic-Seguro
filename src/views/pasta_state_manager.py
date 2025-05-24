@@ -86,3 +86,25 @@ class PastaStateManager:
         except Exception as e:
             print(f"Erro ao buscar histórico: {e}")
             return []
+    
+    def get_todo_historico_paginado(self, offset=0, limit=20):
+        """
+        Obtém o histórico de todas as pastas com paginação
+        
+        Args:
+            offset (int): Número de registros a pular
+            limit (int): Número máximo de registros a retornar
+            
+        Returns:
+            list: Lista de tuplas (data_hora, pasta_id, acao, usuario)
+        """
+        return self._db.get_todo_historico_paginado(offset, limit)
+    
+    def get_total_todo_historico(self):
+        """
+        Retorna o número total de registros de histórico de todas as pastas
+        
+        Returns:
+            int: Número total de registros
+        """
+        return self._db.get_total_todo_historico()
