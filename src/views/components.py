@@ -3,6 +3,7 @@ from tkinter import messagebox
 from PIL import Image
 import os
 from .pasta_state_manager import PastaStateManager
+from src.session_manager import SessionManager  # Importa o SessionManager do caminho correto
 
 # Lazy loading de imagens
 class ImageCache:
@@ -182,12 +183,21 @@ class PastaButton:
         """Manipula o estado da pasta baseado no tipo de usuário"""
         estado_atual = self.state_manager.get_estado(self.pasta_id)
         
+        # Obtém o ID do usuário atual, se disponível
+        session_manager = SessionManager.get_instance()
+        current_user = session_manager.get_current_user()
+        user_id = current_user.get('id') if current_user else None
+        
         if self.tipo_usuario == 'administrador':
             # Administrador pode tanto abrir quanto fechar
             if not estado_atual:  # Se a pasta estiver fechada, abre com confirmação
                 self._abrir_pasta_com_confirmacao()
             else:
-                sucesso, mensagem = self.state_manager.fechar_pasta(self.pasta_id, self.tipo_usuario)
+                sucesso, mensagem = self.state_manager.fechar_pasta(
+                    self.pasta_id, 
+                    self.tipo_usuario,
+                    user_id
+                )
                 messagebox.showinfo("Sucesso" if sucesso else "Aviso", mensagem)
                 if sucesso:
                     self.atualizar_imagem()
@@ -202,7 +212,11 @@ class PastaButton:
         elif self.tipo_usuario == 'repositor':
             # Repositório só pode fechar pastas abertas
             if estado_atual:
-                sucesso, mensagem = self.state_manager.fechar_pasta(self.pasta_id, self.tipo_usuario)
+                sucesso, mensagem = self.state_manager.fechar_pasta(
+                    self.pasta_id, 
+                    self.tipo_usuario,
+                    user_id
+                )
                 messagebox.showinfo("Sucesso" if sucesso else "Aviso", mensagem)
                 if sucesso:
                     self.atualizar_imagem()
@@ -212,125 +226,232 @@ class PastaButton:
             messagebox.showerror("Erro", "Tipo de usuário desconhecido")
     
     def _abrir_pasta_com_confirmacao(self):
-        """Mostra uma janela de confirmação antes de abrir a pasta"""
-        # Cria uma janela de diálogo personalizada
+        """Mostra uma janela de confirmação antes de abrir a pasta, se o timer estiver ativado"""
+        # Verifica se o timer está ativado
+        session_manager = SessionManager.get_instance()
+        if not session_manager.is_timer_enabled():
+            # Se o timer estiver desativado, abre a pasta diretamente sem mostrar a janela de confirmação
+            sucesso, mensagem = self.state_manager.abrir_pasta(self.pasta_id, self.tipo_usuario)
+            messagebox.showinfo("Sucesso" if sucesso else "Aviso", mensagem)
+            if sucesso:
+                self.atualizar_imagem()
+            return
+            
+        # Se o timer estiver ativado, mostra a janela de confirmação
         dialog = customtkinter.CTkToplevel()
         dialog.title("Confirmar Abertura")
         dialog.geometry("500x250")  # Aumentei a largura e altura
         dialog.resizable(False, False)  # Impede redimensionamento
         dialog.grab_set()  # Torna a janela modal
         
-        # Centraliza a janela na tela
+        # Centraliza a janela
         dialog.update_idletasks()
         width = dialog.winfo_width()
         height = dialog.winfo_height()
         x = (dialog.winfo_screenwidth() // 2) - (width // 2)
         y = (dialog.winfo_screenheight() // 2) - (height // 2)
-        dialog.geometry(f'{width}x{height}+{x}+{y-50}')  # Ajuste vertical
+        dialog.geometry(f'+{x}+{y}')
         
-        # Frame principal para melhor organização
-        main_frame = customtkinter.CTkFrame(dialog, fg_color="transparent")
+        # Frame principal
+        main_frame = customtkinter.CTkFrame(dialog, fg_color="white")
         main_frame.pack(expand=True, fill="both", padx=20, pady=20)
         
-        # Adiciona o texto de aviso
-        aviso = customtkinter.CTkLabel(
+        # Título
+        customtkinter.CTkLabel(
+            main_frame,
+            text="Confirmar Abertura",
+            font=("Arial", 16, "bold"),
+            text_color="black"
+        ).pack(pady=(10, 5))
+        
+        # Mensagem
+        customtkinter.CTkLabel(
             main_frame,
             text=f"Deseja realmente abrir a pasta {self.pasta_id}?\n\n"
-                 "Atenção: O sistema será bloqueado por 5 minutos após a abertura.",
-            font=("Arial", 16, "bold"),  # Fonte maior
-            wraplength=450,  # Largura maior para o texto
+                 "O sistema será bloqueado por 5 minutos após a abertura.",
+            font=("Arial", 12),
+            text_color="black",
+            wraplength=400,
             justify="center"
-        )
-        aviso.pack(pady=(20, 30), padx=10, expand=True, fill="both")
+        ).pack(pady=10, padx=20)
         
         # Frame para os botões
-        botoes_frame = customtkinter.CTkFrame(main_frame, fg_color="transparent")
-        botoes_frame.pack(pady=(10, 0))
+        button_frame = customtkinter.CTkFrame(main_frame, fg_color="transparent")
+        button_frame.pack(pady=20)
         
         # Botão de confirmar
-        btn_confirmar = customtkinter.CTkButton(
-            botoes_frame,
+        customtkinter.CTkButton(
+            button_frame,
             text="Confirmar",
-            command=lambda: self._confirmar_abertura(dialog),
-            fg_color="#4CAF50",
-            hover_color="#45a049",
-            width=140,
-            height=40,
-            font=("Arial", 14, "bold")
-        )
-        btn_confirmar.pack(side="left", padx=15)
+            font=("Arial", 12, "bold"),
+            width=120,
+            command=lambda: self._on_confirmar_abertura(dialog)
+        ).pack(side="left", padx=10)
         
         # Botão de cancelar
-        btn_cancelar = customtkinter.CTkButton(
-            botoes_frame,
+        customtkinter.CTkButton(
+            button_frame,
             text="Cancelar",
-            command=dialog.destroy,
-            fg_color="#f44336",
-            hover_color="#d32f2f",
-            width=140,
-            height=40,
-            font=("Arial", 14, "bold")
-        )
-        btn_cancelar.pack(side="right", padx=15)
+            font=("Arial", 12),
+            fg_color="#6c757d",
+            hover_color="#5a6268",
+            width=120,
+            command=dialog.destroy
+        ).pack(side="right", padx=10)
         
-        # Focar no botão de cancelar por padrão
-        btn_cancelar.focus_set()
-    
-    def _confirmar_abertura(self, dialog):
-        """Confirma a abertura da pasta e fecha o diálogo"""
+        dialog.transient(self.frame.winfo_toplevel())
+        dialog.wait_window(dialog)
+
+    def _on_confirmar_abertura(self, dialog):
+        """Confirma a abertura da pasta"""
         dialog.destroy()
-        sucesso, mensagem = self.state_manager.abrir_pasta(self.pasta_id, self.tipo_usuario)
+        # Obtém o ID do usuário atual, se disponível
+        session_manager = SessionManager.get_instance()
+        current_user = session_manager.get_current_user()
+        user_id = current_user.get('id') if current_user else None
+        
+        sucesso, mensagem = self.state_manager.abrir_pasta(
+            self.pasta_id, 
+            self.tipo_usuario,
+            user_id
+        )
         messagebox.showinfo("Sucesso" if sucesso else "Aviso", mensagem)
         if sucesso:
             self.atualizar_imagem()
 
     def mostrar_historico(self):
-        """Mostra o histórico de alterações da pasta"""
-        historico = self.state_manager.get_historico(self.pasta_id)
+        """Mostra o histórico de alterações da pasta com paginação"""
+        # Configuração da paginação
+        self.itens_por_pagina = 20
+        self.pagina_atual = 1
         
-        if not historico:
-            messagebox.showinfo("Histórico", "Nenhum registro de histórico para esta pasta.")
-            return
+        # Criar janela
+        self.janela_historico = customtkinter.CTkToplevel()
+        self.janela_historico.title(f"Histórico - Pasta {self.pasta_id}")
+        self.janela_historico.geometry("600x400")
         
-        # Formata o histórico para exibição
-        historico_formatado = []
-        for acao, usuario, data in historico:
-            acao_texto = "Aberta" if acao == "aberta" else "Fechada"
-            historico_formatado.append(f"{data} - {acao_texto} por {usuario}")
+        # Frame principal
+        frame_principal = customtkinter.CTkFrame(self.janela_historico)
+        frame_principal.pack(fill="both", expand=True, padx=10, pady=10)
         
-        # Cria uma janela para exibir o histórico
-        janela_historico = customtkinter.CTkToplevel()
-        janela_historico.title(f"Histórico - Pasta {self.pasta_id}")
-        janela_historico.geometry("500x300")
-        
-        frame = customtkinter.CTkFrame(janela_historico)
-        frame.pack(fill="both", expand=True, padx=10, pady=10)
-        
+        # Título
         label_titulo = customtkinter.CTkLabel(
-            frame, 
+            frame_principal, 
             text=f"Histórico - Pasta {self.pasta_id}",
             font=("Arial", 14, "bold")
         )
         label_titulo.pack(pady=(0, 10))
         
-        # Área de texto para exibir o histórico
-        texto_historico = customtkinter.CTkTextbox(frame, wrap="word")
-        texto_historico.pack(fill="both", expand=True, padx=5, pady=5)
+        # Frame para os controles de paginação (superior)
+        frame_controles_cima = customtkinter.CTkFrame(frame_principal, fg_color="transparent")
+        frame_controles_cima.pack(fill="x", pady=(0, 5))
         
-        # Insere os itens do histórico
-        for item in historico_formatado:
-            texto_historico.insert("end", item + "\n")
-        
-        # Desabilita a edição do texto
-        texto_historico.configure(state="disabled")
-        
-        # Botão para fechar
-        btn_fechar = customtkinter.CTkButton(
-            frame,
-            text="Fechar",
-            command=janela_historico.destroy
+        # Frame para a lista de histórico
+        self.frame_historico = customtkinter.CTkScrollableFrame(
+            frame_principal,
+            fg_color="transparent"
         )
-        btn_fechar.pack(pady=(10, 0))
+        self.frame_historico.pack(fill="both", expand=True)
+        
+        # Frame para os controles de paginação (inferior)
+        frame_controles_baixo = customtkinter.CTkFrame(frame_principal, fg_color="transparent")
+        frame_controles_baixo.pack(fill="x", pady=(5, 0))
+        
+        # Botões de navegação
+        self.btn_anterior = customtkinter.CTkButton(
+            frame_controles_baixo,
+            text="Anterior",
+            command=self._pagina_anterior,
+            state="disabled"
+        )
+        self.btn_anterior.pack(side="left", padx=5)
+        
+        self.lbl_pagina = customtkinter.CTkLabel(
+            frame_controles_baixo,
+            text="Página 1",
+            width=100
+        )
+        self.lbl_pagina.pack(side="left")
+        
+        self.btn_proximo = customtkinter.CTkButton(
+            frame_controles_baixo,
+            text="Próximo",
+            command=self._proxima_pagina
+        )
+        self.btn_proximo.pack(side="left", padx=5)
+        
+        # Botão de fechar
+        btn_fechar = customtkinter.CTkButton(
+            frame_controles_baixo,
+            text="Fechar",
+            command=self.janela_historico.destroy
+        )
+        btn_fechar.pack(side="right")
+        
+        # Carregar a primeira página
+        self._carregar_historico()
+    
+    def _carregar_historico(self):
+        """Carrega os itens do histórico para a página atual"""
+        # Limpa o frame de histórico
+        for widget in self.frame_historico.winfo_children():
+            widget.destroy()
+        
+        # Obtém o histórico paginado
+        offset = (self.pagina_atual - 1) * self.itens_por_pagina
+        historico = self.state_manager.get_historico_paginado(
+            self.pasta_id, 
+            offset=offset, 
+            limit=self.itens_por_pagina
+        )
+        
+        # Obtém o total de itens para controle de paginação
+        total_itens = self.state_manager.get_total_historico(self.pasta_id)
+        total_paginas = (total_itens + self.itens_por_pagina - 1) // self.itens_por_pagina
+        
+        # Atualiza controles de paginação
+        self.lbl_pagina.configure(text=f"Página {self.pagina_atual} de {total_paginas}")
+        self.btn_anterior.configure(state="disabled" if self.pagina_atual == 1 else "normal")
+        self.btn_proximo.configure(state="disabled" if self.pagina_atual >= total_paginas else "normal")
+        
+        # Adiciona os itens ao frame
+        if not historico:
+            lbl_vazio = customtkinter.CTkLabel(
+                self.frame_historico,
+                text="Nenhum registro de histórico para esta pasta.",
+                text_color="gray"
+            )
+            lbl_vazio.pack(pady=10)
+            return
+        
+        for acao, usuario, data in historico:
+            acao_texto = "Aberta" if acao == "aberta" else "Fechada"
+            
+            frame_item = customtkinter.CTkFrame(
+                self.frame_historico,
+                fg_color="#f0f0f0",
+                corner_radius=5
+            )
+            frame_item.pack(fill="x", pady=2, padx=2)
+            
+            lbl_item = customtkinter.CTkLabel(
+                frame_item,
+                text=f"{data} - {acao_texto} por {usuario}",
+                anchor="w",
+                justify="left"
+            )
+            lbl_item.pack(fill="x", padx=5, pady=5)
+    
+    def _proxima_pagina(self):
+        """Vai para a próxima página do histórico"""
+        self.pagina_atual += 1
+        self._carregar_historico()
+    
+    def _pagina_anterior(self):
+        """Volta para a página anterior do histórico"""
+        if self.pagina_atual > 1:
+            self.pagina_atual -= 1
+            self._carregar_historico()
 
 # Componente de botão de voltar
 class VoltarButton:

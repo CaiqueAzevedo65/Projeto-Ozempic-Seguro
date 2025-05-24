@@ -1,9 +1,12 @@
 import customtkinter
 from ..components import Header, VoltarButton
+from src.session_manager import SessionManager
+from tkinter import messagebox
 
 class ParametroSistemasFrame(customtkinter.CTkFrame):
     def __init__(self, master, voltar_callback=None, *args, **kwargs):
         self.voltar_callback = voltar_callback
+        self.session_manager = SessionManager.get_instance()
         super().__init__(master, fg_color="#3B6A7D", *args, **kwargs)
         self.pack(fill="both", expand=True)
         
@@ -12,13 +15,102 @@ class ParametroSistemasFrame(customtkinter.CTkFrame):
         self.main_content.pack(fill="both", expand=True, padx=40, pady=(20, 100))
         
         self.criar_topo()
+        self.criar_controle_timer()
         self.criar_tabela_parametros()
         self.criar_botao_voltar()
 
     def criar_topo(self):
-        # Cabeçalho
-        self.header = Header(self.main_content, "Parâmetro de Sistemas")
+        Header(self, "Parâmetro de Sistemas")
+    
+    def criar_controle_timer(self):
+        """Cria o controle para ativar/desativar a função de timer de abertura de pastas"""
+        frame_controle = customtkinter.CTkFrame(
+            self.main_content,
+            fg_color="white",
+            corner_radius=15,
+            height=100
+        )
+        frame_controle.pack(fill="x", pady=(10, 20))
+        frame_controle.pack_propagate(False)
         
+        # Título
+        lbl_titulo = customtkinter.CTkLabel(
+            frame_controle,
+            text="Controle de Timer de Abertura de Pastas",
+            font=("Arial", 14, "bold"),
+            text_color="#333333"
+        )
+        lbl_titulo.pack(side="left", padx=20, pady=10, anchor="n")
+        
+        # Frame para o status e botão
+        frame_status = customtkinter.CTkFrame(frame_controle, fg_color="transparent")
+        frame_status.pack(side="right", padx=20, pady=10, fill="y")
+        
+        # Status atual
+        self.lbl_status = customtkinter.CTkLabel(
+            frame_status,
+            text="Status: " + ("Ativado" if self.session_manager.is_timer_enabled() else "Desativado"),
+            font=("Arial", 12),
+            text_color="#333333"
+        )
+        self.lbl_status.pack(pady=(0, 5))
+        
+        # Botão de controle
+        self.btn_controle_timer = customtkinter.CTkButton(
+            frame_status,
+            text="",
+            width=120,
+            command=self.alternar_timer,
+            fg_color="#4CAF50" if self.session_manager.is_timer_enabled() else "#F44336"
+        )
+        self.btn_controle_timer.pack()
+        
+        # Atualiza o texto do botão
+        self.atualizar_estado_botao()
+    
+    def alternar_timer(self):
+        """Alterna o estado da função de timer"""
+        novo_estado = not self.session_manager.is_timer_enabled()
+        if self.session_manager.set_timer_enabled(novo_estado):
+            estado = "ativado" if novo_estado else "desativado"
+            messagebox.showinfo("Sucesso", f"Timer de abertura de pastas {estado} com sucesso!")
+            
+            # Se estiver ativando e houver um bloqueio ativo, mostra o tempo restante
+            if novo_estado and self.session_manager.is_blocked():
+                segundos = self.session_manager.get_remaining_time()
+                minutos = segundos // 60
+                segundos = segundos % 60
+                messagebox.showinfo("Informação", 
+                    f"O sistema está bloqueado por mais {minutos} minutos e {segundos} segundos.")
+        else:
+            messagebox.showerror("Erro", "Você não tem permissão para alterar esta configuração.")
+        
+        # Atualiza o estado do botão
+        self.atualizar_estado_botao()
+    
+    def atualizar_estado_botao(self):
+        """Atualiza o texto e a cor do botão de acordo com o estado do timer"""
+        if self.session_manager.is_timer_enabled():
+            self.btn_controle_timer.configure(
+                text="Desativar Timer",
+                fg_color="#4CAF50",
+                hover_color="#388E3C"
+            )
+            self.lbl_status.configure(
+                text="Status: Ativado",
+                text_color="#2E7D32"
+            )
+        else:
+            self.btn_controle_timer.configure(
+                text="Ativar Timer",
+                fg_color="#F44336",
+                hover_color="#D32F2F"
+            )
+            self.lbl_status.configure(
+                text="Status: Desativado",
+                text_color="#C62828"
+            )
+
     def criar_tabela_parametros(self):
         # Frame para a tabela
         self.tabela_frame = customtkinter.CTkFrame(

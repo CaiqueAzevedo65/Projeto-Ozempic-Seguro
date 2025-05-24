@@ -143,7 +143,7 @@ class DatabaseManager:
         result = self.cursor.fetchone()
         return result[0] if result else False
     
-    def set_estado_pasta(self, numero_pasta, estado, usuario_tipo):
+    def set_estado_pasta(self, numero_pasta, estado, usuario_tipo, usuario_id=None):
         """Define o estado de uma pasta e registra no histórico"""
         try:
             # Verifica se a pasta já existe
@@ -174,10 +174,15 @@ class DatabaseManager:
                     )
             
             # Registra no histórico se houve mudança de estado
-            if acao:
+            if acao and usuario_id:
                 self.cursor.execute(
-                    'INSERT INTO historico_pastas (pasta_id, acao, usuario_tipo) VALUES (?, ?, ?)',
-                    (pasta_id, acao, usuario_tipo)
+                    'INSERT INTO historico_pastas (pasta_id, acao, usuario_id) VALUES (?, ?, ?)',
+                    (pasta_id, acao, usuario_id)
+                )
+            elif acao:  # Se não houver usuário, registra sem o ID do usuário
+                self.cursor.execute(
+                    'INSERT INTO historico_pastas (pasta_id, acao) VALUES (?, ?)',
+                    (pasta_id, acao)
                 )
             
             self.conn.commit()
@@ -189,9 +194,10 @@ class DatabaseManager:
     def get_historico_pasta(self, numero_pasta, limite=10):
         """Obtém o histórico de alterações de uma pasta"""
         self.cursor.execute('''
-            SELECT h.acao, h.usuario_tipo, h.data_hora 
+            SELECT h.acao, u.username, h.data_hora 
             FROM historico_pastas h
             JOIN pastas p ON h.pasta_id = p.id
+            LEFT JOIN usuarios u ON h.usuario_id = u.id
             WHERE p.numero_pasta = ?
             ORDER BY h.data_hora DESC
             LIMIT ?
@@ -199,12 +205,61 @@ class DatabaseManager:
         
         return self.cursor.fetchall()
     
+    def get_historico_paginado(self, numero_pasta, offset=0, limit=20):
+        """
+        Obtém o histórico de alterações de uma pasta com paginação
+        
+        Args:
+            numero_pasta (str): Número da pasta
+            offset (int): Número de registros a pular
+            limit (int): Número máximo de registros a retornar
+            
+        Returns:
+            list: Lista de tuplas (acao, usuario, data_hora)
+        """
+        self.cursor.execute('''
+            SELECT h.acao, COALESCE(u.username, 'Sistema') as usuario, 
+                   strftime('%d/%m/%Y %H:%M:%S', h.data_hora) as data_formatada
+            FROM historico_pastas h
+            JOIN pastas p ON h.pasta_id = p.id
+            LEFT JOIN usuarios u ON h.usuario_id = u.id
+            WHERE p.numero_pasta = ?
+            ORDER BY h.data_hora DESC
+            LIMIT ? OFFSET ?
+        ''', (numero_pasta, limit, offset))
+        
+        return self.cursor.fetchall()
+    
+    def get_total_historico(self, numero_pasta):
+        """
+        Retorna o número total de registros de histórico para uma pasta
+        
+        Args:
+            numero_pasta (str): Número da pasta
+            
+        Returns:
+            int: Número total de registros
+        """
+        self.cursor.execute('''
+            SELECT COUNT(*)
+            FROM historico_pastas h
+            JOIN pastas p ON h.pasta_id = p.id
+            WHERE p.numero_pasta = ?
+        ''', (numero_pasta,))
+        
+        return self.cursor.fetchone()[0]
+    
     def get_todo_historico(self):
         """Obtém o histórico completo de todas as pastas"""
         self.cursor.execute('''
-            SELECT h.data_hora, p.numero_pasta, h.acao, h.usuario_tipo 
+            SELECT 
+                strftime('%d/%m/%Y %H:%M:%S', h.data_hora) as data_hora, 
+                p.numero_pasta, 
+                h.acao, 
+                COALESCE(u.nome_completo, u.username, 'Sistema') as usuario
             FROM historico_pastas h
             JOIN pastas p ON h.pasta_id = p.id
+            LEFT JOIN usuarios u ON h.usuario_id = u.id
             ORDER BY h.data_hora DESC
         ''')
         

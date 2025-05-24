@@ -16,8 +16,7 @@ class EstadoTerminalFrame(customtkinter.CTkFrame):
         self.criar_botao_voltar()
 
     def criar_topo(self):
-        # Cabeçalho
-        self.header = Header(self.main_content, "Estado Terminal")
+        Header(self, "Estado Terminal")
         
     def criar_tabela_estados(self):
         # Frame para a tabela

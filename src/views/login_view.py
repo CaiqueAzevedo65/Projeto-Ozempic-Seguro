@@ -4,6 +4,7 @@ from tkinter import messagebox
 from .pages_adm.painel_administrador_view import PainelAdministradorFrame
 from .components import Header, ImageCache, VoltarButton
 from ..auth import AuthManager
+from src.session_manager import SessionManager
 from .repositor_view import RepositorFrame
 from .vendedor_view import VendedorFrame
 
@@ -74,6 +75,10 @@ class LoginFrame(customtkinter.CTkFrame):
         senha = self.senha_entry.get()
         user = self.auth_manager.autenticar(usuario, senha)
         if user:
+            # Define o usuário atual no SessionManager
+            session_manager = SessionManager.get_instance()
+            session_manager.set_current_user(user)
+            
             if user.get('tipo') == 'administrador':
                 self.abrir_painel_administrador()
             elif user.get('tipo') == 'repositor':

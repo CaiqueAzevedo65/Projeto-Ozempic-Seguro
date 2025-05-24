@@ -16,8 +16,7 @@ class DiagnosticoFrame(customtkinter.CTkFrame):
         self.criar_botao_voltar()
 
     def criar_topo(self):
-        # Cabeçalho
-        self.header = Header(self.main_content, "Diagnóstico")
+        Header(self, "Diagnóstico")
         
     def criar_tabela_diagnostico(self):
         # Frame para a tabela
