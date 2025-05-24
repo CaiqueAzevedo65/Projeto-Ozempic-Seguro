@@ -13,6 +13,10 @@ class CadastroUsuarioFrame(customtkinter.CTkFrame):
         # Configuração da validação de entrada
         self.vcmd = (self.register(self.validar_entrada_numerica), '%P')
         
+        # Inicializa os temporizadores
+        self.erro_timer = None
+        self.mensagem_timer = None
+        
         self.criar_topo()
         self.criar_interface_cadastro()
         self.criar_botao_voltar()
@@ -230,15 +234,31 @@ class CadastroUsuarioFrame(customtkinter.CTkFrame):
             "info": "yellow"
         }
         
+        # Cancela o temporizador anterior se existir
         if tipo == "erro":
-            # Exibe mensagens de erro abaixo do campo de senha
-            self.lbl_erro_senha.configure(text=mensagem, text_color=cores[tipo])
-            # Remove a mensagem após 5 segundos
-            self.after(5000, lambda: self.lbl_erro_senha.configure(text=""))
+            if self.erro_timer is not None:
+                self.after_cancel(self.erro_timer)
         else:
-            # Para outros tipos de mensagem, usa o label normal
+            if self.mensagem_timer is not None:
+                self.after_cancel(self.mensagem_timer)
+        
+        if tipo == "erro":
+            # Exibe a mensagem de erro no label apropriado
+            self.lbl_erro_senha.configure(text=mensagem, text_color=cores[tipo])
+            # Define um novo temporizador
+            self.erro_timer = self.after(5000, self.limpar_mensagem_erro)
+        else:
+            # Para outros tipos de mensagem (sucesso, info), usa o label normal
             self.mensagem_label.configure(text=mensagem, text_color=cores.get(tipo, "white"))
-            self.after(5000, lambda: self.mensagem_label.configure(text=""))
+            self.mensagem_timer = self.after(5000, self.limpar_mensagem_normal)
+    
+    def limpar_mensagem_erro(self):
+        self.lbl_erro_senha.configure(text="")
+        self.erro_timer = None
+    
+    def limpar_mensagem_normal(self):
+        self.mensagem_label.configure(text="")
+        self.mensagem_timer = None
     
     def limpar_campos(self):
         self.nome_entry.delete(0, tk.END)
