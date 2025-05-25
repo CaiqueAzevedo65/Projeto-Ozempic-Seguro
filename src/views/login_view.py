@@ -7,6 +7,7 @@ from ..auth import AuthManager
 from src.session_manager import SessionManager
 from .repositor_view import RepositorFrame
 from .vendedor_view import VendedorFrame
+from .tecnico_view import TecnicoFrame
 
 class LoginFrame(customtkinter.CTkFrame):
     def __init__(self, master, show_iniciar_callback, *args, **kwargs):
@@ -88,10 +89,17 @@ class LoginFrame(customtkinter.CTkFrame):
                 self.abrir_painel_repositor()
             elif user.get('tipo') == 'vendedor':
                 self.abrir_painel_vendedor()
+            elif user.get('tipo') == 'tecnico':
+                self.abrir_painel_tecnico()
             else:
-                messagebox.showinfo("Sucesso", f"Login realizado como {user.get('tipo','usuário')}!")
+                messagebox.showinfo("Sucesso", f"Login realizado como {user.get('tipo','usuário')}!") 
         else:
             messagebox.showerror("Erro", "Usuário ou senha incorretos!")
+
+    def abrir_painel_tecnico(self):
+        """Abre o painel do técnico"""
+        self.pack_forget()
+        TecnicoFrame(self.master, finalizar_sessao_callback=self.show_iniciar_callback)
 
     def abrir_painel_vendedor(self):
         self.pack_forget()

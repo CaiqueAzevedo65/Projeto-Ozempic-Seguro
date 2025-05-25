@@ -22,6 +22,8 @@ class DatabaseManager:
     
     def _initialize_database(self):
         """Inicializa o banco de dados com as tabelas necessárias"""
+        db_exists = os.path.exists(self._get_db_path())
+        
         self.conn = sqlite3.connect(self._get_db_path())
         self.cursor = self.conn.cursor()
         
@@ -32,11 +34,15 @@ class DatabaseManager:
             username TEXT NOT NULL UNIQUE,
             senha_hash TEXT NOT NULL,
             nome_completo TEXT NOT NULL,
-            tipo TEXT NOT NULL CHECK (tipo IN ('administrador', 'vendedor', 'repositor')),
+            tipo TEXT NOT NULL CHECK (tipo IN ('administrador', 'vendedor', 'repositor', 'tecnico')),
             ativo BOOLEAN DEFAULT 1,
             data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         ''')
+        
+        # Se o banco de dados não existia, cria o usuário administrador padrão
+        if not db_exists:
+            self._criar_usuario_admin_padrao()
         
         # Tabelas existentes (mantidas)
         self.cursor.execute('''
@@ -393,3 +399,38 @@ class DatabaseManager:
         """Fecha a conexão com o banco de dados"""
         if hasattr(self, 'conn'):
             self.conn.close()
+
+    def _criar_usuario_admin_padrao(self):
+        """Cria um usuário administrador padrão"""
+        from hashlib import sha256
+        import secrets
+        
+        # Dados do administrador padrão
+        username = "00"
+        senha = "1234"
+        nome_completo = "ADM"
+        
+        # Gera um salt aleatório
+        salt = secrets.token_hex(8)
+        # Cria o hash da senha
+        senha_hash = sha256(f"{senha}{salt}".encode('utf-8')).hexdigest()
+        
+        try:
+            # Insere o usuário administrador
+            self.cursor.execute('''
+            INSERT INTO usuarios (username, senha_hash, nome_completo, tipo, ativo)
+            VALUES (?, ?, ?, 'administrador', 1)
+            ''', (username, f"{salt}${senha_hash}", nome_completo))
+            
+            self.conn.commit()
+            print("Usuário administrador padrão criado com sucesso!")
+            print(f"Usuário: {username}")
+            print(f"Senha: {senha}")
+            
+        except sqlite3.IntegrityError:
+            # Se o usuário já existir, não faz nada
+            self.conn.rollback()
+            print("Usuário administrador padrão já existe.")
+        except Exception as e:
+            self.conn.rollback()
+            print(f"Erro ao criar usuário administrador padrão: {e}")
