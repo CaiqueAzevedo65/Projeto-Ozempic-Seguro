@@ -119,32 +119,28 @@ class PastaButtonGrid(customtkinter.CTkFrame):
     
     def criar_controles_navegacao(self):
         """Cria os controles de navegação entre páginas"""
+        # Frame para agrupar os botões de navegação
+        self.btn_frame = customtkinter.CTkFrame(self.nav_frame, fg_color="transparent")
+        self.btn_frame.pack(side="left", anchor="w", padx=10)  # Alinha à esquerda
+        
         # Botão página anterior
         self.btn_anterior = customtkinter.CTkButton(
-            self.nav_frame,
+            self.btn_frame,
             text="← Anterior",
             command=self.pagina_anterior,
-            width=100,
+            width=120,
             state="disabled"
         )
-        self.btn_anterior.pack(side="left", padx=10)
-        
-        # Label de página atual
-        self.lbl_pagina = customtkinter.CTkLabel(
-            self.nav_frame,
-            text=f"Página 1 de {self.total_pages}",
-            font=("Arial", 12, "bold")
-        )
-        self.lbl_pagina.pack(side="left", expand=True)
+        self.btn_anterior.pack(side="left", padx=(0, 5))  # Espaço apenas à direita
         
         # Botão próxima página
         self.btn_proximo = customtkinter.CTkButton(
-            self.nav_frame,
+            self.btn_frame,
             text="Próxima →",
             command=self.proxima_pagina,
-            width=100
+            width=120
         )
-        self.btn_proximo.pack(side="right", padx=10)
+        self.btn_proximo.pack(side="left")  # Sem espaço extra
         
         # Esconder controles de navegação se houver apenas uma página
         if self.total_pages <= 1:
@@ -154,12 +150,12 @@ class PastaButtonGrid(customtkinter.CTkFrame):
         """Vai para a página anterior"""
         if self.current_page > 0:
             self.mostrar_pagina(self.current_page - 1)
-    
+            
     def proxima_pagina(self):
         """Vai para a próxima página"""
         if self.current_page < self.total_pages - 1:
             self.mostrar_pagina(self.current_page + 1)
-    
+            
     def mostrar_pagina(self, page_num):
         """Mostra a página especificada"""
         # Validar número da página
@@ -179,14 +175,15 @@ class PastaButtonGrid(customtkinter.CTkFrame):
         # Criar os botões da página atual
         for i in range(self.rows):
             for j in range(self.cols):
-                item_idx = start_idx + i * self.cols + j
-                
-                # Se for a segunda página e o último item, deixar vazio
-                if page_num == 1 and i == self.rows - 1 and j == self.cols - 1 and len(self.button_data) > 8:
-                    continue
-                
+                item_idx = start_idx + (i * self.cols) + j
+                if item_idx >= end_idx:
+                    break
+                    
                 # Criar frame para a célula
-                cell_frame = customtkinter.CTkFrame(self.grid_frame, fg_color="transparent")
+                cell_frame = customtkinter.CTkFrame(
+                    self.grid_frame,
+                    fg_color="transparent"
+                )
                 cell_frame.grid(row=i, column=j, padx=10, pady=10, sticky="nsew")
                 
                 if item_idx < end_idx:
@@ -205,8 +202,7 @@ class PastaButtonGrid(customtkinter.CTkFrame):
     
     def atualizar_controles_navegacao(self):
         """Atualiza o estado dos controles de navegação"""
-        if hasattr(self, 'lbl_pagina') and hasattr(self, 'btn_anterior') and hasattr(self, 'btn_proximo'):
-            self.lbl_pagina.configure(text=f"Página {self.current_page + 1} de {self.total_pages}")
+        if hasattr(self, 'btn_anterior') and hasattr(self, 'btn_proximo'):
             self.btn_anterior.configure(state="normal" if self.current_page > 0 else "disabled")
             self.btn_proximo.configure(state="normal" if self.current_page < self.total_pages - 1 else "disabled")
 
