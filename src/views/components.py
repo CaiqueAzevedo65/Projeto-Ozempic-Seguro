@@ -256,7 +256,7 @@ class PastaButton:
         
         # Frame principal
         main_frame = customtkinter.CTkFrame(dialog, fg_color="white")
-        main_frame.pack(expand=True, fill="both", padx=20, pady=20)
+        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
         
         # Título
         customtkinter.CTkLabel(
@@ -591,9 +591,9 @@ class TecladoVirtual(customtkinter.CTkFrame):
                     text="MAIÚSCULAS",
                     height=40,
                     font=("Arial", 12, "bold"),
-                    fg_color="#f0f0f0" if self.maiusculas_ativado else "#ffffff",
-                    text_color="#000000",
-                    hover_color="#d5d5d5" if self.maiusculas_ativado else "#e0e0e0",
+                    fg_color="#3498db" if self.maiusculas_ativado else "#ffffff",
+                    text_color="#ffffff" if self.maiusculas_ativado else "#000000",
+                    hover_color="#2980b9" if self.maiusculas_ativado else "#e0e0e0",
                     corner_radius=5,
                     command=lambda: self.tecla_pressionada('MAIÚSCULAS')
                 )
@@ -698,8 +698,9 @@ class TecladoVirtual(customtkinter.CTkFrame):
             # Atualiza a aparência do botão de maiúsculas
             if hasattr(self, 'btn_maiusculas'):
                 self.btn_maiusculas.configure(
-                    fg_color="#f0f0f0" if self.maiusculas_ativado else "#ffffff",
-                    hover_color="#d5d5d5" if self.maiusculas_ativado else "#e0e0e0"
+                    fg_color="#3498db" if self.maiusculas_ativado else "#ffffff",
+                    text_color="#ffffff" if self.maiusculas_ativado else "#000000",
+                    hover_color="#2980b9" if self.maiusculas_ativado else "#e0e0e0"
                 )
             
             # Reconstrói o teclado para atualizar as letras
@@ -710,15 +711,6 @@ class TecladoVirtual(customtkinter.CTkFrame):
             # Aplica maiúsculas se estiver ativado
             tecla_inserida = tecla.upper() if self.maiusculas_ativado and tecla.isalpha() else tecla
             self.entrada_atual.insert('end', tecla_inserida)
-            
-            # Desativa o modo maiúsculas após inserir uma letra (comportamento comum em teclados)
-            if self.maiusculas_ativado and tecla.isalpha():
-                self.maiusculas_ativado = False
-                if hasattr(self, 'btn_maiusculas'):
-                    self.btn_maiusculas.configure(
-                        fg_color="#ffffff",
-                        hover_color="#e0e0e0"
-                    )
             
     def definir_entrada(self, entrada):
         self.entrada_atual = entrada
