@@ -41,6 +41,9 @@ class LoginFrame(customtkinter.CTkFrame):
         # Campo ativo por padrão
         self.campo_ativo = self.usuario_entry
         
+        # Define o foco no campo de usuário
+        self.after(100, lambda: self.usuario_entry.focus_set())
+        
         try:
             digital_img = ImageCache.get_digital()
             digital_label = customtkinter.CTkLabel(frame_login, image=digital_img, text="", bg_color="#2F6073")
