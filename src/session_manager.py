@@ -107,3 +107,14 @@ class SessionManager:
             bool: True se o timer está ativado, False caso contrário
         """
         return self._timer_enabled
+        
+    def get_user_id(self):
+        """
+        Obtém o ID do usuário atualmente logado
+        
+        Returns:
+            int or None: O ID do usuário ou None se não houver usuário logado
+        """
+        if self._current_user and 'id' in self._current_user:
+            return self._current_user['id']
+        return None

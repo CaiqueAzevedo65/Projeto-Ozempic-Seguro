@@ -40,11 +40,18 @@ class PastaStateManager:
             return False, f"Sistema bloqueado por {minutos}:{segundos:02d} minutos após a abertura da pasta."
         
         try:
-            # Se não estiver bloqueado, abre a pasta e bloqueia o sistema por 5 minutos
+            # Obtém o ID do usuário da sessão atual se não foi fornecido
+            if usuario_id is None and hasattr(self._session_manager, 'get_user_id'):
+                usuario_id = self._session_manager.get_user_id()
+                
+            # Abre a pasta e registra o histórico
             resultado = self._db.set_estado_pasta(pasta_id, True, usuario_tipo, usuario_id)
+            
+            # Se for vendedor ou administrador, bloqueia o sistema por 5 minutos
             if usuario_tipo in ['vendedor', 'administrador']:
                 self._session_manager.block_for_minutes(5)
                 return True, f"Pasta {pasta_id} aberta com sucesso! O sistema será bloqueado por 5 minutos."
+                
             return resultado, f"Pasta {pasta_id} aberta com sucesso!"
         except Exception as e:
             return False, f"Erro ao abrir a pasta: {str(e)}"
