@@ -9,7 +9,6 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         super().__init__(master, fg_color="#3B6A7D", *args, **kwargs)
         self.db = DatabaseManager()
         self.usuario_selecionado = None  # Armazenará o ID do usuário selecionado
-        self.usuario_atual_esta_ativo = None  # Armazena o estado atual do usuário
         self.pack(fill="both", expand=True)
         
         # Variáveis para controle de estado
@@ -235,7 +234,6 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
     
     def exibir_detalhes_usuario(self, user_id, username, nome_completo, tipo, ativo, data_criacao):
         self.usuario_selecionado = user_id
-        self.usuario_atual_esta_ativo = ativo  # Armazena o estado atual do usuário
         
         # Limpar frame de detalhes
         for widget in self.frame_detalhes.winfo_children():
@@ -258,7 +256,6 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
             ("Usuário:", username),
             ("Nome Completo:", nome_completo),
             ("Tipo:", tipo.capitalize()),
-            ("Status:", "Ativo" if ativo else "Inativo"),
             ("Data de Criação:", data_criacao.split(' ')[0])
         ]
         
@@ -289,9 +286,9 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         for widget in self.frame_botoes.winfo_children():
             widget.destroy()
         
-        # Configurar grid para os botões (3 colunas)
-        for i in range(3):
-            self.frame_botoes.columnconfigure(i, weight=1)
+        # Configurar grid para os botões (2 colunas)
+        self.frame_botoes.columnconfigure(0, weight=1)
+        self.frame_botoes.columnconfigure(1, weight=1)
         
         # Botão Alterar Senha
         btn_alterar_senha = customtkinter.CTkButton(
@@ -303,16 +300,6 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         )
         btn_alterar_senha.grid(row=0, column=0, padx=5, pady=10, sticky="nsew")
         
-        # Botão Ativar/Desativar Usuário
-        btn_status = customtkinter.CTkButton(
-            self.frame_botoes,
-            text="Desativar Usuário" if ativo else "Ativar Usuário",
-            fg_color="#FFA500" if ativo else "#4CAF50",
-            hover_color="#e69500" if ativo else "#45a049",
-            command=self.toggle_status_usuario
-        )
-        btn_status.grid(row=0, column=1, padx=5, pady=10, sticky="nsew")
-        
         # Botão Excluir Usuário
         btn_excluir = customtkinter.CTkButton(
             self.frame_botoes,
@@ -321,58 +308,10 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
             hover_color="#d32f2f",
             command=self.confirmar_exclusao
         )
-        btn_excluir.grid(row=0, column=2, padx=5, pady=10, sticky="nsew")
+        btn_excluir.grid(row=0, column=1, padx=5, pady=10, sticky="nsew")
         
         # Esconder instrução
         self.lbl_instrucao.grid_forget()
-    
-    def toggle_status_usuario(self):
-        """Alterna o status de ativação do usuário"""
-        if not hasattr(self, 'usuario_selecionado') or not self.usuario_selecionado:
-            return
-        
-        try:
-            novo_status = not self.usuario_atual_esta_ativo
-            
-            # Atualiza o status no banco de dados
-            sucesso = self.db.atualizar_status_usuario(
-                usuario_id=self.usuario_selecionado,
-                ativo=novo_status,
-                usuario_alteracao_id=self.master.master.usuario_logado['id']
-            )
-            
-            if sucesso:
-                # Atualiza a interface
-                self.usuario_atual_esta_ativo = novo_status
-                mensagem = "Usuário ativado com sucesso!" if novo_status else "Usuário desativado com sucesso!"
-                self.mostrar_mensagem_sucesso(mensagem)
-                
-                # Atualiza o botão de status
-                for widget in self.frame_botoes.winfo_children():
-                    if widget.cget("text") in ["Ativar Usuário", "Desativar Usuário"]:
-                        widget.configure(
-                            text="Desativar Usuário" if novo_status else "Ativar Usuário",
-                            fg_color="#FFA500" if novo_status else "#4CAF50",
-                            hover_color="#e69500" if novo_status else "#45a049"
-                        )
-                
-                # Atualiza o status exibido
-                for widget in self.frame_detalhes.winfo_children():
-                    if hasattr(widget, 'children'):
-                        for child in widget.winfo_children():
-                            if isinstance(child, customtkinter.CTkLabel) and child.cget("text") == "Status:":
-                                # Encontra o label de valor ao lado do label "Status:"
-                                for sibling in widget.winfo_children():
-                                    if sibling != child and isinstance(sibling, customtkinter.CTkLabel):
-                                        sibling.configure(text="Ativo" if novo_status else "Inativo")
-                                        break
-                                break
-            else:
-                self.mostrar_mensagem_erro("Não foi possível alterar o status do usuário.")
-                
-        except Exception as e:
-            print(f"Erro ao alternar status do usuário: {e}")
-            self.mostrar_mensagem_erro(f"Erro ao alterar status do usuário: {str(e)}")
     
     def abrir_janela_alterar_senha(self):
         if not self.usuario_selecionado:
@@ -381,12 +320,12 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         # Criar janela de diálogo
         self.dialog = customtkinter.CTkToplevel(self)
         self.dialog.title("Alterar Senha")
-        self.dialog.geometry("400x350")  # Aumentei a altura para acomodar a mensagem
+        self.dialog.geometry("700x400")  # Largura: 700px, Altura: 400px
         self.dialog.grab_set()  # Torna a janela modal
         
         # Centralizar a janela
-        window_width = 400
-        window_height = 350
+        window_width = 700
+        window_height = 400
         screen_width = self.dialog.winfo_screenwidth()
         screen_height = self.dialog.winfo_screenheight()
         x = (screen_width // 2) - (window_width // 2)
@@ -394,35 +333,36 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         self.dialog.geometry(f'{window_width}x{window_height}+{x}+{y}')
         
         # Frame principal
-        frame = customtkinter.CTkFrame(self.dialog, fg_color="white")
-        frame.pack(fill="both", expand=True, padx=20, pady=20)
-        frame.columnconfigure(0, weight=1)  # Configura a coluna para expandir
+        main_frame = customtkinter.CTkFrame(self.dialog, fg_color="white")
+        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        # Frame para os campos de senha (lado esquerdo)
+        campos_frame = customtkinter.CTkFrame(main_frame, fg_color="transparent")
+        campos_frame.pack(side="left", fill="both", expand=True, padx=(0, 10))
         
         # Título
         lbl_titulo = customtkinter.CTkLabel(
-            frame,
+            campos_frame,
             text="Alterar Senha",
             font=("Arial", 16, "bold")
         )
-        lbl_titulo.grid(row=0, column=0, pady=(0, 20), sticky="n")
-        
-        # Frame para campos de senha
-        campos_frame = customtkinter.CTkFrame(frame, fg_color="transparent")
-        campos_frame.grid(row=1, column=0, sticky="nsew")
+        lbl_titulo.pack(pady=(0, 20))
         
         # Campo Nova Senha
         lbl_nova_senha = customtkinter.CTkLabel(campos_frame, text="Nova Senha:", anchor="w")
-        lbl_nova_senha.grid(row=0, column=0, sticky="w", pady=(0, 5))
+        lbl_nova_senha.pack(fill="x", pady=(0, 5))
         
         self.entry_nova_senha = customtkinter.CTkEntry(campos_frame, show="•", width=300)
-        self.entry_nova_senha.grid(row=1, column=0, pady=(0, 10), sticky="ew")
+        self.entry_nova_senha.pack(fill="x", pady=(0, 10))
+        self.entry_nova_senha.bind("<Button-1>", lambda e: self.definir_campo_ativo(self.entry_nova_senha))
         
         # Campo Confirmar Senha
         lbl_confirmar_senha = customtkinter.CTkLabel(campos_frame, text="Confirmar Senha:", anchor="w")
-        lbl_confirmar_senha.grid(row=2, column=0, sticky="w", pady=(10, 5))
+        lbl_confirmar_senha.pack(fill="x", pady=(10, 5))
         
         self.entry_confirmar_senha = customtkinter.CTkEntry(campos_frame, show="•", width=300)
-        self.entry_confirmar_senha.grid(row=3, column=0, pady=(0, 10), sticky="ew")
+        self.entry_confirmar_senha.pack(fill="x", pady=(0, 10))
+        self.entry_confirmar_senha.bind("<Button-1>", lambda e: self.definir_campo_ativo(self.entry_confirmar_senha))
         
         # Rótulo para mensagens de erro/sucesso
         self.lbl_mensagem = customtkinter.CTkLabel(
@@ -432,17 +372,17 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
             wraplength=300,
             justify="left"
         )
-        self.lbl_mensagem.grid(row=4, column=0, pady=(5, 10), sticky="w")
+        self.lbl_mensagem.pack(fill="x", pady=(10, 0))
         
         # Frame para botões
-        botoes_frame = customtkinter.CTkFrame(frame, fg_color="transparent")
-        botoes_frame.grid(row=2, column=0, sticky="nsew", pady=(10, 0))
+        botoes_frame = customtkinter.CTkFrame(campos_frame, fg_color="transparent")
+        botoes_frame.pack(fill="x", pady=(20, 0))
         
         # Botão Salvar
         btn_salvar = customtkinter.CTkButton(
             botoes_frame,
             text="Salvar",
-            command=lambda: self.salvar_nova_senha()
+            command=self.salvar_nova_senha
         )
         btn_salvar.pack(side="left", padx=5, pady=10, fill="x", expand=True)
         
@@ -456,12 +396,61 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         )
         btn_cancelar.pack(side="left", padx=5, pady=10, fill="x", expand=True)
         
-        # Configurar o grid para expandir corretamente
-        frame.grid_rowconfigure(1, weight=1)
-        frame.grid_columnconfigure(0, weight=1)
+        # Frame para o teclado (lado direito)
+        teclado_frame = customtkinter.CTkFrame(main_frame, fg_color="white", corner_radius=10)
+        teclado_frame.pack(side="right", fill="y", padx=(10, 0))
         
-        # Focar no primeiro campo
+        # Título do teclado
+        customtkinter.CTkLabel(
+            teclado_frame,
+            text="Teclado Numérico",
+            font=("Arial", 14, "bold"),
+            text_color="black"
+        ).pack(pady=(10, 5))
+        
+        # Teclado numérico
+        botoes = [
+            ["1", "2", "3"],
+            ["4", "5", "6"],
+            ["7", "8", "9"],
+            ["", "0", "⌫"]
+        ]
+        
+        for i, linha in enumerate(botoes):
+            frame_linha = customtkinter.CTkFrame(teclado_frame, fg_color="transparent")
+            frame_linha.pack(fill="x")
+            
+            for j, texto in enumerate(linha):
+                if texto:
+                    btn = customtkinter.CTkButton(
+                        frame_linha, 
+                        text=texto, 
+                        width=70, 
+                        height=60,
+                        font=("Arial", 18, "bold"), 
+                        fg_color="#E9ECEF",
+                        text_color="black", 
+                        hover_color="#DEE2E6",
+                        command=lambda t=texto: self.tecla_pressionada(t)
+                    )
+                    btn.pack(side="left", padx=5, pady=5, expand=True, fill="both")
+        
+        # Definir campo ativo inicial
+        self.campo_ativo = self.entry_nova_senha
         self.entry_nova_senha.focus_set()
+    
+    def definir_campo_ativo(self, campo):
+        """Define qual campo está ativo para receber entrada do teclado"""
+        self.campo_ativo = campo
+    
+    def tecla_pressionada(self, valor):
+        """Manipula o pressionamento das teclas do teclado numérico"""
+        if valor == "⌫":  # Backspace
+            current_text = self.campo_ativo.get()
+            self.campo_ativo.delete(0, tkinter.END)
+            self.campo_ativo.insert(0, current_text[:-1])
+        else:
+            self.campo_ativo.insert(tkinter.END, valor)
     
     def salvar_nova_senha(self):
         nova_senha = self.entry_nova_senha.get()
