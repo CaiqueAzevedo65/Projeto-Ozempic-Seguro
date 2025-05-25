@@ -11,7 +11,8 @@ class CadastroUsuarioFrame(customtkinter.CTkFrame):
         self.pack(fill="both", expand=True)
         
         # Configuração da validação de entrada
-        self.vcmd = (self.register(self.validar_entrada_numerica), '%P')
+        self.vcmd_nome = (self.register(self.validar_entrada_nome), '%P')
+        self.vcmd_numerico = (self.register(self.validar_entrada_numerica), '%P')
         
         # Inicializa os temporizadores
         self.erro_timer = None
@@ -26,10 +27,16 @@ class CadastroUsuarioFrame(customtkinter.CTkFrame):
         self.campo_entrada_atual = None
 
     def validar_entrada_numerica(self, valor):
-        """Valida se a entrada contém apenas números"""
+        """Valida se a entrada contém apenas números e tem no máximo 8 caracteres"""
+        if len(valor) > 8:  # Limite de 8 caracteres
+            return False
         if valor == "":  # Permite campo vazio para poder apagar
             return True
         return valor.isdigit()
+    
+    def validar_entrada_nome(self, valor):
+        """Valida se o nome tem no máximo 26 caracteres"""
+        return len(valor) <= 26
 
     def criar_topo(self):
         Header(self, "Cadastro de Usuário")
@@ -52,7 +59,7 @@ class CadastroUsuarioFrame(customtkinter.CTkFrame):
         # Campo de Nome (aceita letras)
         customtkinter.CTkLabel(
             frame_cadastro, 
-            text="Nome", 
+            text="Nome (máx. 26 caracteres)", 
             font=("Arial", 16, "bold"), 
             text_color="white"
         ).pack(anchor="w", pady=(10, 5), padx=20)
@@ -61,7 +68,9 @@ class CadastroUsuarioFrame(customtkinter.CTkFrame):
             frame_cadastro, 
             width=300, 
             height=40,
-            font=("Arial", 14)
+            font=("Arial", 14),
+            validate="key",
+            validatecommand=self.vcmd_nome
         )
         self.nome_entry.pack(pady=(0, 10), padx=20)
         self.nome_entry.bind("<Button-1>", lambda e: definir_campo_atual(self.nome_entry))
@@ -69,7 +78,7 @@ class CadastroUsuarioFrame(customtkinter.CTkFrame):
         # Campo de Usuário (aceita apenas números)
         customtkinter.CTkLabel(
             frame_cadastro, 
-            text="Usuário", 
+            text="Usuário (máx. 8 dígitos)", 
             font=("Arial", 16, "bold"), 
             text_color="white"
         ).pack(anchor="w", pady=(10, 5), padx=20)
@@ -80,7 +89,7 @@ class CadastroUsuarioFrame(customtkinter.CTkFrame):
             height=40,
             font=("Arial", 14),
             validate="key",
-            validatecommand=self.vcmd
+            validatecommand=self.vcmd_numerico
         )
         self.usuario_entry.pack(pady=(0, 10), padx=20)
         self.usuario_entry.bind("<Button-1>", lambda e: definir_campo_atual(self.usuario_entry))
@@ -88,7 +97,7 @@ class CadastroUsuarioFrame(customtkinter.CTkFrame):
         # Campo de senha com mensagem de erro abaixo
         customtkinter.CTkLabel(
             frame_cadastro, 
-            text="Senha", 
+            text="Senha (máx. 8 dígitos)", 
             font=("Arial", 16, "bold"), 
             text_color="white"
         ).pack(anchor="w", pady=(10, 5), padx=20)
@@ -100,7 +109,7 @@ class CadastroUsuarioFrame(customtkinter.CTkFrame):
             font=("Arial", 14),
             show="•",  # Mostra bolinhas no lugar dos caracteres
             validate="key",
-            validatecommand=self.vcmd
+            validatecommand=self.vcmd_numerico
         )
         self.senha_entry.pack(pady=(0, 5), padx=20)
         self.senha_entry.bind("<Button-1>", lambda e: definir_campo_atual(self.senha_entry))
@@ -199,7 +208,21 @@ class CadastroUsuarioFrame(customtkinter.CTkFrame):
             self.mostrar_mensagem("Preencha todos os campos!", "erro")
             return
             
+        # Validação do tamanho do nome
+        if len(nome) > 26:
+            self.mostrar_mensagem("O nome deve ter no máximo 26 caracteres!", "erro")
+            return
+            
+        # Validação do tamanho do usuário
+        if len(usuario) > 8:
+            self.mostrar_mensagem("O usuário deve ter no máximo 8 dígitos!", "erro")
+            return
+            
         # Validação do tamanho da senha
+        if len(senha) > 8:
+            self.mostrar_mensagem("A senha deve ter no máximo 8 dígitos!", "erro")
+            return
+            
         if len(senha) < 4:
             self.mostrar_mensagem("A senha deve ter no mínimo 4 caracteres!", "erro")
             return
