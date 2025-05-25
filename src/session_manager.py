@@ -64,7 +64,8 @@ class SessionManager:
             bool: True se o bloqueio foi aplicado, False se o usuário não tem permissão
                   ou se o timer estiver desativado
         """
-        if not self.is_admin() or not self._timer_enabled:
+        # Permite que tanto administradores quanto vendedores ativem o bloqueio
+        if not (self.is_admin() or (self._current_user and self._current_user.get('tipo') == 'vendedor')) or not self._timer_enabled:
             return False
             
         self._blocked_until = datetime.now() + timedelta(minutes=minutes)

@@ -231,7 +231,9 @@ class PastaButton:
         session_manager = SessionManager.get_instance()
         if not session_manager.is_timer_enabled():
             # Se o timer estiver desativado, abre a pasta diretamente sem mostrar a janela de confirmação
-            sucesso, mensagem = self.state_manager.abrir_pasta(self.pasta_id, self.tipo_usuario)
+            current_user = session_manager.get_current_user()
+            user_id = current_user.get('id') if current_user else None
+            sucesso, mensagem = self.state_manager.abrir_pasta(self.pasta_id, self.tipo_usuario, user_id)
             messagebox.showinfo("Sucesso" if sucesso else "Aviso", mensagem)
             if sucesso:
                 self.atualizar_imagem()
@@ -265,10 +267,17 @@ class PastaButton:
         ).pack(pady=(10, 5))
         
         # Mensagem
+        if self.tipo_usuario == 'vendedor':
+            mensagem = f"Deseja realmente abrir a pasta {self.pasta_id}?\n\n" \
+                       "O sistema será bloqueado por 5 minutos após a abertura.\n" \
+                       "Você terá acesso somente para visualizar os dados."
+        else:
+            mensagem = f"Deseja realmente abrir a pasta {self.pasta_id}?\n\n" \
+                       "O sistema será bloqueado por 5 minutos após a abertura."
+        
         customtkinter.CTkLabel(
             main_frame,
-            text=f"Deseja realmente abrir a pasta {self.pasta_id}?\n\n"
-                 "O sistema será bloqueado por 5 minutos após a abertura.",
+            text=mensagem,
             font=("Arial", 12),
             text_color="black",
             wraplength=400,
