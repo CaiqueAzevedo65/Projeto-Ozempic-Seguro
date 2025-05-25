@@ -51,7 +51,7 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         # Cabeçalhos da tabela
         self.criar_cabecalhos()
         
-        # Linhas da tabela
+        # Carregar dados iniciais
         self.carregar_dados()
     
     def criar_cabecalhos(self):
@@ -84,6 +84,11 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
             lbl.pack(side="left", padx=10, pady=5)
     
     def carregar_dados(self):
+        # Destruir apenas o frame rolável se existir
+        for widget in self.tabela_frame.winfo_children():
+            if isinstance(widget, customtkinter.CTkScrollableFrame):
+                widget.destroy()
+        
         # Frame rolável para os itens
         scrollable_frame = customtkinter.CTkScrollableFrame(
             self.tabela_frame,
@@ -507,11 +512,12 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         self.confirmando_exclusao = False
         self.frame_mensagem.grid_forget()
         
-        # Atualizar a tabela
-        self.carregar_dados()
-        
         # Limpar painel de detalhes
         self.limpar_painel_detalhes()
+        
+        # Destruir e recriar a tabela inteira
+        self.tabela_frame.destroy()
+        self.criar_tabela_usuarios()
         
         # Mostrar instrução novamente
         self.lbl_instrucao.grid(row=0, column=0, pady=50, padx=20, sticky="n")
@@ -594,9 +600,6 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
             corner_radius=8
         )
         btn_ok.pack(pady=(10, 20))
-        
-        # Foca na janela de erro
-        janela_erro.focus_set()
         
         # Configura o que acontece quando a janela é fechada
         janela_erro.protocol("WM_DELETE_WINDOW", janela_erro.destroy)
