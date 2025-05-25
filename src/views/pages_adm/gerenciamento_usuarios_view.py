@@ -1,3 +1,4 @@
+import tkinter
 import customtkinter
 from ..components import Header, VoltarButton
 from ...data.database import DatabaseManager
@@ -107,23 +108,22 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
                     self.scrollable_frame,
                     fg_color="#f0f0f0" if idx % 2 == 0 else "#f8f8f8",
                     corner_radius=8,
-                    height=50  # Altura fixa para as linhas
+                    height=50,
+                    border_width=1,
+                    border_color="#e0e0e0"
                 )
-                linha_frame.grid(row=idx, column=0, sticky="ew", pady=2)
-                linha_frame.grid_propagate(False)  # Impede que a linha mude de tamanho
-                
-                # Configurar grid da linha
-                linha_frame.columnconfigure(0, weight=1)
+                linha_frame.grid(row=idx, column=0, sticky="nsew", pady=2, padx=5)
+                linha_frame.grid_propagate(False)
                 
                 # Armazenar dados do usuário para uso no clique
                 linha_frame.dados_usuario = (user_id, username, nome_completo, tipo, ativo, data_criacao)
                 
-                # Frame para o conteúdo da linha
+                # Frame para o conteúdo da linha que preenche todo o espaço
                 conteudo_frame = customtkinter.CTkFrame(
                     linha_frame,
                     fg_color="transparent"
                 )
-                conteudo_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=8)
+                conteudo_frame.pack(fill="both", expand=True, padx=10, pady=8)
                 
                 # Configurar grid do conteúdo
                 for i in range(3):
@@ -138,12 +138,13 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
                 
                 # Adicionar os dados como labels dentro do frame
                 for col, texto in enumerate(dados):
-                    # Frame para cada célula
+                    # Frame para cada célula que preenche o espaço disponível
                     cell_frame = customtkinter.CTkFrame(
                         conteudo_frame,
                         fg_color="transparent"
                     )
                     cell_frame.grid(row=0, column=col, sticky="nsew", padx=5)
+                    cell_frame.columnconfigure(0, weight=1)
                     
                     # Definir estilo da fonte
                     font_style = ("Arial", 12, "bold") if col == 0 else ("Arial", 12)
@@ -155,21 +156,39 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
                         text_color="#333333",
                         anchor="w"
                     )
-                    lbl.pack(side="left", anchor="w")
+                    lbl.pack(side="left", fill="x", expand=True, anchor="w")
+                    
+                    # Configurar para que a célula ocupe todo o espaço horizontal
+                    cell_frame.grid_propagate(False)
                 
                 # Função para lidar com eventos de clique
                 def make_click_handler(dados):
                     return lambda e: self.exibir_detalhes_usuario(*dados)
                 
-                # Tornar a linha inteira clicável
+                # Criar handler de clique
                 click_handler = make_click_handler(linha_frame.dados_usuario)
-                linha_frame.bind("<Button-1>", click_handler)
-                conteudo_frame.bind("<Button-1>", click_handler)
                 
-                # Tornar todas as células clicáveis também
-                for widget in conteudo_frame.winfo_children():
-                    widget.bind("<Button-1>", click_handler)
-                    
+                # Adicionar evento de clique apenas uma vez no frame principal
+                linha_frame.bind("<Button-1>", click_handler)
+                
+                # Função para propagar o clique para os elementos filhos
+                def propagate_click(widget, handler):
+                    widget.bind("<Button-1>", handler)
+                    for child in widget.winfo_children():
+                        if isinstance(child, (customtkinter.CTkFrame, customtkinter.CTkLabel)):
+                            propagate_click(child, handler)
+                
+                # Aplicar propagação de clique para os elementos internos
+                propagate_click(conteudo_frame, click_handler)
+                
+                # Remover efeitos de cursor apenas
+                for widget in [linha_frame, conteudo_frame] + conteudo_frame.winfo_children():
+                    try:
+                        if hasattr(widget, 'configure'):
+                            widget.configure(cursor="")
+                    except Exception:
+                        continue
+                
         except Exception as e:
             print(f"Erro ao carregar usuários: {e}")
     
