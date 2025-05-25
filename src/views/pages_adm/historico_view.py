@@ -147,15 +147,30 @@ class HistoricoView(customtkinter.CTkFrame):
             print(f"Erro ao carregar histórico: {e}")
     
     def atualizar_controles_paginacao(self, total_itens):
-        # Atualiza o texto da página
+        # Calcula o total de páginas
         total_paginas = (total_itens + self.items_per_page - 1) // self.items_per_page
-        self.lbl_pagina.configure(text=f"Página {self.current_page} de {max(1, total_paginas)}")
+        total_paginas = max(1, total_paginas)  # Garante pelo menos 1 página
         
-        # Habilita/desabilita botões de navegação
-        self.btn_anterior.configure(state="normal" if self.current_page > 1 else "disabled")
-        self.btn_proximo.configure(
-            state="normal" if self.current_page * self.items_per_page < total_itens else "disabled"
-        )
+        # Atualiza o texto da página
+        self.lbl_pagina.configure(text=f"Página {self.current_page} de {total_paginas}")
+        
+        # Mostra ou esconde os controles de paginação com base no número de páginas
+        if total_paginas <= 1:
+            # Esconde os controles de paginação se houver apenas uma página
+            self.btn_anterior.pack_forget()
+            self.lbl_pagina.pack_forget()
+            self.btn_proximo.pack_forget()
+        else:
+            # Mostra os controles e atualiza os estados dos botões
+            self.btn_anterior.pack(side="left", padx=5)
+            self.lbl_pagina.pack(side="left", padx=5)
+            self.btn_proximo.pack(side="left", padx=5)
+            
+            # Atualiza estados dos botões
+            self.btn_anterior.configure(state="normal" if self.current_page > 1 else "disabled")
+            self.btn_proximo.configure(
+                state="normal" if self.current_page < total_paginas else "disabled"
+            )
     
     def proxima_pagina(self):
         self.current_page += 1
