@@ -8,6 +8,7 @@ from .parametro_sistemas_view import ParametroSistemasFrame
 from .estado_terminal_view import EstadoTerminalFrame
 from .historico_view import HistoricoView
 from .admin_pastas_view import AdminPastasFrame
+from .auditoria_view import AuditoriaFrame
 
 class PainelAdministradorFrame(customtkinter.CTkFrame):
     def __init__(self, master, finalizar_sessao_callback=None, *args, **kwargs):
@@ -38,6 +39,7 @@ class PainelAdministradorFrame(customtkinter.CTkFrame):
             {"texto": "Gerenciar Usuários", "comando": self.gerenciar_usuarios},
             {"texto": "Gerenciar Pastas", "comando": self.gerenciar_pastas},
             {"texto": "Cadastro de Usuário", "comando": self.cadastro_usuario},
+            {"texto": "Registro de Auditoria", "comando": self.registro_auditoria},
             {"texto": "Diagnóstico", "comando": self.diagnostico},
             {"texto": "Parâmetros de Sistema", "comando": self.parametro_sistemas},
             {"texto": "Estado do Terminal", "comando": self.estado_terminal},
@@ -77,6 +79,12 @@ class PainelAdministradorFrame(customtkinter.CTkFrame):
         for widget in self.winfo_children():
             widget.destroy()
         HistoricoView(self, voltar_callback=self.criar_tela_principal)
+
+    def registro_auditoria(self):
+        """Abre a tela de registro de auditoria"""
+        for widget in self.winfo_children():
+            widget.destroy()
+        AuditoriaFrame(self, voltar_callback=self.criar_tela_principal)
 
     def criar_botao_finalizar(self):
         FinalizarSessaoButton(self, self.finalizar_sessao)

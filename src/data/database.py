@@ -66,6 +66,22 @@ class DatabaseManager:
         )
         ''')
         
+        # Tabela de auditoria
+        self.cursor.execute('''
+        CREATE TABLE IF NOT EXISTS auditoria (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id INTEGER,
+            acao TEXT NOT NULL,
+            tabela_afetada TEXT NOT NULL,
+            id_afetado INTEGER,
+            dados_anteriores TEXT,
+            dados_novos TEXT,
+            data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            endereco_ip TEXT,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
+        )
+        ''')
+        
         self.conn.commit()
         self._migrar_usuarios_se_necessario()
 
@@ -384,14 +400,43 @@ class DatabaseManager:
             bool: True se a senha foi atualizada com sucesso, False caso contrário
         """
         try:
+            # Primeiro, obter o nome de usuário para o log
+            self.cursor.execute('SELECT username FROM usuarios WHERE id = ?', (usuario_id,))
+            resultado = self.cursor.fetchone()
+            
+            if not resultado:
+                return False
+                
+            username = resultado[0]
             senha_hash = self._hash_senha(nova_senha)
+            
+            # Registrar a alteração de senha na auditoria
+            self.registrar_auditoria(
+                usuario_id=usuario_id,
+                acao='ALTERAR_SENHA',
+                tabela_afetada='USUARIOS',
+                id_afetado=usuario_id,
+                dados_anteriores={'usuario': username, 'acao': 'senha_alterada'},
+                dados_novos={'usuario': username, 'hora_alteracao': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+            )
+            
+            # Atualizar a senha no banco de dados
             self.cursor.execute(
                 'UPDATE usuarios SET senha_hash = ? WHERE id = ?',
                 (senha_hash, usuario_id)
             )
             self.conn.commit()
             return self.cursor.rowcount > 0
+            
         except Exception as e:
+            # Registrar erro na auditoria
+            self.registrar_auditoria(
+                usuario_id=usuario_id,
+                acao='ERRO_ALTERAR_SENHA',
+                tabela_afetada='USUARIOS',
+                id_afetado=usuario_id,
+                dados_anteriores={'erro': str(e), 'hora_erro': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+            )
             print(f"Erro ao atualizar senha: {e}")
             return False
 
@@ -434,3 +479,174 @@ class DatabaseManager:
         except Exception as e:
             self.conn.rollback()
             print(f"Erro ao criar usuário administrador padrão: {e}")
+
+    def registrar_auditoria(self, usuario_id, acao, tabela_afetada, id_afetado=None, dados_anteriores=None, dados_novos=None, endereco_ip=None):
+        """
+        Registra uma ação na tabela de auditoria
+        
+        Args:
+            usuario_id (int): ID do usuário que realizou a ação
+            acao (str): Ação realizada (ex: 'LOGIN', 'LOGOUT', 'CRIAR', 'ATUALIZAR', 'EXCLUIR')
+            tabela_afetada (str): Nome da tabela afetada
+            id_afetado (int, optional): ID do registro afetado
+            dados_anteriores (dict, optional): Dados antes da alteração
+            dados_novos (dict, optional): Dados após a alteração
+            endereco_ip (str, optional): Endereço IP do usuário
+            
+        Returns:
+            int: ID do registro de auditoria criado
+        """
+        try:
+            # Converter dicionários para strings JSON
+            dados_anteriores_json = json.dumps(dados_anteriores, ensure_ascii=False) if dados_anteriores else None
+            dados_novos_json = json.dumps(dados_novos, ensure_ascii=False) if dados_novos else None
+            
+            self.cursor.execute('''
+                INSERT INTO auditoria 
+                (usuario_id, acao, tabela_afetada, id_afetado, dados_anteriores, dados_novos, endereco_ip)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (usuario_id, acao, tabela_afetada, id_afetado, dados_anteriores_json, dados_novos_json, endereco_ip))
+            
+            self.conn.commit()
+            return self.cursor.lastrowid
+            
+        except Exception as e:
+            print(f"Erro ao registrar auditoria: {e}")
+            self.conn.rollback()
+            return None
+    
+    def buscar_logs_auditoria(self, offset=0, limit=50, filtro_usuario=None, filtro_acao=None, filtro_tabela=None, 
+                             data_inicio=None, data_fim=None):
+        """
+        Busca registros de auditoria com filtros opcionais
+        
+        Args:
+            offset (int): Número de registros para pular (paginação)
+            limit (int): Número máximo de registros a retornar
+            filtro_usuario (int, optional): ID do usuário para filtrar
+            filtro_acao (str, optional): Ação para filtrar
+            filtro_tabela (str, optional): Tabela para filtrar
+            data_inicio (str, optional): Data de início no formato 'YYYY-MM-DD'
+            data_fim (str, optional): Data de fim no formato 'YYYY-MM-DD'
+            
+        Returns:
+            list: Lista de dicionários com os registros de auditoria
+        """
+        try:
+            query = '''
+                SELECT 
+                    a.id,
+                    a.acao,
+                    a.tabela_afetada,
+                    a.id_afetado,
+                    a.dados_anteriores,
+                    a.dados_novos,
+                    a.data_hora,
+                    u.username as usuario
+                FROM auditoria a
+                LEFT JOIN usuarios u ON a.usuario_id = u.id
+                WHERE 1=1
+            '''
+            
+            params = []
+            
+            # Aplicar filtros
+            if filtro_usuario is not None:
+                query += ' AND a.usuario_id = ?'
+                params.append(filtro_usuario)
+                
+            if filtro_acao:
+                query += ' AND a.acao = ?'
+                params.append(filtro_acao)
+                
+            if filtro_tabela:
+                query += ' AND a.tabela_afetada = ?'
+                params.append(filtro_tabela)
+                
+            if data_inicio:
+                query += ' AND DATE(a.data_hora) >= ?'
+                params.append(data_inicio)
+                
+            if data_fim:
+                query += ' AND DATE(a.data_hora) <= ?'
+                params.append(data_fim)
+            
+            # Ordenar por data mais recente primeiro
+            query += ' ORDER BY a.data_hora DESC'
+            
+            # Adicionar paginação
+            query += ' LIMIT ? OFFSET ?'
+            params.extend([limit, offset])
+            
+            self.cursor.execute(query, params)
+            colunas = [desc[0] for desc in self.cursor.description]
+            
+            # Converter para lista de dicionários
+            resultados = []
+            for row in self.cursor.fetchall():
+                resultado = dict(zip(colunas, row))
+                # Converter strings JSON de volta para dicionários
+                if resultado.get('dados_anteriores'):
+                    resultado['dados_anteriores'] = json.loads(resultado['dados_anteriores'])
+                if resultado.get('dados_novos'):
+                    resultado['dados_novos'] = json.loads(resultado['dados_novos'])
+                
+                # Formatar data para exibição
+                if resultado.get('data_hora'):
+                    data_obj = datetime.strptime(resultado['data_hora'], '%Y-%m-%d %H:%M:%S')
+                    resultado['data_formatada'] = data_obj.strftime('%d/%m/%Y %H:%M:%S')
+                
+                resultados.append(resultado)
+                
+            return resultados
+            
+        except Exception as e:
+            print(f"Erro ao buscar logs de auditoria: {e}")
+            return []
+    
+    def contar_logs_auditoria(self, filtro_usuario=None, filtro_acao=None, filtro_tabela=None, 
+                             data_inicio=None, data_fim=None):
+        """
+        Conta o número total de registros de auditoria que correspondem aos filtros
+        
+        Args:
+            filtro_usuario (int, optional): ID do usuário para filtrar
+            filtro_acao (str, optional): Ação para filtrar
+            filtro_tabela (str, optional): Tabela para filtrar
+            data_inicio (str, optional): Data de início no formato 'YYYY-MM-DD'
+            data_fim (str, optional): Data de fim no formato 'YYYY-MM-DD'
+            
+        Returns:
+            int: Número total de registros que correspondem aos filtros
+        """
+        try:
+            query = 'SELECT COUNT(*) FROM auditoria a WHERE 1=1'
+            params = []
+            
+            # Aplicar filtros (mesmos filtros da busca)
+            if filtro_usuario is not None:
+                query += ' AND a.usuario_id = ?'
+                params.append(filtro_usuario)
+                
+            if filtro_acao:
+                query += ' AND a.acao = ?'
+                params.append(filtro_acao)
+                
+            if filtro_tabela:
+                query += ' AND a.tabela_afetada = ?'
+                params.append(filtro_tabela)
+                
+            if data_inicio:
+                query += ' AND DATE(a.data_hora) >= ?'
+                params.append(data_inicio)
+                
+            if data_fim:
+                query += ' AND DATE(a.data_hora) <= ?'
+                params.append(data_fim)
+            
+            self.cursor.execute(query, params)
+            return self.cursor.fetchone()[0]
+            
+        except Exception as e:
+            print(f"Erro ao contar logs de auditoria: {e}")
+            return 0

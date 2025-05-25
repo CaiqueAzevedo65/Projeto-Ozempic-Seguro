@@ -9,6 +9,7 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         super().__init__(master, fg_color="#3B6A7D", *args, **kwargs)
         self.db = DatabaseManager()
         self.usuario_selecionado = None  # Armazenará o ID do usuário selecionado
+        self.usuario_atual_esta_ativo = None  # Armazena o estado atual do usuário
         self.pack(fill="both", expand=True)
         
         # Variáveis para controle de estado
@@ -234,6 +235,7 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
     
     def exibir_detalhes_usuario(self, user_id, username, nome_completo, tipo, ativo, data_criacao):
         self.usuario_selecionado = user_id
+        self.usuario_atual_esta_ativo = ativo  # Armazena o estado atual do usuário
         
         # Limpar frame de detalhes
         for widget in self.frame_detalhes.winfo_children():
@@ -283,6 +285,14 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         # Configurar frame de botões
         self.frame_botoes.grid(row=2, column=0, columnspan=2, padx=20, pady=(20, 10), sticky="nsew")
         
+        # Limpar botões existentes
+        for widget in self.frame_botoes.winfo_children():
+            widget.destroy()
+        
+        # Configurar grid para os botões (3 colunas)
+        for i in range(3):
+            self.frame_botoes.columnconfigure(i, weight=1)
+        
         # Botão Alterar Senha
         btn_alterar_senha = customtkinter.CTkButton(
             self.frame_botoes,
@@ -293,6 +303,16 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         )
         btn_alterar_senha.grid(row=0, column=0, padx=5, pady=10, sticky="nsew")
         
+        # Botão Ativar/Desativar Usuário
+        btn_status = customtkinter.CTkButton(
+            self.frame_botoes,
+            text="Desativar Usuário" if ativo else "Ativar Usuário",
+            fg_color="#FFA500" if ativo else "#4CAF50",
+            hover_color="#e69500" if ativo else "#45a049",
+            command=self.toggle_status_usuario
+        )
+        btn_status.grid(row=0, column=1, padx=5, pady=10, sticky="nsew")
+        
         # Botão Excluir Usuário
         btn_excluir = customtkinter.CTkButton(
             self.frame_botoes,
@@ -301,10 +321,58 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
             hover_color="#d32f2f",
             command=self.confirmar_exclusao
         )
-        btn_excluir.grid(row=0, column=1, padx=5, pady=10, sticky="nsew")
+        btn_excluir.grid(row=0, column=2, padx=5, pady=10, sticky="nsew")
         
         # Esconder instrução
         self.lbl_instrucao.grid_forget()
+    
+    def toggle_status_usuario(self):
+        """Alterna o status de ativação do usuário"""
+        if not hasattr(self, 'usuario_selecionado') or not self.usuario_selecionado:
+            return
+        
+        try:
+            novo_status = not self.usuario_atual_esta_ativo
+            
+            # Atualiza o status no banco de dados
+            sucesso = self.db.atualizar_status_usuario(
+                usuario_id=self.usuario_selecionado,
+                ativo=novo_status,
+                usuario_alteracao_id=self.master.master.usuario_logado['id']
+            )
+            
+            if sucesso:
+                # Atualiza a interface
+                self.usuario_atual_esta_ativo = novo_status
+                mensagem = "Usuário ativado com sucesso!" if novo_status else "Usuário desativado com sucesso!"
+                self.mostrar_mensagem_sucesso(mensagem)
+                
+                # Atualiza o botão de status
+                for widget in self.frame_botoes.winfo_children():
+                    if widget.cget("text") in ["Ativar Usuário", "Desativar Usuário"]:
+                        widget.configure(
+                            text="Desativar Usuário" if novo_status else "Ativar Usuário",
+                            fg_color="#FFA500" if novo_status else "#4CAF50",
+                            hover_color="#e69500" if novo_status else "#45a049"
+                        )
+                
+                # Atualiza o status exibido
+                for widget in self.frame_detalhes.winfo_children():
+                    if hasattr(widget, 'children'):
+                        for child in widget.winfo_children():
+                            if isinstance(child, customtkinter.CTkLabel) and child.cget("text") == "Status:":
+                                # Encontra o label de valor ao lado do label "Status:"
+                                for sibling in widget.winfo_children():
+                                    if sibling != child and isinstance(sibling, customtkinter.CTkLabel):
+                                        sibling.configure(text="Ativo" if novo_status else "Inativo")
+                                        break
+                                break
+            else:
+                self.mostrar_mensagem_erro("Não foi possível alterar o status do usuário.")
+                
+        except Exception as e:
+            print(f"Erro ao alternar status do usuário: {e}")
+            self.mostrar_mensagem_erro(f"Erro ao alterar status do usuário: {str(e)}")
     
     def abrir_janela_alterar_senha(self):
         if not self.usuario_selecionado:
@@ -501,50 +569,38 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
             return
             
         try:
-            # Verifica se é o único administrador
-            if self.db.eh_unico_administrador(self.usuario_selecionado):
-                self.mostrar_mensagem_erro(
-                    "Não é possível excluir o único administrador do sistema.\n"
-                    "Promova outro usuário a administrador antes de remover este."
-                )
-                self.cancelar_exclusao()
-                return
-                
-            # Chama o método do banco de dados para excluir o usuário
-            sucesso = self.db.excluir_usuario(self.usuario_selecionado)
+            # Obter dados do usuário antes de excluir para auditoria
+            self.db.cursor.execute('SELECT username, nome_completo, tipo FROM usuarios WHERE id = ?', (self.usuario_selecionado,))
+            usuario = self.db.cursor.fetchone()
             
-            # Limpar frame de mensagem
-            for widget in self.frame_mensagem.winfo_children():
-                widget.destroy()
+            if usuario:
+                dados_anteriores = {
+                    'username': usuario[0],
+                    'nome_completo': usuario[1],
+                    'tipo': usuario[2]
+                }
                 
-            if sucesso:
-                # Mostrar mensagem de sucesso
-                lbl_sucesso = customtkinter.CTkLabel(
-                    self.frame_mensagem,
-                    text="Usuário excluído com sucesso!",
-                    text_color="#28a745",
-                    font=("Arial", 12, "bold")
+                # Registrar auditoria antes de excluir
+                self.db.registrar_auditoria(
+                    usuario_id=self.master.master.usuario_logado['id'],
+                    acao='EXCLUIR',
+                    tabela_afetada='USUARIOS',
+                    id_afetado=self.usuario_selecionado,
+                    dados_anteriores=dados_anteriores
                 )
-                lbl_sucesso.pack(pady=5)
                 
-                # Atualizar a tabela de usuários após 1.5 segundos
-                self.after(1500, self.atualizar_apos_exclusao)
-            else:
-                # Mostrar mensagem de erro
-                lbl_erro = customtkinter.CTkLabel(
-                    self.frame_mensagem,
-                    text="Não foi possível excluir o usuário.",
-                    text_color="#dc3545",
-                    font=("Arial", 12, "bold")
-                )
-                lbl_erro.pack(pady=5)
+                # Executar exclusão
+                self.db.cursor.execute('DELETE FROM usuarios WHERE id = ?', (self.usuario_selecionado,))
+                self.db.conn.commit()
                 
-                # Reativar botão de excluir após 2 segundos
-                self.after(2000, self.reiniciar_estado_exclusao)
+                self.mostrar_mensagem("Usuário excluído com sucesso!", "sucesso")
+                self.limpar_campos()
+                self.carregar_dados()
                 
         except Exception as e:
-            print(f"Erro ao excluir usuário: {e}")
-            self.mostrar_mensagem_erro(f"Erro ao excluir usuário: {str(e)}")
+            self.mostrar_mensagem(f"Erro ao excluir usuário: {str(e)}", "erro")
+        finally:
+            self.resetar_botao_excluir()
     
     def atualizar_apos_exclusao(self):
         """Atualiza a interface após a exclusão bem-sucedida"""
