@@ -7,16 +7,16 @@ class EstadoTerminalFrame(customtkinter.CTkFrame):
         super().__init__(master, fg_color="#3B6A7D", *args, **kwargs)
         self.pack(fill="both", expand=True)
         
-        # Frame principal para o conteúdo
+        # Criar header primeiro
+        self.header = Header(self, "Estado Terminal")
+        
+        # Frame principal para o conteúdo abaixo do header
         self.main_content = customtkinter.CTkFrame(self, fg_color="transparent")
         self.main_content.pack(fill="both", expand=True, padx=40, pady=(20, 100))
         
-        self.criar_topo()
+        # Criar elementos restantes
         self.criar_tabela_estados()
         self.criar_botao_voltar()
-
-    def criar_topo(self):
-        Header(self, "Estado Terminal")
         
     def criar_tabela_estados(self):
         # Frame para a tabela
@@ -77,6 +77,6 @@ class EstadoTerminalFrame(customtkinter.CTkFrame):
                 anchor="w"
             )
             lbl.pack(side="left", padx=10, pady=5)
-
+    
     def criar_botao_voltar(self):
         VoltarButton(self, self.voltar_callback)

@@ -7,16 +7,16 @@ class DiagnosticoFrame(customtkinter.CTkFrame):
         super().__init__(master, fg_color="#3B6A7D", *args, **kwargs)
         self.pack(fill="both", expand=True)
         
-        # Frame principal para o conteúdo
+        # Criar header primeiro
+        self.header = Header(self, "Diagnóstico")
+        
+        # Frame principal para o conteúdo abaixo do header
         self.main_content = customtkinter.CTkFrame(self, fg_color="transparent")
         self.main_content.pack(fill="both", expand=True, padx=40, pady=(20, 100))
         
-        self.criar_topo()
+        # Criar elementos restantes
         self.criar_tabela_diagnostico()
         self.criar_botao_voltar()
-
-    def criar_topo(self):
-        Header(self, "Diagnóstico")
         
     def criar_tabela_diagnostico(self):
         # Frame para a tabela
@@ -59,7 +59,7 @@ class DiagnosticoFrame(customtkinter.CTkFrame):
         cabecalho_frame.pack(fill="x", padx=10, pady=10)
 
         # Cabeçalhos
-        cabecalhos = ["Data/Hora", "Tipo", "Descrição", "Status"]
+        cabecalhos = ["Data/Hora", "Tipo", "Mensagem", "Status"]
         
         for texto in cabecalhos:
             # Cria um frame para cada cabeçalho para melhor controle
@@ -72,11 +72,12 @@ class DiagnosticoFrame(customtkinter.CTkFrame):
             lbl = customtkinter.CTkLabel(
                 header_cell,
                 text=texto,
-                font=("Arial", 14, "bold"),
+                font=("Arial", 12, "bold"),
                 text_color="black",
                 anchor="w"
             )
             lbl.pack(side="left", padx=10, pady=5)
-
+    
     def criar_botao_voltar(self):
-        VoltarButton(self, self.voltar_callback)
+        if self.voltar_callback:
+            VoltarButton(self, self.voltar_callback)

@@ -10,18 +10,18 @@ class ParametroSistemasFrame(customtkinter.CTkFrame):
         super().__init__(master, fg_color="#3B6A7D", *args, **kwargs)
         self.pack(fill="both", expand=True)
         
-        # Frame principal para o conteúdo
+        # Criar header primeiro
+        self.header = Header(self, "Parâmetro de Sistemas")
+        
+        # Frame principal para o conteúdo abaixo do header
         self.main_content = customtkinter.CTkFrame(self, fg_color="transparent")
         self.main_content.pack(fill="both", expand=True, padx=40, pady=(20, 100))
         
-        self.criar_topo()
+        # Criar elementos restantes
         self.criar_controle_timer()
         self.criar_tabela_parametros()
         self.criar_botao_voltar()
 
-    def criar_topo(self):
-        Header(self, "Parâmetro de Sistemas")
-    
     def criar_controle_timer(self):
         """Cria o controle para ativar/desativar a função de timer de abertura de pastas"""
         frame_controle = customtkinter.CTkFrame(
