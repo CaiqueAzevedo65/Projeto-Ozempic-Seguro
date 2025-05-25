@@ -47,9 +47,18 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         
         # Configurar grid da tabela
         self.tabela_frame.columnconfigure(0, weight=1)
+        self.tabela_frame.rowconfigure(1, weight=1)  # Linha para o conteúdo rolável
         
         # Cabeçalhos da tabela
         self.criar_cabecalhos()
+        
+        # Frame para o conteúdo rolável
+        self.scrollable_frame = customtkinter.CTkScrollableFrame(
+            self.tabela_frame,
+            fg_color="white"
+        )
+        self.scrollable_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
+        self.scrollable_frame.columnconfigure(0, weight=1)
         
         # Carregar dados iniciais
         self.carregar_dados()
@@ -58,43 +67,34 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         # Frame para os cabeçalhos
         cabecalho_frame = customtkinter.CTkFrame(
             self.tabela_frame,
-            fg_color="#f0f0f0",
-            corner_radius=10
+            fg_color="#e0e0e0",
+            corner_radius=8,
+            border_width=1,
+            border_color="#cccccc"
         )
-        cabecalho_frame.pack(fill="x", padx=10, pady=10)
+        cabecalho_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
+        
+        # Configurar grid dos cabeçalhos
+        for i in range(3):  # 3 colunas
+            cabecalho_frame.columnconfigure(i, weight=1)
 
         # Cabeçalhos atualizados
         cabecalhos = ["Usuário", "Nome Completo", "Tipo"]
         
-        for texto in cabecalhos:
-            # Cria um frame para cada cabeçalho para melhor controle
-            header_cell = customtkinter.CTkFrame(
-                cabecalho_frame,
-                fg_color="transparent"
-            )
-            header_cell.pack(side="left", fill="x", expand=True)
-            
+        for col, texto in enumerate(cabecalhos):
             lbl = customtkinter.CTkLabel(
-                header_cell,
+                cabecalho_frame,
                 text=texto,
-                font=("Arial", 14, "bold"),
-                text_color="black",
+                font=("Arial", 13, "bold"),
+                text_color="#333333",
                 anchor="w"
             )
-            lbl.pack(side="left", padx=10, pady=5)
+            lbl.grid(row=0, column=col, padx=15, pady=8, sticky="ew")
     
     def carregar_dados(self):
-        # Destruir apenas o frame rolável se existir
-        for widget in self.tabela_frame.winfo_children():
-            if isinstance(widget, customtkinter.CTkScrollableFrame):
-                widget.destroy()
-        
-        # Frame rolável para os itens
-        scrollable_frame = customtkinter.CTkScrollableFrame(
-            self.tabela_frame,
-            fg_color="white"
-        )
-        scrollable_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        # Limpar frame existente
+        for widget in self.scrollable_frame.winfo_children():
+            widget.destroy()
         
         try:
             # Obter usuários do banco de dados
@@ -102,56 +102,76 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
             
             # Adicionar itens
             for idx, (user_id, username, nome_completo, tipo, ativo, data_criacao) in enumerate(usuarios):
-                self.adicionar_linha(
-                    scrollable_frame,
-                    user_id,
+                # Frame para uma linha da tabela
+                linha_frame = customtkinter.CTkFrame(
+                    self.scrollable_frame,
+                    fg_color="#f0f0f0" if idx % 2 == 0 else "#f8f8f8",
+                    corner_radius=8,
+                    height=50  # Altura fixa para as linhas
+                )
+                linha_frame.grid(row=idx, column=0, sticky="ew", pady=2)
+                linha_frame.grid_propagate(False)  # Impede que a linha mude de tamanho
+                
+                # Configurar grid da linha
+                linha_frame.columnconfigure(0, weight=1)
+                
+                # Armazenar dados do usuário para uso no clique
+                linha_frame.dados_usuario = (user_id, username, nome_completo, tipo, ativo, data_criacao)
+                
+                # Frame para o conteúdo da linha
+                conteudo_frame = customtkinter.CTkFrame(
+                    linha_frame,
+                    fg_color="transparent"
+                )
+                conteudo_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=8)
+                
+                # Configurar grid do conteúdo
+                for i in range(3):
+                    conteudo_frame.columnconfigure(i, weight=1)
+                
+                # Dados a serem exibidos
+                dados = [
                     username,
                     nome_completo,
-                    tipo,
-                    ativo,
-                    data_criacao,
-                    idx % 2 == 0  # Alternar cor de fundo
-                )
+                    tipo.capitalize()
+                ]
+                
+                # Adicionar os dados como labels dentro do frame
+                for col, texto in enumerate(dados):
+                    # Frame para cada célula
+                    cell_frame = customtkinter.CTkFrame(
+                        conteudo_frame,
+                        fg_color="transparent"
+                    )
+                    cell_frame.grid(row=0, column=col, sticky="nsew", padx=5)
+                    
+                    # Definir estilo da fonte
+                    font_style = ("Arial", 12, "bold") if col == 0 else ("Arial", 12)
+                    
+                    lbl = customtkinter.CTkLabel(
+                        cell_frame,
+                        text=str(texto),
+                        font=font_style,
+                        text_color="#333333",
+                        anchor="w"
+                    )
+                    lbl.pack(side="left", anchor="w")
+                
+                # Função para lidar com eventos de clique
+                def make_click_handler(dados):
+                    return lambda e: self.exibir_detalhes_usuario(*dados)
+                
+                # Tornar a linha inteira clicável
+                click_handler = make_click_handler(linha_frame.dados_usuario)
+                linha_frame.bind("<Button-1>", click_handler)
+                conteudo_frame.bind("<Button-1>", click_handler)
+                
+                # Tornar todas as células clicáveis também
+                for widget in conteudo_frame.winfo_children():
+                    widget.bind("<Button-1>", click_handler)
+                    
         except Exception as e:
             print(f"Erro ao carregar usuários: {e}")
-    
-    def adicionar_linha(self, parent, user_id, username, nome_completo, tipo, ativo, data_criacao, par):
-        # Formatar dados
-        tipo_formatado = tipo.capitalize()
-        
-        # Frame para uma linha da tabela
-        linha_frame = customtkinter.CTkFrame(
-            parent,
-            fg_color="#f9f9f9" if par else "white",
-            corner_radius=8
-        )
-        linha_frame.pack(fill="x", padx=5, pady=2)
-        
-        # Armazenar dados do usuário para uso no clique
-        linha_frame.dados_usuario = (user_id, username, nome_completo, tipo, ativo, data_criacao)
-        
-        # Tornar a linha clicável
-        linha_frame.bind("<Button-1>", lambda e, dados=linha_frame.dados_usuario: self.exibir_detalhes_usuario(*dados))
-        
-        # Apenas os dados necessários
-        dados = [
-            username,
-            nome_completo,
-            tipo_formatado
-        ]
-        
-        for texto in dados:
-            lbl = customtkinter.CTkLabel(
-                linha_frame,
-                text=str(texto),
-                font=("Arial", 12),
-                text_color="black",
-                anchor="w"
-            )
-            lbl.pack(side="left", padx=10, pady=8, fill="x", expand=True)
-            
-            # Tornar os labels da linha clicáveis também
-            lbl.bind("<Button-1>", lambda e, dados=linha_frame.dados_usuario: self.exibir_detalhes_usuario(*dados))
     
     def criar_painel_direito(self):
         # Frame para o painel direito
