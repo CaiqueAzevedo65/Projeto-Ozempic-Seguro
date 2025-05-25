@@ -17,7 +17,8 @@ class AdminPastasFrame(customtkinter.CTkFrame):
     def criar_grade_botoes(self):
         """Cria a grade de botões das pastas"""
         button_data = []
-        for i in range(1, 9):  # 8 pastas (1001 a 1008)
+        # Criar 15 pastas para testar a paginação
+        for i in range(1, 16):
             pasta_id = f"100{i}"
             button_data.append({
                 'text': pasta_id,

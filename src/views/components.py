@@ -83,46 +83,132 @@ class FinalizarSessaoButton:
 class PastaButtonGrid(customtkinter.CTkFrame):
     def __init__(self, master, button_data):
         super().__init__(master, fg_color="transparent")
-        self.pack(expand=True, fill="both", padx=30, pady=(50, 150))
+        self.pack(expand=True, fill="both", padx=30, pady=20)
         
-        # Configuração da grade
-        rows = 2
-        cols = 4
+        # Armazenar os dados dos botões
+        self.button_data = button_data
+        self.current_page = 0
         
-        # Verificar se temos dados suficientes
-        if len(button_data) < rows * cols:
-            raise ValueError(f"Precisa de {rows*cols} itens em button_data")
+        # Configurações da grade
+        self.rows = 2
+        self.cols = 4
+        self.buttons_per_page = self.rows * self.cols
+        
+        # Calcular número total de páginas
+        self.total_pages = max(1, (len(self.button_data) + self.buttons_per_page - 1) // self.buttons_per_page)
+        
+        # Frame para a grade de botões
+        self.grid_frame = customtkinter.CTkFrame(self, fg_color="transparent")
+        self.grid_frame.pack(expand=True, fill="both")
+        
+        # Frame para a navegação
+        self.nav_frame = customtkinter.CTkFrame(self, fg_color="transparent")
+        self.nav_frame.pack(fill="x", pady=(10, 0))
         
         # Configurar grid layout
-        for i in range(rows):
-            self.rowconfigure(i, weight=1, uniform="rows")
-        for j in range(cols):
-            self.columnconfigure(j, weight=1, uniform="cols")
+        for i in range(self.rows):
+            self.grid_frame.rowconfigure(i, weight=1)
+        for j in range(self.cols):
+            self.grid_frame.columnconfigure(j, weight=1)
         
-        # Criar os botões
-        self.buttons = []
-        index = 0
-        for i in range(rows):
-            for j in range(cols):
-                if index >= len(button_data):
-                    break
-                    
-                # Frame para cada célula
-                cell_frame = customtkinter.CTkFrame(self, fg_color="transparent")
-                cell_frame.grid(row=i, column=j, padx=30, pady=10, sticky="nsew")
+        # Criar controles de navegação
+        self.criar_controles_navegacao()
+        
+        # Exibir a primeira página
+        self.mostrar_pagina(0)
+    
+    def criar_controles_navegacao(self):
+        """Cria os controles de navegação entre páginas"""
+        # Botão página anterior
+        self.btn_anterior = customtkinter.CTkButton(
+            self.nav_frame,
+            text="← Anterior",
+            command=self.pagina_anterior,
+            width=100,
+            state="disabled"
+        )
+        self.btn_anterior.pack(side="left", padx=10)
+        
+        # Label de página atual
+        self.lbl_pagina = customtkinter.CTkLabel(
+            self.nav_frame,
+            text=f"Página 1 de {self.total_pages}",
+            font=("Arial", 12, "bold")
+        )
+        self.lbl_pagina.pack(side="left", expand=True)
+        
+        # Botão próxima página
+        self.btn_proximo = customtkinter.CTkButton(
+            self.nav_frame,
+            text="Próxima →",
+            command=self.proxima_pagina,
+            width=100
+        )
+        self.btn_proximo.pack(side="right", padx=10)
+        
+        # Esconder controles de navegação se houver apenas uma página
+        if self.total_pages <= 1:
+            self.nav_frame.pack_forget()
+    
+    def pagina_anterior(self):
+        """Vai para a página anterior"""
+        if self.current_page > 0:
+            self.mostrar_pagina(self.current_page - 1)
+    
+    def proxima_pagina(self):
+        """Vai para a próxima página"""
+        if self.current_page < self.total_pages - 1:
+            self.mostrar_pagina(self.current_page + 1)
+    
+    def mostrar_pagina(self, page_num):
+        """Mostra a página especificada"""
+        # Validar número da página
+        if page_num < 0 or page_num >= self.total_pages:
+            return
+            
+        self.current_page = page_num
+        
+        # Limpar a grade atual
+        for widget in self.grid_frame.winfo_children():
+            widget.destroy()
+        
+        # Calcular índices dos itens a serem exibidos
+        start_idx = page_num * self.buttons_per_page
+        end_idx = min(start_idx + self.buttons_per_page, len(self.button_data))
+        
+        # Criar os botões da página atual
+        for i in range(self.rows):
+            for j in range(self.cols):
+                item_idx = start_idx + i * self.cols + j
                 
-                # Criar o botão de pasta
-                btn_data = button_data[index]
-                btn = PastaButton(
-                    master=cell_frame,
-                    text=btn_data['text'],
-                    command=btn_data['command'],
-                    name=btn_data['name'],
-                    tipo_usuario=btn_data['tipo_usuario']
-                )
+                # Se for a segunda página e o último item, deixar vazio
+                if page_num == 1 and i == self.rows - 1 and j == self.cols - 1 and len(self.button_data) > 8:
+                    continue
                 
-                self.buttons.append(btn)
-                index += 1
+                # Criar frame para a célula
+                cell_frame = customtkinter.CTkFrame(self.grid_frame, fg_color="transparent")
+                cell_frame.grid(row=i, column=j, padx=10, pady=10, sticky="nsew")
+                
+                if item_idx < end_idx:
+                    # Criar o botão de pasta
+                    btn_data = self.button_data[item_idx]
+                    btn = PastaButton(
+                        master=cell_frame,
+                        text=btn_data['text'],
+                        command=btn_data['command'],
+                        name=btn_data['name'],
+                        tipo_usuario=btn_data['tipo_usuario']
+                    )
+        
+        # Atualizar controles de navegação
+        self.atualizar_controles_navegacao()
+    
+    def atualizar_controles_navegacao(self):
+        """Atualiza o estado dos controles de navegação"""
+        if hasattr(self, 'lbl_pagina') and hasattr(self, 'btn_anterior') and hasattr(self, 'btn_proximo'):
+            self.lbl_pagina.configure(text=f"Página {self.current_page + 1} de {self.total_pages}")
+            self.btn_anterior.configure(state="normal" if self.current_page > 0 else "disabled")
+            self.btn_proximo.configure(state="normal" if self.current_page < self.total_pages - 1 else "disabled")
 
 # Componente de botão com imagem de pasta
 class PastaButton:
