@@ -4,8 +4,9 @@ from ..components import Header, VoltarButton
 from ...data.database import DatabaseManager
 
 class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
-    def __init__(self, master, voltar_callback=None, *args, **kwargs):
+    def __init__(self, master, voltar_callback=None, usuario_logado=None, *args, **kwargs):
         self.voltar_callback = voltar_callback
+        self.usuario_logado = usuario_logado  # Store the logged-in user
         super().__init__(master, fg_color="#3B6A7D", *args, **kwargs)
         self.db = DatabaseManager()
         self.usuario_selecionado = None  # Armazenará o ID do usuário selecionado
@@ -563,15 +564,29 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
             usuario = self.db.cursor.fetchone()
             
             if usuario:
+                # Verificar se é um administrador e se é o último
+                if usuario[2].lower() == 'administrador':
+                    # Contar quantos administradores existem
+                    self.db.cursor.execute('SELECT COUNT(*) FROM usuarios WHERE tipo = ?', ('administrador',))
+                    total_admins = self.db.cursor.fetchone()[0]
+                    
+                    if total_admins <= 1:  # Se for o último administrador
+                        self.mostrar_mensagem_erro("Não é possível excluir o último administrador do sistema!")
+                        return
+                
                 dados_anteriores = {
                     'username': usuario[0],
                     'nome_completo': usuario[1],
                     'tipo': usuario[2]
                 }
                 
+                # Verificar se há um usuário logado
+                if not hasattr(self, 'usuario_logado') or not self.usuario_logado:
+                    raise ValueError("Nenhum usuário logado encontrado")
+                
                 # Registrar auditoria antes de excluir
                 self.db.registrar_auditoria(
-                    usuario_id=self.master.master.usuario_logado['id'],
+                    usuario_id=self.usuario_logado['id'],
                     acao='EXCLUIR',
                     tabela_afetada='USUARIOS',
                     id_afetado=self.usuario_selecionado,
@@ -582,29 +597,14 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
                 self.db.cursor.execute('DELETE FROM usuarios WHERE id = ?', (self.usuario_selecionado,))
                 self.db.conn.commit()
                 
-                self.mostrar_mensagem("Usuário excluído com sucesso!", "sucesso")
-                self.limpar_campos()
+                self.mostrar_mensagem_sucesso("Usuário excluído com sucesso!")
+                self.limpar_painel_detalhes()  # Changed from limpar_campos()
                 self.carregar_dados()
                 
         except Exception as e:
-            self.mostrar_mensagem(f"Erro ao excluir usuário: {str(e)}", "erro")
+            self.mostrar_mensagem_erro(f"Erro ao excluir usuário: {str(e)}")
         finally:
-            self.resetar_botao_excluir()
-    
-    def atualizar_apos_exclusao(self):
-        """Atualiza a interface após a exclusão bem-sucedida"""
-        self.confirmando_exclusao = False
-        self.frame_mensagem.grid_forget()
-        
-        # Limpar painel de detalhes
-        self.limpar_painel_detalhes()
-        
-        # Destruir e recriar a tabela inteira
-        self.tabela_frame.destroy()
-        self.criar_tabela_usuarios()
-        
-        # Mostrar instrução novamente
-        self.lbl_instrucao.grid(row=0, column=0, pady=50, padx=20, sticky="n")
+            self.reiniciar_estado_exclusao()
     
     def reiniciar_estado_exclusao(self):
         """Reinicia o estado dos botões após uma tentativa de exclusão"""
@@ -692,8 +692,68 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         self.wait_window(janela_erro)
     
     def mostrar_mensagem_sucesso(self, mensagem):
-        # Implemente a exibição de mensagem de sucesso conforme sua aplicação
-        print(f"SUCESSO: {mensagem}")
+        """
+        Exibe uma mensagem de sucesso em uma janela de diálogo personalizada.
+        
+        Args:
+            mensagem (str): Mensagem de sucesso a ser exibida
+        """
+        # Cria uma janela de diálogo personalizada
+        janela_sucesso = customtkinter.CTkToplevel(self)
+        janela_sucesso.title("Sucesso")
+        janela_sucesso.geometry("500x200")
+        janela_sucesso.grab_set()  # Torna a janela modal
+        
+        # Centraliza a janela na tela
+        largura_janela = 500
+        altura_janela = 200
+        largura_tela = self.winfo_screenwidth()
+        altura_tela = self.winfo_screenheight()
+        pos_x = (largura_tela // 2) - (largura_janela // 2)
+        pos_y = (altura_tela // 2) - (altura_janela // 2)
+        janela_sucesso.geometry(f'{largura_janela}x{altura_janela}+{pos_x}+{pos_y}')
+        
+        # Frame principal
+        frame_principal = customtkinter.CTkFrame(janela_sucesso, fg_color="#dff0d8", corner_radius=10)
+        frame_principal.pack(padx=20, pady=20, fill="both", expand=True)
+        
+        # Ícone de sucesso
+        icone_sucesso = customtkinter.CTkLabel(
+            frame_principal, 
+            text="✔️", 
+            font=("Arial", 24)
+        )
+        icone_sucesso.pack(pady=(20, 10))
+        
+        # Mensagem de sucesso
+        lbl_mensagem = customtkinter.CTkLabel(
+            frame_principal,
+            text=mensagem,
+            text_color="#3c763d",
+            font=("Arial", 12),
+            wraplength=400,
+            justify="center"
+        )
+        lbl_mensagem.pack(padx=20, pady=10)
+        
+        # Botão OK
+        btn_ok = customtkinter.CTkButton(
+            frame_principal,
+            text="OK",
+            fg_color="#3c763d",
+            hover_color="#2ecc71",
+            command=janela_sucesso.destroy,
+            width=100,
+            height=35,
+            corner_radius=8
+        )
+        btn_ok.pack(pady=(10, 20))
+        
+        # Configura o que acontece quando a janela é fechada
+        janela_sucesso.protocol("WM_DELETE_WINDOW", janela_sucesso.destroy)
+        
+        # Espera até que a janela seja fechada
+        self.wait_window(janela_sucesso)
     
     def criar_botao_voltar(self):
         # Botão voltar (adicionado por último para ficar por cima)

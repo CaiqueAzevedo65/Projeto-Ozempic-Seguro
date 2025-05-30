@@ -103,7 +103,14 @@ class LoginFrame(customtkinter.CTkFrame):
 
     def abrir_painel_administrador(self):
         self.pack_forget()
-        PainelAdministradorFrame(self.master, finalizar_sessao_callback=self.show_iniciar_callback)
+        # Get the current user from SessionManager and pass it to PainelAdministradorFrame
+        session_manager = SessionManager.get_instance()
+        usuario_logado = session_manager.get_current_user()
+        PainelAdministradorFrame(
+            self.master, 
+            finalizar_sessao_callback=self.show_iniciar_callback,
+            usuario_logado=usuario_logado
+        )
 
     def definir_campo_ativo(self, campo):
         """Define qual campo está ativo para receber entrada do teclado"""

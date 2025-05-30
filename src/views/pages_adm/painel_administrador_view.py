@@ -11,9 +11,10 @@ from .admin_pastas_view import AdminPastasFrame
 from .auditoria_view import AuditoriaFrame
 
 class PainelAdministradorFrame(customtkinter.CTkFrame):
-    def __init__(self, master, finalizar_sessao_callback=None, *args, **kwargs):
+    def __init__(self, master, finalizar_sessao_callback=None, usuario_logado=None, *args, **kwargs):
         super().__init__(master, fg_color="#3B6A7D", *args, **kwargs)
         self.finalizar_sessao_callback = finalizar_sessao_callback
+        self.usuario_logado = usuario_logado  # Store the logged-in user
         self.pack(fill="both", expand=True)
         self.criar_tela_principal()
 
@@ -99,7 +100,12 @@ class PainelAdministradorFrame(customtkinter.CTkFrame):
     def gerenciar_usuarios(self):
         for widget in self.winfo_children():
             widget.destroy()
-        GerenciamentoUsuariosFrame(self, voltar_callback=self.criar_tela_principal)
+        # Pass the logged-in user to the GerenciamentoUsuariosFrame
+        if hasattr(self, 'usuario_logado'):
+            GerenciamentoUsuariosFrame(self, voltar_callback=self.criar_tela_principal, usuario_logado=self.usuario_logado)
+        else:
+            # If for some reason usuario_logado is not set, pass None
+            GerenciamentoUsuariosFrame(self, voltar_callback=self.criar_tela_principal, usuario_logado=None)
 
     def cadastro_usuario(self):
         for widget in self.winfo_children():
