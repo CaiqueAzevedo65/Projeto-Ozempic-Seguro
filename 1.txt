@@ -1,9 +1,6 @@
 Mini Pc Pipo - windows
 Sensor de leitura de código de barras para o usuário repositor
-Portabilidade para até 15 gavetas
 Fuso horário do Brasil no histórico de movimentações de pastas
-
-Aqui está um resumo detalhado do sistema de gerenciamento de usuários do projeto Ozempic Seguro:
 
 Visão Geral do Sistema de Gerenciamento de Usuários
 1. Estrutura de Arquivos
@@ -58,4 +55,6 @@ Tratamento de erros adequado
 Interface amigável
 Boas práticas de segurança
 8. Conclusão
-O sistema de gerenciamento de usuários é robusto e seguro, com uma boa base para expansão. As melhorias sugeridas podem ser implementadas conforme necessário para atender a requisitos específicos.
+O sistema de gerenciamento de usuários é robusto e seguro, com uma boa base para expansão.
+As melhorias sugeridas podem ser implementadas conforme necessário para atender a 
+requisitos específicos.

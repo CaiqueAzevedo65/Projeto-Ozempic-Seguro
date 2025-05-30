@@ -44,14 +44,6 @@ class LoginFrame(customtkinter.CTkFrame):
         
         # Define o foco no campo de usuário
         self.after(100, lambda: self.usuario_entry.focus_set())
-        
-        try:
-            digital_img = ImageCache.get_digital()
-            digital_label = customtkinter.CTkLabel(frame_login, image=digital_img, text="", bg_color="#2F6073")
-            digital_label.pack(pady=30)
-        except:
-            digital_label = customtkinter.CTkLabel(frame_login, text="🔒", font=("Arial", 40), text_color="white", bg_color="#2F6073")
-            digital_label.pack(pady=30)
 
     def criar_botao_voltar(self):
         VoltarButton(self, self.show_iniciar_callback)
