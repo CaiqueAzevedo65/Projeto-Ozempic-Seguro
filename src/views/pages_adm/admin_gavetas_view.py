@@ -1,7 +1,7 @@
 import customtkinter
-from ..components import Header, VoltarButton, PastaButtonGrid, PastaButton
+from ..components import Header, VoltarButton, GavetaButtonGrid, GavetaButton
 
-class AdminPastasFrame(customtkinter.CTkFrame):
+class AdminGavetasFrame(customtkinter.CTkFrame):
     def __init__(self, master, voltar_callback=None, *args, **kwargs):
         super().__init__(master, fg_color="#3B6A7D", *args, **kwargs)
         self.voltar_callback = voltar_callback
@@ -12,30 +12,30 @@ class AdminPastasFrame(customtkinter.CTkFrame):
 
     def criar_topo(self):
         """Cria o cabeçalho da tela"""
-        Header(self, "Administrador - Gerenciar Pastas")
+        Header(self, "Administrador - Gerenciar Gavetas")
 
     def criar_grade_botoes(self):
-        """Cria a grade de botões das pastas"""
+        """Cria a grade de botões das gavetas"""
         button_data = []
-        # Criar 15 pastas para testar a paginação
+        # Criar 15 gavetas para testar a paginação
         for i in range(1, 16):
-            pasta_id = f"100{i}"
+            gaveta_id = f"100{i}"
             button_data.append({
-                'text': pasta_id,
-                'command': lambda x=pasta_id: self.mostrar_historico_pasta(x),
-                'name': "pasta_black.png",
+                'text': gaveta_id,
+                'command': lambda x=gaveta_id: self.mostrar_historico_gaveta(x),
+                'name': "gaveta_black.png",
                 'tipo_usuario': 'administrador'  # Permite abrir e fechar
             })
         
-        self.grade_botoes = PastaButtonGrid(self, button_data)
+        self.grade_botoes = GavetaButtonGrid(self, button_data)
 
-    def mostrar_historico_pasta(self, pasta_id):
-        """Mostra o histórico de uma pasta específica"""
-        temp_button = PastaButton(
+    def mostrar_historico_gaveta(self, gaveta_id):
+        """Mostra o histórico de uma gaveta específica"""
+        temp_button = GavetaButton(
             self, 
-            text=pasta_id, 
+            text=gaveta_id, 
             command=None, 
-            name="pasta_black.png", 
+            name="gaveta_black.png", 
             tipo_usuario='administrador'
         )
         temp_button.mostrar_historico()

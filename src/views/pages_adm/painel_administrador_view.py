@@ -7,7 +7,7 @@ from .diagnostico_view import DiagnosticoFrame
 from .parametro_sistemas_view import ParametroSistemasFrame
 from .estado_terminal_view import EstadoTerminalFrame
 from .historico_view import HistoricoView
-from .admin_pastas_view import AdminPastasFrame
+from .admin_gavetas_view import AdminGavetasFrame
 from .auditoria_view import AuditoriaFrame
 
 class PainelAdministradorFrame(customtkinter.CTkFrame):
@@ -38,7 +38,7 @@ class PainelAdministradorFrame(customtkinter.CTkFrame):
         
         botoes = [
             {"texto": "Gerenciar Usuários", "comando": self.gerenciar_usuarios},
-            {"texto": "Gerenciar Pastas", "comando": self.gerenciar_pastas},
+            {"texto": "Gerenciar Gavetas", "comando": self.gerenciar_gavetas},
             {"texto": "Cadastro de Usuário", "comando": self.cadastro_usuario},
             {"texto": "Registro de Auditoria", "comando": self.registro_auditoria},
             {"texto": "Diagnóstico", "comando": self.diagnostico},
@@ -70,11 +70,11 @@ class PainelAdministradorFrame(customtkinter.CTkFrame):
         main_frame.grid_columnconfigure(1, weight=1)
         main_frame.grid_rowconfigure(tuple(range((len(botoes) + 1) // 2)), weight=1)
 
-    def gerenciar_pastas(self):
-        """Abre a tela de gerenciamento de pastas"""
+    def gerenciar_gavetas(self):
+        """Abre a tela de gerenciamento de gavetas"""
         for widget in self.winfo_children():
             widget.destroy()
-        AdminPastasFrame(self, voltar_callback=self.criar_tela_principal)
+        AdminGavetasFrame(self, voltar_callback=self.criar_tela_principal)
 
     def mostrar_historico(self):
         for widget in self.winfo_children():

@@ -1,13 +1,13 @@
 import customtkinter
 from ..components import Header, VoltarButton
-from ..pasta_state_manager import PastaStateManager
+from ..gaveta_state_manager import GavetaStateManager
 
 class HistoricoView(customtkinter.CTkFrame):
     def __init__(self, master, voltar_callback=None, tipo_usuario="administrador", **kwargs):
         super().__init__(master, fg_color="#3B6A7D", **kwargs)
         self.voltar_callback = voltar_callback
         self.tipo_usuario = tipo_usuario
-        self.state_manager = PastaStateManager.get_instance()
+        self.state_manager = GavetaStateManager.get_instance()
         self.current_page = 1
         self.items_per_page = 20
         
@@ -16,7 +16,7 @@ class HistoricoView(customtkinter.CTkFrame):
     
     def criar_interface(self):
         # Cabeçalho
-        self.header = Header(self, "Histórico de Ações nas Pastas")
+        self.header = Header(self, "Histórico de Ações nas Gavetas")
         
         # Frame para o conteúdo
         self.content_frame = customtkinter.CTkFrame(self, fg_color="transparent")
@@ -83,7 +83,7 @@ class HistoricoView(customtkinter.CTkFrame):
         cabecalho_frame.pack(fill="x", padx=10, pady=10)
 
         # Cabeçalhos
-        cabecalhos = ["Data/Hora", "Pasta", "Ação", "Usuário"]
+        cabecalhos = ["Data/Hora", "Gaveta", "Ação", "Usuário"]
         larguras = [0.3, 0.2, 0.25, 0.25]  # Proporções de largura
         
         for i, (texto, largura) in enumerate(zip(cabecalhos, larguras)):
@@ -94,8 +94,8 @@ class HistoricoView(customtkinter.CTkFrame):
             )
             header_cell.pack(side="left", fill="x", expand=True)
             
-            # Configura o padding apenas para o cabeçalho "Pasta"
-            padx_left = 65 if texto == "Pasta" else 0
+            # Configura o padding apenas para o cabeçalho "Gaveta"
+            padx_left = 65 if texto == "Gaveta" else 0
             
             lbl = customtkinter.CTkLabel(
                 header_cell,
@@ -134,11 +134,11 @@ class HistoricoView(customtkinter.CTkFrame):
             self.atualizar_controles_paginacao(total_itens)
             
             # Adicionar itens
-            for idx, (data_hora, pasta_id, acao, usuario) in enumerate(historico):
+            for idx, (data_hora, gaveta_id, acao, usuario) in enumerate(historico):
                 self.adicionar_linha(
                     scrollable_frame,
                     data_hora,
-                    pasta_id,
+                    gaveta_id,
                     acao,
                     usuario,
                     idx % 2 == 0  # Alternar cor de fundo
@@ -181,7 +181,7 @@ class HistoricoView(customtkinter.CTkFrame):
             self.current_page -= 1
             self.carregar_dados()
     
-    def adicionar_linha(self, parent, data_hora, pasta_id, acao, usuario, par):
+    def adicionar_linha(self, parent, data_hora, gaveta_id, acao, usuario, par):
         # Frame para uma linha da tabela
         linha_frame = customtkinter.CTkFrame(
             parent,
@@ -191,7 +191,7 @@ class HistoricoView(customtkinter.CTkFrame):
         linha_frame.pack(fill="x", padx=5, pady=2)
         
         # Dados da linha
-        dados = [data_hora, pasta_id, acao, usuario]
+        dados = [data_hora, gaveta_id, acao, usuario]
         
         for texto in dados:
             lbl = customtkinter.CTkLabel(

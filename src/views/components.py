@@ -2,7 +2,7 @@ import customtkinter
 from tkinter import messagebox
 from PIL import Image
 import os
-from .pasta_state_manager import PastaStateManager
+from .gaveta_state_manager import GavetaStateManager
 from src.session_manager import SessionManager  # Importa o SessionManager do caminho correto
 
 # Lazy loading de imagens
@@ -79,8 +79,8 @@ class FinalizarSessaoButton:
         )
         self.label.pack(pady=(5, 0))
 
-# Componente de grade de botões com imagens de pastas
-class PastaButtonGrid(customtkinter.CTkFrame):
+# Componente de grade de botões com imagens de gavetas
+class GavetaButtonGrid(customtkinter.CTkFrame):
     def __init__(self, master, button_data):
         super().__init__(master, fg_color="transparent")
         self.pack(expand=True, fill="both", padx=30, pady=20)
@@ -187,9 +187,9 @@ class PastaButtonGrid(customtkinter.CTkFrame):
                 cell_frame.grid(row=i, column=j, padx=10, pady=10, sticky="nsew")
                 
                 if item_idx < end_idx:
-                    # Criar o botão de pasta
+                    # Criar o botão de gaveta
                     btn_data = self.button_data[item_idx]
-                    btn = PastaButton(
+                    btn = GavetaButton(
                         master=cell_frame,
                         text=btn_data['text'],
                         command=btn_data['command'],
@@ -206,39 +206,39 @@ class PastaButtonGrid(customtkinter.CTkFrame):
             self.btn_anterior.configure(state="normal" if self.current_page > 0 else "disabled")
             self.btn_proximo.configure(state="normal" if self.current_page < self.total_pages - 1 else "disabled")
 
-# Componente de botão com imagem de pasta
-class PastaButton:
+# Componente de botão com imagem de gaveta
+class GavetaButton:
     def __init__(self, master, text, command=None, name=None, tipo_usuario=None):
-        """Componente de botão de pasta para a grade"""
+        """Componente de botão de gaveta para a grade"""
         self.frame = customtkinter.CTkFrame(master, fg_color="transparent")
         self.frame.pack(expand=True, fill="both")
         
         # Obter o gerenciador de estado
-        self.state_manager = PastaStateManager.get_instance()
+        self.state_manager = GavetaStateManager.get_instance()
         self.tipo_usuario = tipo_usuario  # 'repositor' ou 'vendedor'
         
         # Carregar ambas as imagens
-        self.pasta_aberta = customtkinter.CTkImage(
-            Image.open(os.path.join("src", "assets", "pasta.png")),
+        self.gaveta_aberta = customtkinter.CTkImage(
+            Image.open(os.path.join("src", "assets", "gaveta.png")),
             size=(120, 120)
         )
-        self.pasta_fechada = customtkinter.CTkImage(
-            Image.open(os.path.join("src", "assets", "pasta_black.png")),
+        self.gaveta_fechada = customtkinter.CTkImage(
+            Image.open(os.path.join("src", "assets", "gaveta_black.png")),
             size=(120, 120)
         )
 
         # Botão principal
-        self.btn_pasta = customtkinter.CTkButton(
+        self.btn_gaveta = customtkinter.CTkButton(
             self.frame,
             text="",  # Texto vazio no botão
             width=120,
             height=120,
-            image=self.pasta_fechada,  # Começa com a pasta fechada
+            image=self.gaveta_fechada,  # Começa com a gaveta fechada
             fg_color="transparent",
             hover_color="#3B6A7D",
             command=self.manipular_estado
         )
-        self.btn_pasta.pack(pady=(0, 5))
+        self.btn_gaveta.pack(pady=(0, 5))
 
         # Label com o texto
         self.label = customtkinter.CTkLabel(
@@ -249,21 +249,21 @@ class PastaButton:
         )
         self.label.pack()
         
-        # Guardar o comando original e o ID da pasta
+        # Guardar o comando original e o ID da gaveta
         self.command_original = command
-        self.pasta_id = text  # Usando o texto como ID da pasta
+        self.gaveta_id = text  # Usando o texto como ID da gaveta
         
         # Atualizar a imagem inicial baseada no estado atual
         self.atualizar_imagem()
 
     def atualizar_imagem(self):
         """Atualiza a imagem do botão baseado no estado atual"""
-        estado = self.state_manager.get_estado(self.pasta_id)
-        self.btn_pasta.configure(image=self.pasta_aberta if estado else self.pasta_fechada)
+        estado = self.state_manager.get_estado(self.gaveta_id)
+        self.btn_gaveta.configure(image=self.gaveta_aberta if estado else self.gaveta_fechada)
 
     def manipular_estado(self):
-        """Manipula o estado da pasta baseado no tipo de usuário"""
-        estado_atual = self.state_manager.get_estado(self.pasta_id)
+        """Manipula o estado da gaveta baseado no tipo de usuário"""
+        estado_atual = self.state_manager.get_estado(self.gaveta_id)
         
         # Obtém o ID do usuário atual, se disponível
         session_manager = SessionManager.get_instance()
@@ -272,11 +272,11 @@ class PastaButton:
         
         if self.tipo_usuario == 'administrador':
             # Administrador pode tanto abrir quanto fechar
-            if not estado_atual:  # Se a pasta estiver fechada, abre com confirmação
-                self._abrir_pasta_com_confirmacao()
+            if not estado_atual:  # Se a gaveta estiver fechada, abre com confirmação
+                self._abrir_gaveta_com_confirmacao()
             else:
-                sucesso, mensagem = self.state_manager.fechar_pasta(
-                    self.pasta_id, 
+                sucesso, mensagem = self.state_manager.fechar_gaveta(
+                    self.gaveta_id, 
                     self.tipo_usuario,
                     user_id
                 )
@@ -285,17 +285,17 @@ class PastaButton:
                     self.atualizar_imagem()
         
         elif self.tipo_usuario == 'vendedor':
-            # Vendedor só pode abrir pastas fechadas
+            # Vendedor só pode abrir gavetas fechadas
             if not estado_atual:
-                self._abrir_pasta_com_confirmacao()
+                self._abrir_gaveta_com_confirmacao()
             else:
-                messagebox.showwarning("Aviso", "Você não tem permissão para fechar pastas")
+                messagebox.showwarning("Aviso", "Você não tem permissão para fechar gavetas")
         
         elif self.tipo_usuario == 'repositor':
-            # Repositório só pode fechar pastas abertas
+            # Repositório só pode fechar gavetas abertas
             if estado_atual:
-                sucesso, mensagem = self.state_manager.fechar_pasta(
-                    self.pasta_id, 
+                sucesso, mensagem = self.state_manager.fechar_gaveta(
+                    self.gaveta_id, 
                     self.tipo_usuario,
                     user_id
                 )
@@ -303,19 +303,19 @@ class PastaButton:
                 if sucesso:
                     self.atualizar_imagem()
             else:
-                messagebox.showwarning("Aviso", "Você não tem permissão para abrir pastas")
+                messagebox.showwarning("Aviso", "Você não tem permissão para abrir gavetas")
         else:
             messagebox.showerror("Erro", "Tipo de usuário desconhecido")
     
-    def _abrir_pasta_com_confirmacao(self):
-        """Mostra uma janela de confirmação antes de abrir a pasta, se o timer estiver ativado"""
+    def _abrir_gaveta_com_confirmacao(self):
+        """Mostra uma janela de confirmação antes de abrir a gaveta, se o timer estiver ativado"""
         # Verifica se o timer está ativado
         session_manager = SessionManager.get_instance()
         if not session_manager.is_timer_enabled():
-            # Se o timer estiver desativado, abre a pasta diretamente sem mostrar a janela de confirmação
+            # Se o timer estiver desativado, abre a gaveta diretamente sem mostrar a janela de confirmação
             current_user = session_manager.get_current_user()
             user_id = current_user.get('id') if current_user else None
-            sucesso, mensagem = self.state_manager.abrir_pasta(self.pasta_id, self.tipo_usuario, user_id)
+            sucesso, mensagem = self.state_manager.abrir_gaveta(self.gaveta_id, self.tipo_usuario, user_id)
             messagebox.showinfo("Sucesso" if sucesso else "Aviso", mensagem)
             if sucesso:
                 self.atualizar_imagem()
@@ -350,11 +350,11 @@ class PastaButton:
         
         # Mensagem
         if self.tipo_usuario == 'vendedor':
-            mensagem = f"Deseja realmente abrir a pasta {self.pasta_id}?\n\n" \
+            mensagem = f"Deseja realmente abrir a gaveta {self.gaveta_id}?\n\n" \
                        "O sistema será bloqueado por 5 minutos após a abertura.\n" \
                        "Você terá acesso somente para visualizar os dados."
         else:
-            mensagem = f"Deseja realmente abrir a pasta {self.pasta_id}?\n\n" \
+            mensagem = f"Deseja realmente abrir a gaveta {self.gaveta_id}?\n\n" \
                        "O sistema será bloqueado por 5 minutos após a abertura."
         
         customtkinter.CTkLabel(
@@ -394,15 +394,15 @@ class PastaButton:
         dialog.wait_window(dialog)
 
     def _on_confirmar_abertura(self, dialog):
-        """Confirma a abertura da pasta"""
+        """Confirma a abertura da gaveta"""
         dialog.destroy()
         # Obtém o ID do usuário atual, se disponível
         session_manager = SessionManager.get_instance()
         current_user = session_manager.get_current_user()
         user_id = current_user.get('id') if current_user else None
         
-        sucesso, mensagem = self.state_manager.abrir_pasta(
-            self.pasta_id, 
+        sucesso, mensagem = self.state_manager.abrir_gaveta(
+            self.gaveta_id, 
             self.tipo_usuario,
             user_id
         )
@@ -411,14 +411,14 @@ class PastaButton:
             self.atualizar_imagem()
 
     def mostrar_historico(self):
-        """Mostra o histórico de alterações da pasta com paginação"""
+        """Mostra o histórico de alterações da gaveta com paginação"""
         # Configuração da paginação
         self.itens_por_pagina = 20
         self.pagina_atual = 1
         
         # Criar janela
         self.janela_historico = customtkinter.CTkToplevel()
-        self.janela_historico.title(f"Histórico - Pasta {self.pasta_id}")
+        self.janela_historico.title(f"Histórico - Gaveta {self.gaveta_id}")
         self.janela_historico.geometry("600x400")
         
         # Frame principal
@@ -428,7 +428,7 @@ class PastaButton:
         # Título
         label_titulo = customtkinter.CTkLabel(
             frame_principal, 
-            text=f"Histórico - Pasta {self.pasta_id}",
+            text=f"Histórico - Gaveta {self.gaveta_id}",
             font=("Arial", 14, "bold")
         )
         label_titulo.pack(pady=(0, 10))
@@ -491,13 +491,13 @@ class PastaButton:
         # Obtém o histórico paginado
         offset = (self.pagina_atual - 1) * self.itens_por_pagina
         historico = self.state_manager.get_historico_paginado(
-            self.pasta_id, 
+            self.gaveta_id, 
             offset=offset, 
             limit=self.itens_por_pagina
         )
         
         # Obtém o total de itens para controle de paginação
-        total_itens = self.state_manager.get_total_historico(self.pasta_id)
+        total_itens = self.state_manager.get_total_historico(self.gaveta_id)
         total_paginas = (total_itens + self.itens_por_pagina - 1) // self.itens_por_pagina
         
         # Atualiza controles de paginação
@@ -509,7 +509,7 @@ class PastaButton:
         if not historico:
             lbl_vazio = customtkinter.CTkLabel(
                 self.frame_historico,
-                text="Nenhum registro de histórico para esta pasta.",
+                text="Nenhum registro de histórico para esta gaveta.",
                 text_color="gray"
             )
             lbl_vazio.pack(pady=10)
@@ -799,7 +799,7 @@ class TecladoVirtual(customtkinter.CTkFrame):
 
 # Atualizar a lista __all__ para incluir o novo componente
 __all__ = [
-    'Header', 'FinalizarSessaoButton', 'PastaButtonGrid', 
-    'PastaButton', 'VoltarButton', 'MainButton', 'ImageCache',
+    'Header', 'FinalizarSessaoButton', 'GavetaButtonGrid', 
+    'GavetaButton', 'VoltarButton', 'MainButton', 'ImageCache',
     'TecladoVirtual'
 ]

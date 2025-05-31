@@ -1,6 +1,6 @@
 import customtkinter
 from tkinter import messagebox
-from .components import Header, FinalizarSessaoButton, PastaButtonGrid, PastaButton
+from .components import Header, FinalizarSessaoButton, GavetaButtonGrid, GavetaButton
 
 class RepositorFrame(customtkinter.CTkFrame):
     def __init__(self, master, finalizar_sessao_callback=None, *args, **kwargs):
@@ -16,27 +16,27 @@ class RepositorFrame(customtkinter.CTkFrame):
 
     def criar_grade_botoes(self):
         button_data = []
-        # Criar 15 pastas para testar a paginação
+        # Criar 15 gavetas para testar a paginação
         for i in range(1, 16):
-            pasta_id = f"100{i}"
+            gaveta_id = f"100{i}"
             button_data.append({
-                'text': pasta_id,
-                'command': lambda x=pasta_id: self.mostrar_historico_pasta(x),
-                'name': "pasta_black.png",
-                'tipo_usuario': 'repositor'
+                'text': gaveta_id,
+                'command': lambda x=gaveta_id: self.mostrar_historico_gaveta(x),
+                'name': "gaveta_black.png",
+                'tipo_usuario': 'repositor'  # Permite abrir e fechar
             })
         
-        self.grade_botoes = PastaButtonGrid(self, button_data)
+        self.grade_botoes = GavetaButtonGrid(self, button_data)
 
-    def mostrar_historico_pasta(self, pasta_id):
-        """Mostra o histórico de uma pasta específica"""
+    def mostrar_historico_gaveta(self, gaveta_id):
+        """Mostra o histórico de uma gaveta específica"""
         # Cria uma instância temporária do botão para acessar o método mostrar_historico
         # Isso é um workaround, o ideal seria refatorar para um componente separado
-        temp_button = PastaButton(
+        temp_button = GavetaButton(
             self, 
-            text=pasta_id, 
+            text=gaveta_id, 
             command=None, 
-            name="pasta_black.png", 
+            name="gaveta_black.png", 
             tipo_usuario='repositor'
         )
         temp_button.mostrar_historico()

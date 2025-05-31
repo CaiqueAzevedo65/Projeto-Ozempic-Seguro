@@ -23,7 +23,7 @@ class ParametroSistemasFrame(customtkinter.CTkFrame):
         self.criar_botao_voltar()
 
     def criar_controle_timer(self):
-        """Cria o controle para ativar/desativar a função de timer de abertura de pastas"""
+        """Cria o controle para ativar/desativar a função de timer de abertura de gavetas"""
         frame_controle = customtkinter.CTkFrame(
             self.main_content,
             fg_color="white",
@@ -36,7 +36,7 @@ class ParametroSistemasFrame(customtkinter.CTkFrame):
         # Título
         lbl_titulo = customtkinter.CTkLabel(
             frame_controle,
-            text="Controle de Timer de Abertura de Pastas",
+            text="Controle de Timer de Abertura de Gavetas",
             font=("Arial", 14, "bold"),
             text_color="#333333"
         )
@@ -73,7 +73,7 @@ class ParametroSistemasFrame(customtkinter.CTkFrame):
         novo_estado = not self.session_manager.is_timer_enabled()
         if self.session_manager.set_timer_enabled(novo_estado):
             estado = "ativado" if novo_estado else "desativado"
-            messagebox.showinfo("Sucesso", f"Timer de abertura de pastas {estado} com sucesso!")
+            messagebox.showinfo("Sucesso", f"Timer de abertura de gavetas {estado} com sucesso!")
             
             # Se estiver ativando e houver um bloqueio ativo, mostra o tempo restante
             if novo_estado and self.session_manager.is_blocked():

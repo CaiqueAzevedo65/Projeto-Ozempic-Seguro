@@ -46,22 +46,22 @@ class DatabaseManager:
         
         # Tabelas existentes (mantidas)
         self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS pastas (
+        CREATE TABLE IF NOT EXISTS gavetas (
             id INTEGER PRIMARY KEY,
-            numero_pasta TEXT NOT NULL UNIQUE,
+            numero_gaveta TEXT NOT NULL UNIQUE,
             esta_aberta BOOLEAN DEFAULT 0,
             ultima_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         ''')
         
         self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS historico_pastas (
+        CREATE TABLE IF NOT EXISTS historico_gavetas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            pasta_id INTEGER,
+            gaveta_id INTEGER,
             usuario_id INTEGER,
             acao TEXT NOT NULL,
             data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (pasta_id) REFERENCES pastas (id),
+            FOREIGN KEY (gaveta_id) REFERENCES gavetas (id),
             FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
         )
         ''')
@@ -156,156 +156,130 @@ class DatabaseManager:
         except Exception as e:
             print(f"Erro ao migrar usuários: {e}")
     
-    def get_estado_pasta(self, numero_pasta):
-        """Obtém o estado atual de uma pasta"""
+    def get_estado_gaveta(self, numero_gaveta):
+        """Obtém o estado atual de uma gaveta"""
         self.cursor.execute(
-            'SELECT esta_aberta FROM pastas WHERE numero_pasta = ?',
-            (numero_pasta,)
+            'SELECT esta_aberta FROM gavetas WHERE numero_gaveta = ?',
+            (numero_gaveta,)
         )
         result = self.cursor.fetchone()
         return result[0] if result else False
     
-    def set_estado_pasta(self, numero_pasta, estado, usuario_tipo, usuario_id=None):
-        """Define o estado de uma pasta e registra no histórico"""
+    def set_estado_gaveta(self, numero_gaveta, estado, usuario_tipo, usuario_id=None):
+        """Define o estado de uma gaveta e registra no histórico"""
         try:
-            # Verifica se a pasta já existe
+            # Verifica se a gaveta já existe
             self.cursor.execute(
-                'SELECT id, esta_aberta FROM pastas WHERE numero_pasta = ?',
-                (numero_pasta,)
+                'SELECT id, esta_aberta FROM gavetas WHERE numero_gaveta = ?',
+                (numero_gaveta,)
             )
-            pasta = self.cursor.fetchone()
+            gaveta = self.cursor.fetchone()
             
-            # Se a pasta não existe, insere um novo registro
-            if not pasta:
+            # Se a gaveta não existe, insere um novo registro
+            if not gaveta:
                 self.cursor.execute(
-                    'INSERT INTO pastas (numero_pasta, esta_aberta) VALUES (?, ?)',
-                    (numero_pasta, estado)
+                    'INSERT INTO gavetas (numero_gaveta, esta_aberta) VALUES (?, ?)',
+                    (numero_gaveta, estado)
                 )
-                pasta_id = self.cursor.lastrowid
+                gaveta_id = self.cursor.lastrowid
                 acao = 'aberta' if estado else 'fechada'
             else:
-                pasta_id = pasta[0]
-                estado_anterior = bool(pasta[1])
+                gaveta_id = gaveta[0]
+                estado_anterior = bool(gaveta[1])
                 acao = 'aberta' if estado and not estado_anterior else 'fechada' if not estado and estado_anterior else None
                 
                 # Atualiza apenas se o estado for diferente
                 if acao:
                     self.cursor.execute(
-                        'UPDATE pastas SET esta_aberta = ?, ultima_atualizacao = CURRENT_TIMESTAMP WHERE id = ?',
-                        (estado, pasta_id)
+                        'UPDATE gavetas SET esta_aberta = ?, ultima_atualizacao = CURRENT_TIMESTAMP WHERE id = ?',
+                        (estado, gaveta_id)
                     )
             
             # Registra no histórico se houve mudança de estado
             if acao and usuario_id:
                 self.cursor.execute(
-                    'INSERT INTO historico_pastas (pasta_id, acao, usuario_id) VALUES (?, ?, ?)',
-                    (pasta_id, acao, usuario_id)
+                    'INSERT INTO historico_gavetas (gaveta_id, acao, usuario_id) VALUES (?, ?, ?)',
+                    (gaveta_id, acao, usuario_id)
                 )
             elif acao:  # Se não houver usuário, registra sem o ID do usuário
                 self.cursor.execute(
-                    'INSERT INTO historico_pastas (pasta_id, acao) VALUES (?, ?)',
-                    (pasta_id, acao)
+                    'INSERT INTO historico_gavetas (gaveta_id, acao) VALUES (?, ?)',
+                    (gaveta_id, acao)
                 )
             
             self.conn.commit()
-            return True, f"Pasta {numero_pasta} {acao} com sucesso!"
+            return True, f"Gaveta {numero_gaveta} {acao} com sucesso!"
         except Exception as e:
             self.conn.rollback()
-            return False, f"Erro ao atualizar o estado da pasta: {str(e)}"
+            return False, f"Erro ao atualizar o estado da gaveta: {str(e)}"
     
-    def get_historico_pasta(self, numero_pasta, limite=10):
-        """Obtém o histórico de alterações de uma pasta"""
+    def get_historico_gaveta(self, numero_gaveta, limite=10):
+        """Obtém o histórico de uma gaveta"""
         self.cursor.execute('''
-            SELECT h.acao, u.username, h.data_hora 
-            FROM historico_pastas h
-            JOIN pastas p ON h.pasta_id = p.id
-            LEFT JOIN usuarios u ON h.usuario_id = u.id
-            WHERE p.numero_pasta = ?
+            SELECT h.acao, u.username, strftime('%d/%m/%Y %H:%M:%S', h.data_hora, 'localtime')
+            FROM historico_gavetas h
+            JOIN usuarios u ON h.usuario_id = u.id
+            WHERE h.gaveta_id = (SELECT id FROM gavetas WHERE numero_gaveta = ?)
             ORDER BY h.data_hora DESC
             LIMIT ?
-        ''', (numero_pasta, limite))
-        
+        ''', (numero_gaveta, limite))
         return self.cursor.fetchall()
     
-    def get_historico_paginado(self, numero_pasta, offset=0, limit=20):
-        """
-        Obtém o histórico de alterações de uma pasta com paginação
-        
-        Args:
-            numero_pasta (str): Número da pasta
-            offset (int): Número de registros a pular
-            limit (int): Número máximo de registros a retornar
-            
-        Returns:
-            list: Lista de tuplas (acao, usuario, data_hora)
-        """
+    def get_historico_paginado(self, numero_gaveta, offset=0, limit=20):
+        """Obtém o histórico de uma gaveta com paginação"""
         self.cursor.execute('''
-            SELECT h.acao, COALESCE(u.username, 'Sistema') as usuario, 
-                   strftime('%d/%m/%Y %H:%M:%S', h.data_hora) as data_formatada
-            FROM historico_pastas h
-            JOIN pastas p ON h.pasta_id = p.id
-            LEFT JOIN usuarios u ON h.usuario_id = u.id
-            WHERE p.numero_pasta = ?
+            SELECT h.acao, u.username, strftime('%d/%m/%Y %H:%M:%S', h.data_hora, 'localtime')
+            FROM historico_gavetas h
+            JOIN usuarios u ON h.usuario_id = u.id
+            WHERE h.gaveta_id = (SELECT id FROM gavetas WHERE numero_gaveta = ?)
             ORDER BY h.data_hora DESC
             LIMIT ? OFFSET ?
-        ''', (numero_pasta, limit, offset))
-        
+        ''', (numero_gaveta, limit, offset))
         return self.cursor.fetchall()
     
-    def get_total_historico(self, numero_pasta):
-        """
-        Retorna o número total de registros de histórico para uma pasta
-        
-        Args:
-            numero_pasta (str): Número da pasta
-            
-        Returns:
-            int: Número total de registros
-        """
+    def get_total_historico(self, numero_gaveta):
+        """Retorna o número total de registros de histórico para uma gaveta"""
         self.cursor.execute('''
-            SELECT COUNT(*)
-            FROM historico_pastas h
-            JOIN pastas p ON h.pasta_id = p.id
-            WHERE p.numero_pasta = ?
-        ''', (numero_pasta,))
-        
+            SELECT COUNT(*) 
+            FROM historico_gavetas 
+            WHERE gaveta_id = (SELECT id FROM gavetas WHERE numero_gaveta = ?)
+        ''', (numero_gaveta,))
         return self.cursor.fetchone()[0]
     
     def get_todo_historico(self):
-        """Obtém o histórico completo de todas as pastas"""
+        """Retorna todo o histórico de todas as gavetas"""
         self.cursor.execute('''
             SELECT 
-                strftime('%d/%m/%Y %H:%M:%S', h.data_hora) as data_hora, 
-                p.numero_pasta, 
-                h.acao, 
-                COALESCE(u.nome_completo, u.username, 'Sistema') as usuario
-            FROM historico_pastas h
-            JOIN pastas p ON h.pasta_id = p.id
-            LEFT JOIN usuarios u ON h.usuario_id = u.id
+                strftime('%d/%m/%Y %H:%M:%S', h.data_hora, 'localtime') as data_hora,
+                p.numero_gaveta,
+                h.acao,
+                u.username as usuario
+            FROM historico_gavetas h
+            JOIN gavetas p ON h.gaveta_id = p.id
+            JOIN usuarios u ON h.usuario_id = u.id
             ORDER BY h.data_hora DESC
         ''')
-        
         return self.cursor.fetchall()
     
     def get_todo_historico_paginado(self, offset=0, limit=20):
         """
-        Obtém o histórico de todas as pastas com paginação
+        Retorna o histórico de todas as gavetas com paginação
         
         Args:
             offset (int): Número de registros a pular
             limit (int): Número máximo de registros a retornar
             
         Returns:
-            list: Lista de tuplas (data_hora, numero_pasta, acao, usuario)
+            list: Lista de tuplas (data_hora, numero_gaveta, acao, usuario)
         """
         self.cursor.execute('''
             SELECT 
                 strftime('%d/%m/%Y %H:%M:%S', h.data_hora) as data_hora, 
-                p.numero_pasta, 
+                p.numero_gaveta, 
                 h.acao, 
                 COALESCE(u.nome_completo, u.username, 'Sistema') as usuario
-            FROM historico_pastas h
-            JOIN pastas p ON h.pasta_id = p.id
+            FROM historico_gavetas h
+            JOIN gavetas p ON h.gaveta_id = p.id
             LEFT JOIN usuarios u ON h.usuario_id = u.id
             ORDER BY h.data_hora DESC
             LIMIT ? OFFSET ?
@@ -315,12 +289,12 @@ class DatabaseManager:
     
     def get_total_todo_historico(self):
         """
-        Retorna o número total de registros de histórico de todas as pastas
+        Retorna o número total de registros de histórico de todas as gavetas
         
         Returns:
             int: Número total de registros
         """
-        self.cursor.execute('SELECT COUNT(*) FROM historico_pastas')
+        self.cursor.execute('SELECT COUNT(*) FROM historico_gavetas')
         return self.cursor.fetchone()[0]
     
     def get_usuarios(self):

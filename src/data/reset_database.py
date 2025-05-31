@@ -38,26 +38,25 @@ def reset_database():
         )
         ''')
         
-        # Tabela de pastas
+        # Tabela de gavetas
         cursor.execute('''
-        CREATE TABLE IF NOT EXISTS pastas (
-            id INTEGER PRIMARY KEY,
-            numero_pasta TEXT NOT NULL UNIQUE,
-            esta_aberta BOOLEAN DEFAULT 0,
-            ultima_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        CREATE TABLE IF NOT EXISTS gavetas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero_gaveta TEXT NOT NULL UNIQUE,
+            aberta BOOLEAN NOT NULL DEFAULT 0,
+            data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         ''')
         
-        # Tabela de histórico de pastas
+        # Tabela de histórico de gavetas
         cursor.execute('''
-        CREATE TABLE IF NOT EXISTS historico_pastas (
+        CREATE TABLE IF NOT EXISTS historico_gavetas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            pasta_id INTEGER,
-            usuario_id INTEGER,
-            usuario_tipo TEXT,
-            acao TEXT NOT NULL,
+            gaveta_id INTEGER,
             data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (pasta_id) REFERENCES pastas (id),
+            acao TEXT NOT NULL,
+            usuario_id INTEGER,
+            FOREIGN KEY (gaveta_id) REFERENCES gavetas (id),
             FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
         )
         ''')
