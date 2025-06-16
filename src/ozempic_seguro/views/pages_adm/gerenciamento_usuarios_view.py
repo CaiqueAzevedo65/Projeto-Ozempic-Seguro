@@ -1,7 +1,7 @@
 import tkinter
 import customtkinter
 from ..components import Header, VoltarButton
-from ...data.database import DatabaseManager
+from ...repositories.database import DatabaseManager
 
 class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
     def __init__(self, master, voltar_callback=None, usuario_logado=None, *args, **kwargs):

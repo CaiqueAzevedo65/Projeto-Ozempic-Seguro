@@ -3,7 +3,7 @@ from tkinter import messagebox
 from PIL import Image
 import os
 from .gaveta_state_manager import GavetaStateManager
-from src.session_manager import SessionManager  # Importa o SessionManager do caminho correto
+from ..session import SessionManager  # Importa o SessionManager do caminho correto
 
 # Lazy loading de imagens
 class ImageCache:
@@ -13,7 +13,7 @@ class ImageCache:
     @staticmethod
     def get_logo():
         if ImageCache._logo_img is None:
-            logo_path = os.path.join("src", "assets", "logo.jpg")
+            logo_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "assets", "logo.jpg"))
             imagem = Image.open(logo_path)
             ImageCache._logo_img = customtkinter.CTkImage(imagem, size=(60, 60))
         return ImageCache._logo_img
@@ -21,7 +21,7 @@ class ImageCache:
     @staticmethod
     def get_digital():
         if ImageCache._digital_img is None:
-            digital_path = os.path.join("src", "assets", "digital.png")
+            digital_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "assets", "digital.png"))
             imagem = Image.open(digital_path)
             ImageCache._digital_img = customtkinter.CTkImage(imagem, size=(70, 70))
         return ImageCache._digital_img
@@ -48,7 +48,7 @@ class FinalizarSessaoButton:
         self.frame.place(relx=0.5, rely=0.88, anchor="center")
         
         # Caminho para a imagem da elipse
-        elipse_path = os.path.join("src", "assets", "elipse.png")
+        elipse_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "assets", "elipse.png"))
         size = (40, 40) # Tamanho da imagem
         
         self.elipse_img = customtkinter.CTkImage(
@@ -219,11 +219,11 @@ class GavetaButton:
         
         # Carregar ambas as imagens
         self.gaveta_aberta = customtkinter.CTkImage(
-            Image.open(os.path.join("src", "assets", "gaveta.png")),
+            Image.open(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "assets", "gaveta.png"))),
             size=(120, 120)
         )
         self.gaveta_fechada = customtkinter.CTkImage(
-            Image.open(os.path.join("src", "assets", "gaveta_black.png")),
+            Image.open(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "assets", "gaveta_black.png"))),
             size=(120, 120)
         )
 
@@ -551,7 +551,7 @@ class VoltarButton:
         self.frame = customtkinter.CTkFrame(master, fg_color="transparent")
         self.frame.place(relx=0.5, rely=0.88, anchor="center")
         
-        voltar_path = os.path.join("src", "assets", "botao_voltar.png")
+        voltar_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "assets", "botao_voltar.png"))
         size = (40, 40) # Tamanho da imagem
         
         self.elipse_img = customtkinter.CTkImage(

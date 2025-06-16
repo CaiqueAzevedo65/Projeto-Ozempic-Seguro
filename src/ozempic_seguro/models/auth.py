@@ -1,4 +1,4 @@
-from src.data.database import DatabaseManager
+from ..repositories.database import DatabaseManager
 import datetime
 
 class AuthManager:

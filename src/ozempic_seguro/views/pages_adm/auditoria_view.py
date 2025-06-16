@@ -1,8 +1,7 @@
 import customtkinter
 from tkinter import ttk
 from datetime import datetime, timedelta
-import json
-from ...data.database import DatabaseManager
+from ...repositories.database import DatabaseManager
 from ..components import Header
 
 class AuditoriaFrame(customtkinter.CTkFrame):

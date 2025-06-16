@@ -1,5 +1,5 @@
-from src.data.database import DatabaseManager
-from src.session_manager import SessionManager
+from ..repositories.database import DatabaseManager
+from ..session import SessionManager
 
 class GavetaStateManager:
     _instance = None

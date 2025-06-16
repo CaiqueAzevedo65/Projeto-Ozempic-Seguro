@@ -9,7 +9,7 @@ class TelaToqueFrame(customtkinter.CTkFrame):
         self.label = customtkinter.CTkLabel(self, text="TOQUE NA TELA PARA COMEÇAR", font=("Arial", 32, "bold"), text_color="black")
         self.label.pack(pady=40)
         # Mostra a imagem do dedo
-        img_path = os.path.join("src", "assets", "dedo.png")  # ajuste o nome se necessário
+        img_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "assets", "dedo.png"))  # ajuste o caminho se necessário
         self.img = customtkinter.CTkImage(Image.open(img_path), size=(300, 300))
         self.img_label = customtkinter.CTkLabel(self, image=self.img, text="")
         self.img_label.pack(pady=20)

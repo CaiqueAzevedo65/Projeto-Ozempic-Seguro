@@ -1,6 +1,6 @@
 import customtkinter
 from ..components import Header, VoltarButton
-from src.session_manager import SessionManager
+from ...session import SessionManager
 from tkinter import messagebox
 
 class ParametroSistemasFrame(customtkinter.CTkFrame):

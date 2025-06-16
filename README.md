@@ -67,7 +67,7 @@ O Ozempic Seguro é uma aplicação desktop desenvolvida em Python com interface
 
 1. **Inicie a aplicação**
    ```bash
-   python -m src.main
+   cd src && python -m ozempic_seguro.main
    ```
 
 2. **Credenciais de Acesso**
@@ -76,6 +76,8 @@ O Ozempic Seguro é uma aplicação desktop desenvolvida em Python com interface
      - Senha: `1234` (altere após o primeiro acesso)
 
 ## 🗃️ Estrutura do Projeto
+
+*Nota: A partir desta versão, todo o código-fonte está em `src/ozempic_seguro/`.*
 
 ```
 Projeto-Ozempic-Seguro/

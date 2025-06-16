@@ -3,8 +3,8 @@ import tkinter as tk
 from tkinter import messagebox
 from .pages_adm.painel_administrador_view import PainelAdministradorFrame
 from .components import Header, ImageCache, VoltarButton
-from ..auth import AuthManager
-from src.session_manager import SessionManager
+from ..models.auth import AuthManager
+from ..session import SessionManager
 from .repositor_view import RepositorFrame
 from .vendedor_view import VendedorFrame
 from .tecnico_view import TecnicoFrame

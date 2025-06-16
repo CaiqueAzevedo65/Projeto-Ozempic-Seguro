@@ -1,7 +1,7 @@
 import customtkinter
 import tkinter as tk
 from ..components import Header, VoltarButton, TecladoVirtual
-from src.auth import AuthManager
+from ...models.auth import AuthManager
 
 class CadastroUsuarioFrame(customtkinter.CTkFrame):
     def __init__(self, master, voltar_callback=None, *args, **kwargs):
