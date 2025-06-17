@@ -89,3 +89,6 @@ Desktop.ini
 !/src/assets/*.jpeg
 !/src/assets/*.pdf 
 src/data/ozempic_seguro.db
+
+.db-shm
+.db-wal
