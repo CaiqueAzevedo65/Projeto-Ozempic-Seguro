@@ -15,6 +15,7 @@ class NavigationController:
         self.tela_index = 0
         self.telas = [self.show_tela_toque, self.show_tela_logo]
         self.after_id = None
+        self.is_running = True
 
     def preload_frames(self):
         # Carrega os frames iniciais
@@ -128,3 +129,46 @@ class NavigationController:
                 show_iniciar_callback=self.show_iniciar_sessao
             )
         self.show_frame('login')
+    
+    def start_alternancia(self):
+        """Inicia a alternância entre telas"""
+        if self.is_running and len(self.telas) > 1:
+            self.after_id = self.app.after(3000, self.alternar_tela)
+    
+    def alternar_tela(self):
+        """Alterna entre as telas automaticamente"""
+        if not self.is_running:
+            return
+            
+        self.tela_index = (self.tela_index + 1) % len(self.telas)
+        self.telas[self.tela_index]()
+        
+        # Agenda próxima alternância
+        if self.is_running:
+            self.after_id = self.app.after(3000, self.alternar_tela)
+    
+    def cleanup(self):
+        """Limpa recursos quando a aplicação é encerrada"""
+        try:
+            # Parar alternância de telas
+            self.is_running = False
+            
+            # Cancelar timer pendente
+            if self.after_id:
+                self.app.after_cancel(self.after_id)
+                self.after_id = None
+            
+            # Destruir frames se existirem
+            for frame_name, frame in self.frames.items():
+                try:
+                    if frame and hasattr(frame, 'winfo_exists') and frame.winfo_exists():
+                        frame.destroy()
+                except Exception as e:
+                    print(f"Erro ao destruir frame {frame_name}: {e}")
+            
+            # Limpar dicionário de frames
+            self.frames.clear()
+            self.current_frame = None
+            
+        except Exception as e:
+            print(f"Erro durante cleanup do NavigationController: {e}")

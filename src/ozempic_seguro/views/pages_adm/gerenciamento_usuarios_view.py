@@ -393,7 +393,7 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         btn_cancelar = ModernButton(
             botoes_frame,
             text="❌ Cancelar",
-            command=self.fechar_dialog,
+            command=self.dialog.destroy,
             style="secondary",
             height=40
         )
@@ -421,20 +421,23 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         
         for i, linha in enumerate(botoes):
             frame_linha = customtkinter.CTkFrame(teclado_frame, fg_color="transparent")
-            frame_linha.pack(fill="x")
+            frame_linha.pack(fill="x", pady=2)
+            
+            # Configurar 3 colunas iguais
+            for col in range(3):
+                frame_linha.columnconfigure(col, weight=1, uniform="botao")
             
             for j, texto in enumerate(linha):
                 if texto:
                     btn = ModernButton(
                         frame_linha, 
                         text=texto, 
-                        command=lambda t=texto: self.digito_pressionado(t),
+                        command=lambda t=texto: self.tecla_pressionada(t),
                         style="primary",
-                        width=70,
                         height=50,
                         font=("Arial", 16)
                     )
-                    btn.pack(side="left", padx=5, pady=5, expand=True, fill="both")
+                    btn.grid(row=0, column=j, padx=3, pady=3, sticky="nsew")
         
         # Definir campo ativo inicial
         self.campo_ativo = self.entry_nova_senha
@@ -471,7 +474,7 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
                 self.lbl_mensagem.configure(text=f"✅ {mensagem}", text_color="#28a745")
                 ToastNotification.show(self, f"✅ Senha alterada com sucesso!", "success")
                 # Aguardar 2 segundos antes de fechar
-                self.after(2000, self.fechar_dialog)
+                self.after(2000, self.dialog.destroy)
             else:
                 self.lbl_mensagem.configure(text=f"❌ {mensagem}", text_color="#dc3545")
         except Exception as e:
