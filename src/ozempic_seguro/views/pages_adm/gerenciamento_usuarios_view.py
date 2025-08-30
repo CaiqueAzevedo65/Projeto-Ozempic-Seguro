@@ -295,7 +295,7 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         btn_alterar_senha = ModernButton(
             self.frame_botoes,
             text="🔑 Alterar Senha",
-            command=self.alterar_senha,
+            command=self.abrir_janela_alterar_senha,
             style="success",
             height=50
         )
@@ -305,7 +305,7 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         btn_excluir = ModernButton(
             self.frame_botoes,
             text="🗑️ Excluir Usuário",
-            command=self.solicitar_confirmacao_exclusao,
+            command=self.confirmar_exclusao,
             style="danger",
             height=50
         )
