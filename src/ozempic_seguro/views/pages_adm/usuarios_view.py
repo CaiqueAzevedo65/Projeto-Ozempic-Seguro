@@ -1,14 +1,12 @@
 import customtkinter
 from ..components import Header, VoltarButton
-from data.database import DatabaseManager
+from ...services.service_factory import get_user_service
+from ...core.base_views import AdminView
 
-class UsuariosView(customtkinter.CTkFrame):
-    def __init__(self, master, voltar_callback=None, **kwargs):
-        super().__init__(master, fg_color="#3B6A7D", **kwargs)
-        self.voltar_callback = voltar_callback
-        self.db = DatabaseManager()
-        
-        self.pack(fill="both", expand=True)
+class UsuariosView(AdminView):
+    def _setup_view(self):
+        """Setup específico da view de usuários"""
+        self.pack_full_screen()
         self.criar_interface()
     
     def criar_interface(self):
@@ -33,11 +31,9 @@ class UsuariosView(customtkinter.CTkFrame):
         # Linhas da tabela
         self.carregar_dados()
 
-        # Botão voltar (adicionado por último para ficar por cima)
-        self.voltar_btn = VoltarButton(
-            self, 
-            command=self.voltar
-        )
+        # Botão voltar usando método da classe base
+        voltar_btn = VoltarButton(self.content_frame, command=self.handle_voltar)
+        voltar_btn.pack(side="bottom", anchor="w", pady=(20, 0))
     
     def criar_cabecalhos(self):
         # Frame para os cabeçalhos
@@ -81,19 +77,19 @@ class UsuariosView(customtkinter.CTkFrame):
         scrollable_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
         
         try:
-            # Obter usuários do banco de dados
-            usuarios = self.db.get_usuarios()
+            # Obter usuários do banco de dados usando propriedade da classe base
+            usuarios = self.user_service.get_all_users()
             
             # Adicionar itens
-            for idx, (user_id, username, nome_completo, tipo, ativo, data_criacao) in enumerate(usuarios):
+            for idx, user in enumerate(usuarios):
                 self.adicionar_linha(
                     scrollable_frame,
-                    user_id,
-                    username,
-                    nome_completo,
-                    tipo,
-                    ativo,
-                    data_criacao,
+                    user['id'],
+                    user['username'],
+                    user['nome_completo'],
+                    user['tipo'],
+                    user['ativo'],
+                    user['data_criacao'],
                     idx % 2 == 0  # Alternar cor de fundo
                 )
         except Exception as e:
@@ -132,7 +128,7 @@ class UsuariosView(customtkinter.CTkFrame):
             )
             lbl.pack(side="left", padx=10, pady=8, fill="x", expand=True)
     
-    def voltar(self):
+    def handle_voltar(self):
         """Volta para a tela anterior"""
         if self.voltar_callback:
             self.voltar_callback()

@@ -1,14 +1,14 @@
 import tkinter
 import customtkinter
-from ..components import Header, VoltarButton
-from ...repositories.database import DatabaseManager
+from ..components import Header, VoltarButton, ModernButton, ModernConfirmDialog, ToastNotification, ResponsiveFrame
+from ...services.service_factory import get_user_service
 
 class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
     def __init__(self, master, voltar_callback=None, usuario_logado=None, *args, **kwargs):
         self.voltar_callback = voltar_callback
         self.usuario_logado = usuario_logado  # Store the logged-in user
         super().__init__(master, fg_color="#3B6A7D", *args, **kwargs)
-        self.db = DatabaseManager()
+        self.user_service = get_user_service()
         self.usuario_selecionado = None  # Armazenará o ID do usuário selecionado
         self.pack(fill="both", expand=True)
         
@@ -100,7 +100,7 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         
         try:
             # Obter usuários do banco de dados
-            usuarios = self.db.get_usuarios()
+            usuarios = self.user_service.get_all_users()
             
             # Adicionar itens
             for idx, (user_id, username, nome_completo, tipo, ativo, data_criacao) in enumerate(usuarios):
@@ -292,22 +292,22 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         self.frame_botoes.columnconfigure(1, weight=1)
         
         # Botão Alterar Senha
-        btn_alterar_senha = customtkinter.CTkButton(
+        btn_alterar_senha = ModernButton(
             self.frame_botoes,
-            text="Alterar Senha",
-            fg_color="#4CAF50",
-            hover_color="#45a049",
-            command=self.abrir_janela_alterar_senha
+            text="🔑 Alterar Senha",
+            command=self.alterar_senha,
+            style="success",
+            height=50
         )
         btn_alterar_senha.grid(row=0, column=0, padx=5, pady=10, sticky="nsew")
         
         # Botão Excluir Usuário
-        btn_excluir = customtkinter.CTkButton(
+        btn_excluir = ModernButton(
             self.frame_botoes,
-            text="Excluir Usuário",
-            fg_color="#f44336",
-            hover_color="#d32f2f",
-            command=self.confirmar_exclusao
+            text="🗑️ Excluir Usuário",
+            command=self.solicitar_confirmacao_exclusao,
+            style="danger",
+            height=50
         )
         btn_excluir.grid(row=0, column=1, padx=5, pady=10, sticky="nsew")
         
@@ -380,20 +380,22 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         botoes_frame.pack(fill="x", pady=(20, 0))
         
         # Botão Salvar
-        btn_salvar = customtkinter.CTkButton(
+        btn_salvar = ModernButton(
             botoes_frame,
-            text="Salvar",
-            command=self.salvar_nova_senha
+            text="💾 Salvar",
+            command=self.salvar_nova_senha,
+            style="success",
+            height=40
         )
         btn_salvar.pack(side="left", padx=5, pady=10, fill="x", expand=True)
         
         # Botão Cancelar
-        btn_cancelar = customtkinter.CTkButton(
+        btn_cancelar = ModernButton(
             botoes_frame,
-            text="Cancelar",
-            fg_color="#6c757d",
-            hover_color="#5a6268",
-            command=self.dialog.destroy
+            text="❌ Cancelar",
+            command=self.fechar_dialog,
+            style="secondary",
+            height=40
         )
         btn_cancelar.pack(side="left", padx=5, pady=10, fill="x", expand=True)
         
@@ -423,16 +425,14 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
             
             for j, texto in enumerate(linha):
                 if texto:
-                    btn = customtkinter.CTkButton(
+                    btn = ModernButton(
                         frame_linha, 
                         text=texto, 
-                        width=70, 
-                        height=60,
-                        font=("Arial", 18, "bold"), 
-                        fg_color="#E9ECEF",
-                        text_color="black", 
-                        hover_color="#DEE2E6",
-                        command=lambda t=texto: self.tecla_pressionada(t)
+                        command=lambda t=texto: self.digito_pressionado(t),
+                        style="primary",
+                        width=70,
+                        height=50,
+                        font=("Arial", 16)
                     )
                     btn.pack(side="left", padx=5, pady=5, expand=True, fill="both")
         
@@ -457,39 +457,25 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         nova_senha = self.entry_nova_senha.get()
         confirmar_senha = self.entry_confirmar_senha.get()
         
-        # Limpar mensagem anterior
-        self.lbl_mensagem.configure(text="", text_color="red")
+        if not nova_senha:
+            self.lbl_mensagem.configure(text="❌ Por favor, digite uma nova senha.", text_color="#dc3545")
+            return
         
-        if not nova_senha or not confirmar_senha:
-            self.lbl_mensagem.configure(text="Por favor, preencha todos os campos.")
-            return False
-            
         if nova_senha != confirmar_senha:
-            self.lbl_mensagem.configure(text="As senhas não coincidem.")
-            return False
-            
-        if len(nova_senha) < 4:
-            self.lbl_mensagem.configure(text="A senha deve ter pelo menos 4 caracteres.")
-            return False
-            
+            self.lbl_mensagem.configure(text="❌ As senhas não coincidem.", text_color="#dc3545")
+            return
+        
         try:
-            # Atualiza a senha no banco de dados
-            sucesso = self.db.atualizar_senha(self.usuario_selecionado, nova_senha)
-            
+            sucesso, mensagem = self.user_service.change_password(self.usuario_selecionado, nova_senha)
             if sucesso:
-                self.lbl_mensagem.configure(
-                    text="Senha alterada com sucesso!", 
-                    text_color="green"
-                )
-                # Fechar a janela após 1.5 segundos
-                self.dialog.after(1500, self.dialog.destroy)
-                return True
+                self.lbl_mensagem.configure(text=f"✅ {mensagem}", text_color="#28a745")
+                ToastNotification.show(self, f"✅ Senha alterada com sucesso!", "success")
+                # Aguardar 2 segundos antes de fechar
+                self.after(2000, self.fechar_dialog)
             else:
-                self.lbl_mensagem.configure(text="Erro ao alterar a senha. Tente novamente.")
-                return False
+                self.lbl_mensagem.configure(text=f"❌ {mensagem}", text_color="#dc3545")
         except Exception as e:
-            self.lbl_mensagem.configure(text=f"Erro ao alterar senha: {str(e)}")
-            return False
+            self.lbl_mensagem.configure(text=f"❌ Erro ao alterar senha: {str(e)}", text_color="#dc3545")
     
     def confirmar_exclusao(self):
         if not self.usuario_selecionado:
@@ -517,24 +503,24 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
             lbl_confirmacao.pack(side="left", padx=(0, 10))
             
             # Botão Confirmar
-            btn_confirmar = customtkinter.CTkButton(
+            btn_confirmar = ModernButton(
                 self.frame_mensagem,
-                text="Confirmar",
-                fg_color="#dc3545",
-                hover_color="#c82333",
+                text="✅ Confirmar",
                 command=self.excluir_usuario,
-                width=100
+                style="danger",
+                width=100,
+                height=35
             )
             btn_confirmar.pack(side="left", padx=(0, 5))
             
             # Botão Cancelar
-            btn_cancelar = customtkinter.CTkButton(
+            btn_cancelar = ModernButton(
                 self.frame_mensagem,
-                text="Cancelar",
-                fg_color="#6c757d",
-                hover_color="#5a6268",
-                command=self.cancelar_exclusao,
-                width=100
+                text="❌ Cancelar",
+                command=self.reiniciar_estado_exclusao,
+                style="secondary",
+                width=100,
+                height=35
             )
             btn_cancelar.pack(side="left")
             
@@ -553,59 +539,7 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
             if widget.cget("text") == "Excluir Usuário":
                 widget.configure(state="normal")
     
-    def excluir_usuario(self):
-        """Exclui o usuário selecionado"""
-        if not self.usuario_selecionado:
-            return
-            
-        try:
-            # Obter dados do usuário antes de excluir para auditoria
-            self.db.cursor.execute('SELECT username, nome_completo, tipo FROM usuarios WHERE id = ?', (self.usuario_selecionado,))
-            usuario = self.db.cursor.fetchone()
-            
-            if usuario:
-                # Verificar se é um administrador e se é o último
-                if usuario[2].lower() == 'administrador':
-                    # Contar quantos administradores existem
-                    self.db.cursor.execute('SELECT COUNT(*) FROM usuarios WHERE tipo = ?', ('administrador',))
-                    total_admins = self.db.cursor.fetchone()[0]
-                    
-                    if total_admins <= 1:  # Se for o último administrador
-                        self.mostrar_mensagem_erro("Não é possível excluir o último administrador do sistema!")
-                        return
-                
-                dados_anteriores = {
-                    'username': usuario[0],
-                    'nome_completo': usuario[1],
-                    'tipo': usuario[2]
-                }
-                
-                # Verificar se há um usuário logado
-                if not hasattr(self, 'usuario_logado') or not self.usuario_logado:
-                    raise ValueError("Nenhum usuário logado encontrado")
-                
-                # Registrar auditoria antes de excluir
-                self.db.registrar_auditoria(
-                    usuario_id=self.usuario_logado['id'],
-                    acao='EXCLUIR',
-                    tabela_afetada='USUARIOS',
-                    id_afetado=self.usuario_selecionado,
-                    dados_anteriores=dados_anteriores
-                )
-                
-                # Executar exclusão
-                self.db.cursor.execute('DELETE FROM usuarios WHERE id = ?', (self.usuario_selecionado,))
-                self.db.conn.commit()
-                
-                self.mostrar_mensagem_sucesso("Usuário excluído com sucesso!")
-                self.limpar_painel_detalhes()  # Changed from limpar_campos()
-                self.carregar_dados()
-                
-        except Exception as e:
-            self.mostrar_mensagem_erro(f"Erro ao excluir usuário: {str(e)}")
-        finally:
-            self.reiniciar_estado_exclusao()
-    
+
     def reiniciar_estado_exclusao(self):
         """Reinicia o estado dos botões após uma tentativa de exclusão"""
         self.confirmando_exclusao = False
@@ -615,6 +549,49 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         for widget in self.frame_botoes.winfo_children():
             if widget.cget("text") == "Excluir Usuário":
                 widget.configure(state="normal")
+
+    def excluir_usuario(self):
+        """Exclui o usuário selecionado usando UserService"""
+        if not self.usuario_selecionado:
+            return
+            
+        # Obter dados do usuário para confirmação
+        try:
+            usuarios = self.user_service.get_all_users()
+            usuario_data = next((u for u in usuarios if u[0] == self.usuario_selecionado), None)
+            if not usuario_data:
+                ToastNotification.show(self, "❌ Usuário não encontrado", "error")
+                return
+            
+            nome_usuario = usuario_data[2]  # nome_completo
+            username = usuario_data[1]      # username
+            
+            # Confirmação moderna antes de excluir
+            if not ModernConfirmDialog.ask(
+                self,
+                "Confirmar Exclusão",
+                f"Tem certeza que deseja excluir o usuário '{nome_usuario}' (ID: {username})?\n\nEsta ação não pode ser desfeita.",
+                icon="warning",
+                confirm_text="Excluir",
+                cancel_text="Cancelar"
+            ):
+                return
+            
+            sucesso, mensagem = self.user_service.delete_user(self.usuario_selecionado)
+            
+            # Reiniciar estado de exclusão
+            self.reiniciar_estado_exclusao()
+            
+            if sucesso:
+                # Recarregar dados e limpar detalhes
+                self.carregar_dados()
+                self.limpar_painel_detalhes()
+                ToastNotification.show(self, f"✅ {mensagem}", "success")
+            else:
+                ToastNotification.show(self, f"❌ {mensagem}", "error")
+                
+        except Exception as e:
+            ToastNotification.show(self, f"❌ Erro ao excluir usuário: {str(e)}", "error")
     
     def limpar_painel_detalhes(self):
         # Esconder frames de detalhes e botões
@@ -673,15 +650,13 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         lbl_mensagem.pack(padx=20, pady=10)
         
         # Botão OK
-        btn_ok = customtkinter.CTkButton(
+        btn_ok = ModernButton(
             frame_principal,
             text="OK",
-            fg_color="#dc3545",
-            hover_color="#c82333",
             command=janela_erro.destroy,
+            style="danger",
             width=100,
-            height=35,
-            corner_radius=8
+            height=35
         )
         btn_ok.pack(pady=(10, 20))
         
@@ -737,15 +712,13 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         lbl_mensagem.pack(padx=20, pady=10)
         
         # Botão OK
-        btn_ok = customtkinter.CTkButton(
+        btn_ok = ModernButton(
             frame_principal,
             text="OK",
-            fg_color="#3c763d",
-            hover_color="#2ecc71",
             command=janela_sucesso.destroy,
+            style="success",
             width=100,
-            height=35,
-            corner_radius=8
+            height=35
         )
         btn_ok.pack(pady=(10, 20))
         

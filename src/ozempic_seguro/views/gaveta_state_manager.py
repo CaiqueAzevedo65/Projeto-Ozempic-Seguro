@@ -1,4 +1,4 @@
-from ..repositories.database import DatabaseManager
+from ..repositories.gaveta_repository import GavetaRepository
 from ..session import SessionManager
 
 class GavetaStateManager:
@@ -8,7 +8,7 @@ class GavetaStateManager:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(GavetaStateManager, cls).__new__(cls)
-            cls._db = DatabaseManager()
+            cls._repository = GavetaRepository()
             cls._session_manager = SessionManager.get_instance()
         return cls._instance
 
@@ -20,15 +20,15 @@ class GavetaStateManager:
 
     def get_estado(self, gaveta_id):
         """Retorna o estado atual de uma gaveta"""
-        return self._db.get_estado_gaveta(gaveta_id)
+        return self._repository.get_state(gaveta_id)
 
     def set_estado(self, gaveta_id, estado, usuario_tipo):
         """Define o estado de uma gaveta"""
-        return self._db.set_estado_gaveta(gaveta_id, estado, usuario_tipo)
+        return self._repository.set_state(gaveta_id, estado, usuario_tipo)
 
     def fechar_gaveta(self, gaveta_id, usuario_tipo, usuario_id=None):
         """Fecha uma gaveta (usado pelo Repositor)"""
-        return self._db.set_estado_gaveta(gaveta_id, False, usuario_tipo, usuario_id)
+        return self._repository.set_state(gaveta_id, False, usuario_tipo, usuario_id)
 
     def abrir_gaveta(self, gaveta_id, usuario_tipo, usuario_id=None):
         """Abre uma gaveta (usado pelo Vendedor e Administrador)"""
@@ -45,7 +45,7 @@ class GavetaStateManager:
                 usuario_id = self._session_manager.get_user_id()
                 
             # Abre a gaveta e registra o histórico
-            resultado = self._db.set_estado_gaveta(gaveta_id, True, usuario_tipo, usuario_id)
+            resultado = self._repository.set_state(gaveta_id, True, usuario_tipo, usuario_id)
             
             # Se for vendedor ou administrador, bloqueia o sistema por 5 minutos
             if usuario_tipo in ['vendedor', 'administrador']:
@@ -58,7 +58,7 @@ class GavetaStateManager:
     
     def get_historico(self, gaveta_id, limite=10):
         """Obtém o histórico de alterações de uma gaveta"""
-        return self._db.get_historico_gaveta(gaveta_id, limite)
+        return self._repository.get_history(gaveta_id, limite)
     
     def get_historico_paginado(self, gaveta_id, offset=0, limit=20):
         """
@@ -72,7 +72,7 @@ class GavetaStateManager:
         Returns:
             list: Lista de tuplas (acao, usuario, data_hora)
         """
-        return self._db.get_historico_paginado(gaveta_id, offset, limit)
+        return self._repository.get_history_paginated(gaveta_id, offset, limit)
     
     def get_total_historico(self, gaveta_id):
         """
@@ -84,12 +84,12 @@ class GavetaStateManager:
         Returns:
             int: Número total de registros
         """
-        return self._db.get_total_historico(gaveta_id)
+        return self._repository.count_history(gaveta_id)
     
     def get_todo_historico(self):
         """Retorna todo o histórico de todas as gavetas"""
         try:
-            return self._db.get_todo_historico()
+            return self._repository.get_all_history()
         except Exception as e:
             print(f"Erro ao buscar histórico: {e}")
             return []
@@ -105,7 +105,7 @@ class GavetaStateManager:
         Returns:
             list: Lista de tuplas (data_hora, gaveta_id, acao, usuario)
         """
-        return self._db.get_todo_historico_paginado(offset, limit)
+        return self._repository.get_all_history_paginated(offset, limit)
     
     def get_total_todo_historico(self):
         """
@@ -114,4 +114,4 @@ class GavetaStateManager:
         Returns:
             int: Número total de registros
         """
-        return self._db.get_total_todo_historico()
+        return self._repository.count_all_history()

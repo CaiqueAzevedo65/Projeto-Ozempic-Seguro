@@ -1,12 +1,12 @@
 import customtkinter
 import tkinter as tk
-from ..components import Header, VoltarButton, TecladoVirtual
-from ...models.auth import AuthManager
+from ..components import Header, VoltarButton, TecladoVirtual, ModernButton, ModernConfirmDialog, ToastNotification
+from ...services.service_factory import get_user_service
 
 class CadastroUsuarioFrame(customtkinter.CTkFrame):
     def __init__(self, master, voltar_callback=None, *args, **kwargs):
         self.voltar_callback = voltar_callback
-        self.auth_manager = AuthManager()
+        self.user_service = get_user_service()
         super().__init__(master, fg_color="#3B6A7D", *args, **kwargs)
         self.pack(fill="both", expand=True)
         
@@ -236,19 +236,26 @@ class CadastroUsuarioFrame(customtkinter.CTkFrame):
             self.mostrar_mensagem("A senha deve conter apenas números!", "erro")
             return
         
+        # Confirmar antes de salvar
+        if not ModernConfirmDialog.ask(
+            self,
+            "Confirmar Cadastro",
+            f"Deseja cadastrar o usuário '{nome}' do tipo '{tipo}'?",
+            icon="question",
+            confirm_text="Cadastrar",
+            cancel_text="Cancelar"
+        ):
+            return
+        
         # Chama o método de cadastro do AuthManager
-        sucesso, mensagem = self.auth_manager.cadastrar_usuario(nome, usuario, senha, tipo)
+        sucesso, mensagem = self.user_service.create_user(nome, usuario, senha, tipo)
         
         if sucesso:
-            # Mostra mensagem de sucesso
-            self.mostrar_mensagem("Usuário cadastrado com sucesso!", "sucesso")
+            # Mostra notificação de sucesso moderna
+            ToastNotification.show(self, f"✅ Usuário '{nome}' cadastrado com sucesso!", "success")
             self.limpar_campos()
-            
-            # Mostra mensagem em uma janela de diálogo
-            from tkinter import messagebox
-            messagebox.showinfo("Sucesso", "Usuário cadastrado com sucesso!")
         else:
-            self.mostrar_mensagem(mensagem, "erro")
+            ToastNotification.show(self, f"❌ Erro: {mensagem}", "error")
     
     def mostrar_mensagem(self, mensagem, tipo):
         cores = {

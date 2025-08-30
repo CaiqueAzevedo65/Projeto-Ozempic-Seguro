@@ -1,14 +1,14 @@
 import customtkinter
 from tkinter import ttk
 from datetime import datetime, timedelta
-from ...repositories.database import DatabaseManager
+from ...services.service_factory import get_audit_service
 from ..components import Header
 
 class AuditoriaFrame(customtkinter.CTkFrame):
     def __init__(self, master, voltar_callback=None, *args, **kwargs):
         self.voltar_callback = voltar_callback
         super().__init__(master, fg_color="#3B6A7D", *args, **kwargs)
-        self.db = DatabaseManager()
+        self.audit_service = get_audit_service()
         self.pack(fill="both", expand=True)
         
         # Variáveis para filtros
@@ -193,7 +193,7 @@ class AuditoriaFrame(customtkinter.CTkFrame):
         
         try:
             # Obter os registros de auditoria filtrados
-            registros = self.db.buscar_logs_auditoria(
+            registros = self.audit_service.get_logs(
                 filtro_acao=filtro_acao,
                 filtro_tabela="USUARIOS",
                 data_inicio=data_inicio,

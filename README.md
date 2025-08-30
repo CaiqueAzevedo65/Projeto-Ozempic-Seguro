@@ -34,7 +34,7 @@ O Ozempic Seguro é uma aplicação desktop desenvolvida em Python com interface
 - **Gerenciamento de Dependências**: pip
 - **Outras Bibliotecas**:
   - Pillow 10.2.0 (processamento de imagens)
-  - Bcrypt (hash de senhas)
+  - Bcrypt 4.1.2 (hash seguro de senhas)
 
 ## 📦 Pré-requisitos
 
@@ -67,13 +67,14 @@ O Ozempic Seguro é uma aplicação desktop desenvolvida em Python com interface
 
 1. **Inicie a aplicação**
    ```bash
-   cd src && python -m ozempic_seguro.main
+   cd src && python -m ozempic_seguro.main  # aplica migrations SQL automaticamente
    ```
 
 2. **Credenciais de Acesso**
    - **Admin Padrão**:
      - Usuário: `00`
      - Senha: `1234` (altere após o primeiro acesso)
+   - **⚠️ Importante**: A sessão expira automaticamente após 10 minutos de inatividade
 
 ## 🗃️ Estrutura do Projeto
 
@@ -84,13 +85,14 @@ Projeto-Ozempic-Seguro/
 ├── src/
 │   ├── assets/           # Recursos de imagem e ícones
 │   ├── data/             # Arquivos de banco de dados
+│   ├── migrations/       # Scripts de migração de esquema SQL
 │   ├── views/            # Telas da aplicação
 │   │   ├── pages_adm/    # Telas administrativas
 │   │   │   ├── painel_administrador_view.py
 │   │   │   └── gerenciamento_usuarios_view.py
 │   │   ├── pages_iniciais/
 │   │   └── ...
-│   ├── auth.py          # Lógica de autenticação
+│   ├── services/        # Camada de serviços (UserService, AuditService, service_factory.py)
 │   ├── database.py       # Gerenciamento do banco de dados
 │   └── main.py           # Ponto de entrada da aplicação
 ├── .gitignore
@@ -100,12 +102,25 @@ Projeto-Ozempic-Seguro/
 
 ## 🔒 Política de Segurança
 
-- Todas as senhas são armazenadas usando hash seguro (bcrypt)
-- Proteção contra injeção SQL usando parâmetros preparados
-- Controle de acesso baseado em funções (RBAC)
-- Registro de atividades sensíveis
-- Validação de entrada em todos os campos
-- Proteção contra exclusão acidental de usuários críticos
+### **Sistema de Autenticação Avançado**
+- **Hash bcrypt** com 12 rounds para senhas (migração automática de SHA256)
+- **Timeout de sessão** automático após 10 minutos de inatividade
+- **Proteção contra força bruta**: máximo 3 tentativas + bloqueio de 15 minutos
+- **Logs de segurança detalhados** com IP, timestamp e contexto completo
+
+### **Validação e Proteção**
+- **Sanitização robusta** contra SQL injection e XSS
+- **Validação rigorosa** de todos os campos de entrada
+- **Escape HTML** automático em dados de usuário
+- **Controle de acesso** baseado em funções (RBAC)
+- **Proteção contra exclusão** do último administrador
+
+### **Auditoria e Monitoramento**
+- **Registro completo** de todas as atividades sensíveis
+- **Captura automática** de IP e informações do sistema
+- **Logs de violações** de segurança e tentativas suspeitas
+- **Timestamps precisos** em formato ISO 8601
+- **Filtros avançados** para análise de logs
 
 ## 🐛 Reportando Problemas
 
@@ -127,13 +142,30 @@ Este projeto está sob a licença MIT. Consulte o arquivo LICENSE para obter mai
 
 ## 📞 Suporte
 
-Para suporte, entre em contato através do email: [seu-email@exemplo.com]
+Para suporte, entre em contato através do email: caiqueazevedo2005@gmail.com
 
 ---
 
 Desenvolvido com ❤️ por Caique Azevedo
 
 ## 📌 Notas de Atualização
+
+### [1.2.0] - 2025-08-30 - **MAJOR SECURITY UPDATE**
+- **🔒 Hash bcrypt**: Migração completa de SHA256+salt para bcrypt (12 rounds)
+- **⏱️ Timeout de sessão**: Implementado timeout automático de 10 minutos de inatividade
+- **🛡️ Proteção força bruta**: Controle de tentativas de login com bloqueio automático
+- **📝 Logs avançados**: Sistema de logs de segurança com IP, timestamp e contexto
+- **✅ Validação robusta**: Sanitização contra SQL injection e XSS
+- **⚙️ Configurações centralizadas**: Arquivo `config.py` para gerenciamento de configurações
+- **📊 Auditoria detalhada**: Logs com contexto completo de segurança
+- **🔄 Compatibilidade**: Suporte a senhas legacy durante migração
+
+### [1.1.0] - 2025-06-25
+- Introduzida camada de serviços (`services/`) com `UserService` e `AuditService`.
+- Removida a classe legada `AuthManager`; lógica de autenticação e auditoria centralizada nos serviços.
+- Criado `service_factory.py` para prover injeção de dependência (singletons) nas views/controllers.
+- Refatoradas todas as views para usar os serviços, eliminando acesso direto ao banco de dados na camada de apresentação.
+- Atualizada a documentação para refletir a nova arquitetura.
 
 ### [1.0.0] - 2024-05-30
 - Adicionada validação para impedir exclusão do último administrador

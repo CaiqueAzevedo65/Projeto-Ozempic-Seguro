@@ -1,6 +1,6 @@
 import customtkinter
 from tkinter import messagebox
-from ..components import Header, FinalizarSessaoButton
+from ..components import Header, FinalizarSessaoButton, ResponsiveButtonGrid, ModernButton, ModernConfirmDialog, ToastNotification
 from .gerenciamento_usuarios_view import GerenciamentoUsuariosFrame
 from .cadastro_usuario_view import CadastroUsuarioFrame
 from .diagnostico_view import DiagnosticoFrame
@@ -32,43 +32,20 @@ class PainelAdministradorFrame(customtkinter.CTkFrame):
         Header(self, "Administrador")
 
     def criar_botoes(self):
-        # Frame principal para centralizar os botões
-        main_frame = customtkinter.CTkFrame(self, fg_color="transparent")
-        main_frame.pack(expand=True)
-        
-        botoes = [
-            {"texto": "Gerenciar Usuários", "comando": self.gerenciar_usuarios},
-            {"texto": "Gerenciar Gavetas", "comando": self.gerenciar_gavetas},
-            {"texto": "Cadastro de Usuário", "comando": self.cadastro_usuario},
-            {"texto": "Registro de Auditoria", "comando": self.registro_auditoria},
-            {"texto": "Diagnóstico", "comando": self.diagnostico},
-            {"texto": "Parâmetros de Sistema", "comando": self.parametro_sistemas},
-            {"texto": "Estado do Terminal", "comando": self.estado_terminal},
-            {"texto": "Histórico", "comando": self.mostrar_historico}
+        # Dados dos botões com estilos e ícones
+        buttons_data = [
+            {"text": "👥 Gerenciar Usuários", "command": self.gerenciar_usuarios, "style": "primary"},
+            {"text": "🗄️ Gerenciar Gavetas", "command": self.gerenciar_gavetas, "style": "primary"},
+            {"text": "➕ Cadastro de Usuário", "command": self.cadastro_usuario, "style": "success"},
+            {"text": "📋 Registro de Auditoria", "command": self.registro_auditoria, "style": "secondary"},
+            {"text": "🔧 Diagnóstico", "command": self.diagnostico, "style": "warning"},
+            {"text": "⚙️ Parâmetros de Sistema", "command": self.parametro_sistemas, "style": "secondary"},
+            {"text": "📟 Estado do Terminal", "command": self.estado_terminal, "style": "secondary"},
+            {"text": "📊 Histórico", "command": self.mostrar_historico, "style": "secondary"}
         ]
         
-        # Adiciona os botões em duas colunas
-        for i, btn_info in enumerate(botoes):
-            row = i // 2
-            col = i % 2
-            btn = customtkinter.CTkButton(
-                main_frame,
-                text=btn_info["texto"],
-                font=("Arial", 16, "bold"),
-                width=250,
-                height=50,
-                corner_radius=15,
-                fg_color="white",
-                text_color="black",
-                hover_color="#e0e0e0",
-                command=btn_info["comando"]
-            )
-            btn.grid(row=row, column=col, padx=20, pady=15, sticky="nsew")
-
-        # Configura o grid para centralizar
-        main_frame.grid_columnconfigure(0, weight=1)
-        main_frame.grid_columnconfigure(1, weight=1)
-        main_frame.grid_rowconfigure(tuple(range((len(botoes) + 1) // 2)), weight=1)
+        # Usar grid responsivo
+        self.button_grid = ResponsiveButtonGrid(self, buttons_data, max_cols=3)
 
     def gerenciar_gavetas(self):
         """Abre a tela de gerenciamento de gavetas"""
@@ -91,11 +68,25 @@ class PainelAdministradorFrame(customtkinter.CTkFrame):
         FinalizarSessaoButton(self, self.finalizar_sessao)
 
     def finalizar_sessao(self):
-        if self.finalizar_sessao_callback:
-            self.pack_forget()
-            self.finalizar_sessao_callback()
-        else:
-            messagebox.showinfo("Sessão", "Sessão finalizada!")
+        # Usar confirmação visual moderna
+        if ModernConfirmDialog.ask(
+            self, 
+            "Finalizar Sessão", 
+            "Tem certeza que deseja sair do sistema?",
+            icon="question",
+            confirm_text="Sair",
+            cancel_text="Cancelar"
+        ):
+            ToastNotification.show(self, "Sessão finalizada com sucesso", "success")
+            if self.finalizar_sessao_callback:
+                self.after(1000, lambda: self._execute_logout())
+            else:
+                messagebox.showinfo("Sessão", "Sessão finalizada!")
+    
+    def _execute_logout(self):
+        """Executa o logout após delay da notificação"""
+        self.pack_forget()
+        self.finalizar_sessao_callback()
 
     def gerenciar_usuarios(self):
         for widget in self.winfo_children():

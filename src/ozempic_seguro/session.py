@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta
+import threading
+from .config import Config
 
 class SessionManager:
     _instance = None
@@ -9,6 +11,12 @@ class SessionManager:
             cls._instance._blocked_until = None
             cls._instance._current_user = None
             cls._instance._timer_enabled = True  # Timer ativado por padrão
+            cls._instance._last_activity = None
+            cls._instance._session_timeout = 10  # 10 minutos padrão
+            cls._instance._timeout_timer = None
+            cls._instance._login_attempts = {}
+            cls._instance._max_login_attempts = Config.Security.MAX_LOGIN_ATTEMPTS
+            cls._instance._lockout_duration = Config.Security.LOCKOUT_DURATION_MINUTES
         return cls._instance
     
     @classmethod
@@ -20,6 +28,12 @@ class SessionManager:
     def set_current_user(self, user):
         """Define o usuário atual da sessão"""
         self._current_user = user
+        if user:
+            self._last_activity = datetime.now()
+            self._start_timeout_timer()
+        else:
+            self._stop_timeout_timer()
+            self._last_activity = None
     
     def get_current_user(self):
         """Retorna o usuário atual da sessão"""
@@ -118,3 +132,181 @@ class SessionManager:
         if self._current_user and 'id' in self._current_user:
             return self._current_user['id']
         return None
+
+    def update_last_activity(self):
+        """Atualiza timestamp da última atividade"""
+        if self._current_user:
+            self._last_activity = datetime.now()
+            # Reinicia o timer de timeout
+            self._start_timeout_timer()
+    
+    def is_session_expired(self):
+        """Verifica se a sessão expirou por inatividade"""
+        if not self._current_user or not self._last_activity:
+            return False
+        
+        time_since_activity = datetime.now() - self._last_activity
+        return time_since_activity.total_seconds() > (self._session_timeout * 60)
+    
+    def _start_timeout_timer(self):
+        """Inicia o timer de timeout da sessão"""
+        self._stop_timeout_timer()  # Para o timer anterior se existir
+        
+        if self._current_user:
+            # Timer para expirar sessão após inatividade
+            self._timeout_timer = threading.Timer(
+                self._session_timeout * 60,  # Converte minutos para segundos
+                self._expire_session
+            )
+            self._timeout_timer.start()
+    
+    def _stop_timeout_timer(self):
+        """Para o timer de timeout"""
+        if self._timeout_timer:
+            self._timeout_timer.cancel()
+            self._timeout_timer = None
+    
+    def _expire_session(self):
+        """Expira a sessão por inatividade"""
+        if self._current_user:
+            # Log da expiração da sessão
+            from .services.service_factory import get_audit_service
+            audit_service = get_audit_service()
+            audit_service.create_log(
+                usuario_id=self._current_user.get('id'),
+                acao='SESSAO_EXPIRADA',
+                tabela_afetada='SESSOES',
+                dados_anteriores={'motivo': 'timeout_inatividade'}
+            )
+            
+            # Limpa a sessão
+            self._current_user = None
+            self._last_activity = None
+    
+    def get_session_remaining_time(self):
+        """Retorna tempo restante da sessão em minutos"""
+        if not self._current_user or not self._last_activity:
+            return 0
+        
+        elapsed = datetime.now() - self._last_activity
+        remaining_seconds = (self._session_timeout * 60) - elapsed.total_seconds()
+        return max(0, int(remaining_seconds / 60))
+    
+    def set_session_timeout(self, minutes):
+        """Define o timeout da sessão em minutos"""
+        if self.is_admin():
+            self._session_timeout = minutes
+            if self._current_user:
+                self._start_timeout_timer()  # Reinicia timer com novo valor
+            return True
+        return False
+    
+    def record_login_attempt(self, username, success=True):
+        """Registra tentativa de login para controle de força bruta"""
+        now = datetime.now()
+        
+        if username not in self._login_attempts:
+            self._login_attempts[username] = {
+                'count': 0,
+                'last_attempt': now,
+                'locked_until': None
+            }
+        
+        attempt_data = self._login_attempts[username]
+        
+        if success:
+            # Reset contador em caso de sucesso
+            attempt_data['count'] = 0
+            attempt_data['locked_until'] = None
+        else:
+            # Incrementa contador de falhas
+            attempt_data['count'] += 1
+            attempt_data['last_attempt'] = now
+            
+            # Bloqueia usuário se excedeu tentativas
+            if attempt_data['count'] >= self._max_login_attempts:
+                attempt_data['locked_until'] = now + timedelta(minutes=self._lockout_duration)
+    
+    def is_user_locked(self, username):
+        """Verifica se usuário está bloqueado por tentativas de login"""
+        if username not in self._login_attempts:
+            return False
+        
+        attempt_data = self._login_attempts[username]
+        
+        if attempt_data['locked_until'] is None:
+            return False
+        
+        # Remove bloqueio se tempo expirou
+        if datetime.now() >= attempt_data['locked_until']:
+            attempt_data['locked_until'] = None
+            attempt_data['count'] = 0
+            return False
+        
+        return True
+    
+    def get_lockout_remaining_time(self, username):
+        """Retorna tempo restante de bloqueio em minutos"""
+        if username not in self._login_attempts:
+            return 0
+        
+        attempt_data = self._login_attempts[username]
+        
+        if attempt_data['locked_until'] is None:
+            return 0
+        
+        remaining = attempt_data['locked_until'] - datetime.now()
+        return max(0, int(remaining.total_seconds() / 60))
+    
+    def get_lockout_remaining_seconds(self, username):
+        """Retorna tempo restante de bloqueio em segundos para timer preciso"""
+        if username not in self._login_attempts:
+            return 0
+        
+        attempt_data = self._login_attempts[username]
+        
+        if attempt_data['locked_until'] is None:
+            return 0
+        
+        remaining = attempt_data['locked_until'] - datetime.now()
+        return max(0, int(remaining.total_seconds()))
+    
+    def get_remaining_attempts(self, username):
+        """Retorna número de tentativas restantes antes do bloqueio"""
+        if username not in self._login_attempts:
+            return self._max_login_attempts
+        
+        attempt_data = self._login_attempts[username]
+        used_attempts = attempt_data['count']
+        remaining = self._max_login_attempts - used_attempts
+        return max(0, remaining)
+    
+    def get_login_status_message(self, username):
+        """Retorna mensagem personalizada sobre o status de login"""
+        if self.is_user_locked(username):
+            remaining_time = self.get_lockout_remaining_time(username)
+            remaining_seconds = self.get_lockout_remaining_seconds(username)
+            
+            if remaining_time > 0:
+                return {
+                    'locked': True,
+                    'message': f"Conta bloqueada por {remaining_time} minuto(s)",
+                    'detailed_message': f"Muitas tentativas incorretas. Tente novamente em {remaining_time}:{remaining_seconds % 60:02d}",
+                    'remaining_seconds': remaining_seconds
+                }
+        
+        remaining_attempts = self.get_remaining_attempts(username)
+        if remaining_attempts < self._max_login_attempts:
+            return {
+                'locked': False,
+                'message': f"Restam {remaining_attempts} tentativa(s)",
+                'detailed_message': f"⚠️ Cuidado! Você tem {remaining_attempts} tentativa(s) restante(s) antes do bloqueio automático",
+                'remaining_attempts': remaining_attempts
+            }
+        
+        return {
+            'locked': False,
+            'message': "Login disponível",
+            'detailed_message': "Digite suas credenciais para acessar o sistema",
+            'remaining_attempts': remaining_attempts
+        }

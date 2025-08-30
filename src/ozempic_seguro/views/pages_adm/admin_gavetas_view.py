@@ -1,5 +1,5 @@
 import customtkinter
-from ..components import Header, VoltarButton, GavetaButtonGrid, GavetaButton
+from ..components import Header, VoltarButton, GavetaButtonGrid, GavetaButton, ModernButton, ResponsiveFrame, ToastNotification
 
 class AdminGavetasFrame(customtkinter.CTkFrame):
     def __init__(self, master, voltar_callback=None, *args, **kwargs):
@@ -31,6 +31,7 @@ class AdminGavetasFrame(customtkinter.CTkFrame):
 
     def mostrar_historico_gaveta(self, gaveta_id):
         """Mostra o histórico de uma gaveta específica"""
+        ToastNotification.show(self, f"📊 Carregando histórico da gaveta {gaveta_id}...", "info")
         temp_button = GavetaButton(
             self, 
             text=gaveta_id, 

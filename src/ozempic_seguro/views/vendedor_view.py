@@ -1,6 +1,6 @@
 import customtkinter
 from tkinter import messagebox
-from .components import Header, FinalizarSessaoButton, GavetaButtonGrid, GavetaButton
+from .components import Header, FinalizarSessaoButton, GavetaButtonGrid, GavetaButton, ModernConfirmDialog, ToastNotification
 
 class VendedorFrame(customtkinter.CTkFrame):
     def __init__(self, master, finalizar_sessao_callback=None, *args, **kwargs):
@@ -44,8 +44,22 @@ class VendedorFrame(customtkinter.CTkFrame):
         FinalizarSessaoButton(self, self.finalizar_sessao)
 
     def finalizar_sessao(self):
-        if self.finalizar_sessao_callback:
-            self.pack_forget()
-            self.finalizar_sessao_callback()
-        else:
-            messagebox.showinfo("Sessão", "Sessão finalizada!")
+        # Usar confirmação visual moderna
+        if ModernConfirmDialog.ask(
+            self, 
+            "Finalizar Sessão", 
+            "Tem certeza que deseja sair do sistema?",
+            icon="question",
+            confirm_text="Sair",
+            cancel_text="Cancelar"
+        ):
+            ToastNotification.show(self, "Sessão finalizada com sucesso", "success")
+            if self.finalizar_sessao_callback:
+                self.after(1000, lambda: self._execute_logout())
+            else:
+                messagebox.showinfo("Sessão", "Sessão finalizada!")
+    
+    def _execute_logout(self):
+        """Executa o logout após delay da notificação"""
+        self.pack_forget()
+        self.finalizar_sessao_callback()

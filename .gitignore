@@ -92,3 +92,7 @@ src/data/ozempic_seguro.db
 
 .db-shm
 .db-wal
+src/ozempic_seguro/data/ozempic_seguro.db-shm
+src/ozempic_seguro/data/ozempic_seguro.db-wal
+src/logs/app_20250830.log
+src/ozempic_seguro/migrations/001_initial.sql

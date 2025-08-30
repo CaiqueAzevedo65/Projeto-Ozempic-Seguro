@@ -1,7 +1,10 @@
 import customtkinter
+import tkinter as tk
 from tkinter import messagebox
 from PIL import Image
 import os
+import threading
+import time
 from .gaveta_state_manager import GavetaStateManager
 from ..session import SessionManager  # Importa o SessionManager do caminho correto
 
@@ -25,6 +28,317 @@ class ImageCache:
             imagem = Image.open(digital_path)
             ImageCache._digital_img = customtkinter.CTkImage(imagem, size=(70, 70))
         return ImageCache._digital_img
+
+# Componente de botão moderno com feedback visual aprimorado
+class ModernButton(customtkinter.CTkButton):
+    def __init__(self, master, text, command=None, style="primary", loading=False, **kwargs):
+        # Estilos predefinidos
+        styles = {
+            "primary": {
+                "fg_color": "#2E86C1",
+                "hover_color": "#1F618D", 
+                "text_color": "white",
+                "border_color": "#2E86C1"
+            },
+            "secondary": {
+                "fg_color": "white",
+                "hover_color": "#F8F9FA",
+                "text_color": "black", 
+                "border_color": "#DEE2E6",
+                "border_width": 2
+            },
+            "success": {
+                "fg_color": "#28A745",
+                "hover_color": "#1E7E34",
+                "text_color": "white",
+                "border_color": "#28A745"
+            },
+            "danger": {
+                "fg_color": "#DC3545", 
+                "hover_color": "#C82333",
+                "text_color": "white",
+                "border_color": "#DC3545"
+            },
+            "warning": {
+                "fg_color": "#FFC107",
+                "hover_color": "#E0A800", 
+                "text_color": "black",
+                "border_color": "#FFC107"
+            }
+        }
+        
+        # Aplicar estilo selecionado
+        selected_style = styles.get(style, styles["primary"])
+        
+        # Configurações padrão
+        defaults = {
+            "font": ("Arial", 14, "bold"),
+            "corner_radius": 8,
+            "height": 45,
+            "width": 200
+        }
+        
+        # Mesclar configurações
+        config = {**defaults, **selected_style, **kwargs}
+        
+        self.original_command = command
+        self.is_loading = loading
+        self.original_text = text
+        
+        super().__init__(master, text=text, command=self._handle_click, **config)
+        
+        if loading:
+            self.set_loading(True)
+    
+    def _handle_click(self):
+        if not self.is_loading and self.original_command:
+            self.original_command()
+    
+    def set_loading(self, loading=True):
+        """Ativa/desativa estado de loading"""
+        self.is_loading = loading
+        if loading:
+            self.configure(text="⏳ Processando...", state="disabled")
+        else:
+            self.configure(text=self.original_text, state="normal")
+    
+    def pulse_animation(self, duration=0.3):
+        """Animação de pulso para feedback visual"""
+        original_color = self.cget("fg_color")
+        self.configure(fg_color="#85C1E9")  # Cor mais clara
+        self.after(int(duration * 1000), lambda: self.configure(fg_color=original_color))
+
+# Layout responsivo para painéis
+class ResponsiveFrame(customtkinter.CTkFrame):
+    def __init__(self, master, min_width=800, min_height=600, **kwargs):
+        super().__init__(master, **kwargs)
+        self.min_width = min_width
+        self.min_height = min_height
+        self.pack(fill="both", expand=True)
+        self.bind("<Configure>", self._on_resize)
+        
+    def _on_resize(self, event):
+        """Ajusta layout baseado no tamanho da janela"""
+        if event.widget == self:
+            width = event.width
+            height = event.height
+            
+            # Ajustar componentes baseado no tamanho
+            if hasattr(self, '_responsive_components'):
+                for component in self._responsive_components:
+                    if hasattr(component, 'adjust_to_size'):
+                        component.adjust_to_size(width, height)
+
+# Grid de botões responsivo
+class ResponsiveButtonGrid(customtkinter.CTkFrame):
+    def __init__(self, master, buttons_data, max_cols=4, **kwargs):
+        super().__init__(master, fg_color="transparent", **kwargs)
+        self.pack(expand=True, fill="both", padx=20, pady=20)
+        
+        self.buttons_data = buttons_data
+        self.max_cols = max_cols
+        self.current_cols = max_cols
+        
+        self.create_grid()
+        self.bind("<Configure>", self._adjust_grid)
+        
+    def create_grid(self):
+        """Cria a grade de botões"""
+        # Limpar grid existente
+        for widget in self.winfo_children():
+            widget.destroy()
+            
+        rows_needed = (len(self.buttons_data) + self.current_cols - 1) // self.current_cols
+        
+        for i, btn_data in enumerate(self.buttons_data):
+            row = i // self.current_cols
+            col = i % self.current_cols
+            
+            btn = ModernButton(
+                self,
+                text=btn_data.get('text', ''),
+                command=btn_data.get('command'),
+                style=btn_data.get('style', 'primary'),
+                width=200
+            )
+            btn.grid(row=row, column=col, padx=10, pady=10, sticky="ew")
+            
+        # Configurar expansão das colunas
+        for col in range(self.current_cols):
+            self.grid_columnconfigure(col, weight=1)
+    
+    def _adjust_grid(self, event):
+        """Ajusta número de colunas baseado na largura"""
+        if event.widget == self:
+            width = event.width
+            # Calcular colunas ideais baseado na largura
+            btn_width = 220  # largura do botão + padding
+            new_cols = max(1, min(self.max_cols, width // btn_width))
+            
+            if new_cols != self.current_cols:
+                self.current_cols = new_cols
+                self.create_grid()
+
+# Componente de confirmação visual moderna
+class ModernConfirmDialog:
+    def __init__(self, parent, title, message, icon="question", confirm_text="Confirmar", cancel_text="Cancelar"):
+        self.result = None
+        self.parent = parent
+        
+        # Criar janela modal
+        self.dialog = customtkinter.CTkToplevel(parent)
+        self.dialog.title(title)
+        self.dialog.geometry("400x250")
+        self.dialog.resizable(False, False)
+        self.dialog.transient(parent)
+        self.dialog.grab_set()
+        
+        # Centralizar na tela
+        self._center_window()
+        
+        # Configurar conteúdo
+        self._create_content(title, message, icon, confirm_text, cancel_text)
+        
+        # Aguardar resultado
+        self.dialog.wait_window()
+    
+    def _center_window(self):
+        """Centraliza a janela na tela"""
+        self.dialog.update_idletasks()
+        
+        # Obter dimensões da tela
+        screen_width = self.dialog.winfo_screenwidth()
+        screen_height = self.dialog.winfo_screenheight()
+        
+        # Calcular posição central
+        x = (screen_width - 400) // 2
+        y = (screen_height - 250) // 2
+        
+        self.dialog.geometry(f"400x250+{x}+{y}")
+    
+    def _create_content(self, title, message, icon, confirm_text, cancel_text):
+        """Cria o conteúdo da janela"""
+        # Frame principal
+        main_frame = customtkinter.CTkFrame(self.dialog, fg_color="white")
+        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        # Ícone e título
+        icon_symbols = {
+            "question": "❓",
+            "warning": "⚠️", 
+            "error": "❌",
+            "info": "ℹ️",
+            "success": "✅"
+        }
+        
+        icon_frame = customtkinter.CTkFrame(main_frame, fg_color="transparent")
+        icon_frame.pack(pady=(10, 20))
+        
+        customtkinter.CTkLabel(
+            icon_frame,
+            text=icon_symbols.get(icon, "❓"),
+            font=("Arial", 32),
+            text_color="#2E86C1"
+        ).pack()
+        
+        # Mensagem
+        customtkinter.CTkLabel(
+            main_frame,
+            text=message,
+            font=("Arial", 14),
+            text_color="black",
+            wraplength=350
+        ).pack(pady=(0, 30))
+        
+        # Botões de ação
+        btn_frame = customtkinter.CTkFrame(main_frame, fg_color="transparent")
+        btn_frame.pack()
+        
+        ModernButton(
+            btn_frame,
+            text=cancel_text,
+            command=self._cancel,
+            style="secondary",
+            width=120
+        ).pack(side="left", padx=(0, 10))
+        
+        ModernButton(
+            btn_frame,
+            text=confirm_text,
+            command=self._confirm,
+            style="primary",
+            width=120
+        ).pack(side="left")
+    
+    def _confirm(self):
+        self.result = True
+        self.dialog.destroy()
+    
+    def _cancel(self):
+        self.result = False
+        self.dialog.destroy()
+    
+    @staticmethod
+    def ask(parent, title, message, **kwargs):
+        """Mostra diálogo e retorna True/False"""
+        dialog = ModernConfirmDialog(parent, title, message, **kwargs)
+        return dialog.result
+
+# Componente de notificação toast
+class ToastNotification:
+    def __init__(self, parent, message, type="info", duration=3000):
+        self.parent = parent
+        
+        # Criar frame de notificação
+        self.frame = customtkinter.CTkFrame(
+            parent,
+            fg_color=self._get_color(type),
+            corner_radius=10,
+            height=60
+        )
+        
+        # Posicionar no canto superior direito
+        self.frame.place(relx=0.98, rely=0.02, anchor="ne")
+        
+        # Ícones e cores por tipo
+        icons = {
+            "info": "ℹ️",
+            "success": "✅", 
+            "warning": "⚠️",
+            "error": "❌"
+        }
+        
+        # Conteúdo da notificação
+        content_frame = customtkinter.CTkFrame(self.frame, fg_color="transparent")
+        content_frame.pack(expand=True, fill="both", padx=15, pady=10)
+        
+        customtkinter.CTkLabel(
+            content_frame,
+            text=f"{icons.get(type, 'ℹ️')} {message}",
+            font=("Arial", 12, "bold"),
+            text_color="white"
+        ).pack(expand=True)
+        
+        # Auto-remover após duration
+        self.parent.after(duration, self.destroy)
+    
+    def _get_color(self, type):
+        colors = {
+            "info": "#2E86C1",
+            "success": "#28A745",
+            "warning": "#FFC107", 
+            "error": "#DC3545"
+        }
+        return colors.get(type, "#2E86C1")
+    
+    def destroy(self):
+        if hasattr(self, 'frame'):
+            self.frame.destroy()
+    
+    @staticmethod
+    def show(parent, message, type="info", duration=3000):
+        """Método estático para mostrar notificação"""
+        return ToastNotification(parent, message, type, duration)
 
 # Componente de cabeçalho reutilizável
 class Header(customtkinter.CTkFrame):

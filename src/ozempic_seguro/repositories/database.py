@@ -5,6 +5,9 @@ import secrets
 import json
 from datetime import datetime
 
+from ..core.logger import logger, log_exceptions, DatabaseException
+from ..config import Config
+
 class DatabaseManager:
     _instance = None
     
@@ -14,76 +17,105 @@ class DatabaseManager:
             cls._instance._initialize_database()
         return cls._instance
     
+    @log_exceptions("Database Path Resolution")
     def _get_db_path(self):
-        """Retorna o caminho para o arquivo do banco de dados"""
-        data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
+        """Retorna o caminho para o arquivo do banco de dados usando configurações centralizadas"""
+        base_dir = os.path.dirname(os.path.dirname(__file__))
+        data_dir = os.path.join(base_dir, Config.App.DATA_DIR)
         os.makedirs(data_dir, exist_ok=True)
-        return os.path.join(data_dir, 'ozempic_seguro.db')
-    
-    def _initialize_database(self):
-        """Inicializa o banco de dados com as tabelas necessárias"""
-        db_exists = os.path.exists(self._get_db_path())
         
-        self.conn = sqlite3.connect(self._get_db_path())
+        db_path = os.path.join(data_dir, Config.Database.DB_NAME)
+        logger.debug(f"Database path resolved: {db_path}")
+        return db_path
+    
+    @log_exceptions("Database Migrations")
+    def _run_migrations(self):
+        """Executa scripts SQL de migrations usando configurações centralizadas"""
+        base_dir = os.path.dirname(os.path.dirname(__file__))
+        migrations_dir = os.path.join(base_dir, Config.App.MIGRATIONS_DIR)
+        os.makedirs(migrations_dir, exist_ok=True)
+        
+        logger.info(f"Running migrations from: {migrations_dir}")
+        # Cria tabela de controle de migrations
+        self.cursor.execute('''
+        CREATE TABLE IF NOT EXISTS migrations (
+            version INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        ''')
+        self.conn.commit()
+        # Detecta versões já aplicadas
+        applied = {row[0] for row in self.cursor.execute('SELECT version FROM migrations')}
+        # Aplica novos scripts com logging
+        migration_files = [f for f in sorted(os.listdir(migrations_dir)) if f.endswith('.sql')]
+        logger.info(f"Found {len(migration_files)} migration files")
+        
+        for fname in migration_files:
+            version = int(fname.split('_')[0])
+            if version in applied:
+                logger.debug(f"Skipping already applied migration: {fname}")
+                continue
+                
+            logger.info(f"Applying migration: {fname}")
+            path = os.path.join(migrations_dir, fname)
+            
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    sql_script = f.read()
+                self.conn.executescript(sql_script)
+                self.cursor.execute(
+                    'INSERT INTO migrations (version, name) VALUES (?, ?)',
+                    (version, fname)
+                )
+                self.conn.commit()
+                logger.info(f"Migration applied successfully: {fname}")
+            except Exception as e:
+                logger.error(f"Failed to apply migration {fname}: {str(e)}")
+                raise DatabaseException(f"Migration failed: {fname}")
+
+    @log_exceptions("Database Initialization")
+    def _initialize_database(self):
+        """Inicializa o banco executando migrations e criando usuário admin"""
+        logger.info("Starting database initialization")
+        
+        db_path = self._get_db_path()
+        is_new = not os.path.exists(db_path)
+        logger.info(f"Database is {'new' if is_new else 'existing'}: {db_path}")
+        
+        # Usar configurações centralizadas para conexão
+        self.conn = sqlite3.connect(
+            db_path,
+            timeout=Config.Database.DB_TIMEOUT,
+            check_same_thread=Config.Database.DB_CHECK_SAME_THREAD
+        )
+        self.conn.row_factory = sqlite3.Row
         self.cursor = self.conn.cursor()
         
-        # Tabela de usuários
-        self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS usuarios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL UNIQUE,
-            senha_hash TEXT NOT NULL,
-            nome_completo TEXT NOT NULL,
-            tipo TEXT NOT NULL CHECK (tipo IN ('administrador', 'vendedor', 'repositor', 'tecnico')),
-            ativo BOOLEAN DEFAULT 1,
-            data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        ''')
+        # Configurações de performance usando Config
+        if Config.Database.ENABLE_FOREIGN_KEYS:
+            self.cursor.execute('PRAGMA foreign_keys = ON;')
         
-        # Se o banco de dados não existia, cria o usuário administrador padrão
-        if not db_exists:
+        if Config.Database.ENABLE_WAL_MODE:
+            self.cursor.execute('PRAGMA journal_mode = WAL;')
+            
+        self.cursor.execute(f'PRAGMA cache_size = {Config.Database.CACHE_SIZE};')
+        self.conn.commit()
+        
+        logger.debug("Database pragmas configured")
+        # Executa migrations SQL
+        self._run_migrations()
+        
+        # Cria admin padrão em banco novo
+        if is_new:
+            logger.info("Creating default admin user for new database")
             self._criar_usuario_admin_padrao()
         
-        # Tabelas existentes (mantidas)
-        self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS gavetas (
-            id INTEGER PRIMARY KEY,
-            numero_gaveta TEXT NOT NULL UNIQUE,
-            esta_aberta BOOLEAN DEFAULT 0,
-            ultima_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        ''')
-        
-        self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS historico_gavetas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            gaveta_id INTEGER,
-            usuario_id INTEGER,
-            acao TEXT NOT NULL,
-            data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (gaveta_id) REFERENCES gavetas (id),
-            FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
-        )
-        ''')
-        
-        # Tabela de auditoria
-        self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS auditoria (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            usuario_id INTEGER,
-            acao TEXT NOT NULL,
-            tabela_afetada TEXT NOT NULL,
-            id_afetado INTEGER,
-            dados_anteriores TEXT,
-            dados_novos TEXT,
-            data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            endereco_ip TEXT,
-            FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
-        )
-        ''')
-        
-        self.conn.commit()
+        # Migra usuários de JSON
         self._migrar_usuarios_se_necessario()
+        
+        logger.info("Database initialization completed successfully")
+
 
     def _hash_senha(self, senha, salt=None):
         """Gera um hash seguro da senha"""
