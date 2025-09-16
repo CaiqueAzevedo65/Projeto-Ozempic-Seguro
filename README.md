@@ -4,7 +4,7 @@ Sistema de gerenciamento para controle de segurança de medicamentos, com foco e
 
 ## 🚀 Visão Geral
 
-O Ozempic Seguro é uma aplicação desktop desenvolvida em Python com interface gráfica moderna usando CustomTkinter. O sistema foi projetado para gerenciar o controle de acesso e estoque de medicamentos, com foco na segurança e rastreabilidade do Ozempic.
+O Ozempic Seguro é uma aplicação desktop desenvolvida em Python com interface gráfica moderna usando CustomTkinter. O sistema foi projetado para gerenciar o controle de acesso e estoque de medicamentos, com foco na segurança e rastreabilidade de remédios termolábeis, controlando o tempo em que cada medicameto pode ser removido do refrigerador.
 
 ## ✨ Funcionalidades Principais
 
@@ -50,15 +50,7 @@ O Ozempic Seguro é uma aplicação desktop desenvolvida em Python com interface
    cd Projeto-Ozempic-Seguro
    ```
 
-2. **Crie um ambiente virtual (recomendado)**
-   ```bash
-   python -m venv venv
-   .\venv\Scripts\activate  # No Windows
-   # ou
-   source venv/bin/activate  # No Linux/Mac
-   ```
-
-3. **Instale as dependências**
+2. **Instale as dependências**
    ```bash
    pip install -r requirements.txt
    ```
@@ -125,7 +117,7 @@ Este projeto está sob a licença MIT. Consulte o arquivo LICENSE para obter mai
 
 ## 📞 Suporte
 
-Para suporte, entre em contato através do email: [seu-email@exemplo.com]
+Para suporte, entre em contato através do email: [caiqueazevedo2005@gmail.com](mailto:caiqueazevedo2005@gmail.com)
 
 ---
 
