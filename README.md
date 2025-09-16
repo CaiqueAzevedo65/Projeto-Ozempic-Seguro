@@ -117,7 +117,7 @@ Este projeto está sob a licença MIT. Consulte o arquivo LICENSE para obter mai
 
 ## 📞 Suporte
 
-Para suporte, entre em contato através do email: [caiqueazevedo2005@gmail.com](mailto:caiqueazevedo2005@gmail.com)
+Para suporte, entre em contato através do email: [caiqueazevedo2005@gmail.com](caiqueazevedo2005@gmail.com)
 
 ---
 
