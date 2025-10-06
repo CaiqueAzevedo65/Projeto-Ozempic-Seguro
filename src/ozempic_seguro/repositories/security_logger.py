@@ -1,10 +1,12 @@
 """
-Módulo para logs de segurança avançados com captura de IP e contexto.
+Módulo para logs de segurança avançados com contexto local.
+Sistema completamente offline - sem conexões de rede.
 """
-import socket
 import platform
 import datetime
 import json
+import hashlib
+import socket
 from typing import Optional, Dict, Any
 
 
@@ -13,20 +15,16 @@ class SecurityLogger:
     
     @staticmethod
     def get_local_ip() -> str:
-        """Captura o IP local da máquina"""
-        try:
-            # Conecta a um endereço externo para obter IP local
-            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-                s.connect(("8.8.8.8", 80))
-                return s.getsockname()[0]
-        except Exception:
-            return "127.0.0.1"
+        """Retorna IP local para aplicação offline"""
+        # Aplicação completamente offline - sempre localhost
+        return "127.0.0.1"
     
     @staticmethod
     def get_system_info() -> Dict[str, str]:
-        """Captura informações do sistema"""
+        """Captura informações do sistema local"""
+        import os
         return {
-            'hostname': socket.gethostname(),
+            'hostname': os.environ.get('COMPUTERNAME', 'LOCAL'),
             'platform': platform.platform(),
             'system': platform.system(),
             'release': platform.release(),

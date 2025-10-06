@@ -48,6 +48,10 @@ class MainApp(customtkinter.CTk):
             import sys
             sys.exit(1)
 
-if __name__ == "__main__":
+def main():
+    """Função principal para iniciar a aplicação"""
     app = MainApp()
     app.mainloop()
+
+if __name__ == "__main__":
+    main()

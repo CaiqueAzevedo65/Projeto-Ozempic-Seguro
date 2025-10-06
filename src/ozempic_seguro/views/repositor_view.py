@@ -30,17 +30,15 @@ class RepositorFrame(customtkinter.CTkFrame):
 
     def mostrar_historico_gaveta(self, gaveta_id):
         """Mostra o histórico de uma gaveta específica"""
-        # Cria uma instância temporária do botão para acessar o método mostrar_historico
-        # Isso é um workaround, o ideal seria refatorar para um componente separado
-        temp_button = GavetaButton(
+        button = GavetaButton(
             self, 
             text=gaveta_id, 
             command=None, 
             name="gaveta_black.png", 
             tipo_usuario='repositor'
         )
-        temp_button.mostrar_historico()
-        temp_button.destroy()  # Remove o botão temporário
+        button.mostrar_historico()
+        button.destroy()
 
     def criar_botao_finalizar(self):
         FinalizarSessaoButton(self, self.finalizar_sessao)

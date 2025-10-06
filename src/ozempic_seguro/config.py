@@ -14,7 +14,7 @@ class SecurityConfig:
     
     # Configurações de tentativas de login
     MAX_LOGIN_ATTEMPTS = 3
-    LOCKOUT_DURATION_MINUTES = 10
+    LOCKOUT_DURATION_MINUTES = 5  # Reduzido de 10 para 5 minutos
     
     # Configurações de validação
     MIN_PASSWORD_LENGTH = 4

@@ -30,15 +30,15 @@ class VendedorFrame(customtkinter.CTkFrame):
 
     def mostrar_historico_gaveta(self, gaveta_id):
         """Mostra o histórico de uma gaveta específica"""
-        # Cria uma instância temporária do botão para acessar o método mostrar_historico
-        temp_button = GavetaButton(
+        # Cria botão para acessar o histórico
+        button = GavetaButton(
             self, 
             text=gaveta_id, 
             command=None, 
             name="gaveta_black.png", 
             tipo_usuario='vendedor'
         )
-        temp_button.mostrar_historico()
+        button.mostrar_historico()
 
     def criar_botao_finalizar(self):
         FinalizarSessaoButton(self, self.finalizar_sessao)

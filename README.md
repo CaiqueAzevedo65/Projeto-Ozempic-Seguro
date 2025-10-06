@@ -1,15 +1,28 @@
 # Ozempic Seguro
 
-Sistema de gerenciamento para controle de segurança de medicamentos, com foco especial no Ozempic.
+Sistema avançado de gerenciamento de gavetas para controle seguro de medicamentos com arquitetura moderna e recursos de segurança aprimorados.
 
-## 🚀 Visão Geral
+## Características Principais
 
-O Ozempic Seguro é uma aplicação desktop desenvolvida em Python com interface gráfica moderna usando CustomTkinter. O sistema foi projetado para gerenciar o controle de acesso e estoque de medicamentos, com foco na segurança e rastreabilidade do Ozempic.
+### Segurança
+- **100% Offline**: Aplicação completamente local, sem conexões externas
+- **Criptografia de Dados**: Banco de dados criptografado com Fernet
+- **Autenticação Robusta**: Sistema bcrypt para hash de senhas
+- **Validação Completa**: Proteção contra SQL Injection e XSS
+- **Auditoria Detalhada**: Logs estruturados de todas as ações
 
-## ✨ Funcionalidades Principais
+### Arquitetura
+- **Padrão MVC**: Separação clara de responsabilidades
+- **Service Layer**: Camada de serviços com injeção de dependência
+- **Repository Pattern**: Abstração de acesso a dados
+- **Cache Inteligente**: Sistema LRU com TTL configurável
+- **Singleton Thread-Safe**: Gerenciamento eficiente de recursos
 
-- **Autenticação de Usuários**
-  - Login seguro com diferentes níveis de acesso (administrador, vendedor, repositor)
+### Performance
+- **Cache em Memória**: Redução de acessos ao banco
+- **Query Optimization**: Índices e consultas otimizadas
+- **Lazy Loading**: Carregamento sob demanda
+- **Connection Pooling**: Gerenciamento eficiente de conexões
   - Gerenciamento de contas de usuário
   - Controle de sessão
 
@@ -32,9 +45,12 @@ O Ozempic Seguro é uma aplicação desktop desenvolvida em Python com interface
 - **Interface Gráfica**: CustomTkinter 5.2.2
 - **Banco de Dados**: SQLite3 (embutido no Python)
 - **Gerenciamento de Dependências**: pip
+- **Framework de Testes**: pytest 7.4.3
 - **Outras Bibliotecas**:
   - Pillow 10.2.0 (processamento de imagens)
   - Bcrypt 4.1.2 (hash seguro de senhas)
+  - pytest-cov 4.1.0 (cobertura de testes)
+  - pytest-mock 3.12.0 (mocking para testes)
 
 ## 📦 Pré-requisitos
 
@@ -67,7 +83,7 @@ O Ozempic Seguro é uma aplicação desktop desenvolvida em Python com interface
 
 1. **Inicie a aplicação**
    ```bash
-   cd src && python -m ozempic_seguro.main  # aplica migrations SQL automaticamente
+   python run.py
    ```
 
 2. **Credenciais de Acesso**
@@ -83,19 +99,35 @@ O Ozempic Seguro é uma aplicação desktop desenvolvida em Python com interface
 ```
 Projeto-Ozempic-Seguro/
 ├── src/
-│   ├── assets/           # Recursos de imagem e ícones
-│   ├── data/             # Arquivos de banco de dados
-│   ├── migrations/       # Scripts de migração de esquema SQL
-│   ├── views/            # Telas da aplicação
-│   │   ├── pages_adm/    # Telas administrativas
-│   │   │   ├── painel_administrador_view.py
-│   │   │   └── gerenciamento_usuarios_view.py
-│   │   ├── pages_iniciais/
-│   │   └── ...
-│   ├── services/        # Camada de serviços (UserService, AuditService, service_factory.py)
-│   ├── database.py       # Gerenciamento do banco de dados
-│   └── main.py           # Ponto de entrada da aplicação
+│   └── ozempic_seguro/
+│       ├── assets/           # Recursos de imagem e ícones
+│       ├── controllers/      # Controladores (NavigationController)
+│       ├── core/            # Componentes principais
+│       ├── repositories/    # Camada de acesso a dados
+│       │   ├── database.py
+│       │   ├── user_repository.py
+│       │   └── audit_repository.py
+│       ├── services/        # Camada de serviços
+│       │   ├── user_service.py
+│       │   ├── audit_service.py
+│       │   └── service_factory.py
+│       ├── views/           # Interfaces gráficas
+│       │   ├── pages_adm/   # Telas administrativas
+│       │   ├── pages_iniciais/
+│       │   └── components.py # Componentes UI modernos
+│       ├── config.py        # Configurações centralizadas
+│       ├── session.py       # Gerenciamento de sessão
+│       └── main.py          # Ponto de entrada
+├── tests/                   # Testes automatizados
+│   ├── conftest.py         # Fixtures compartilhadas
+│   ├── test_user_service.py
+│   ├── test_session_manager.py
+│   ├── test_user_repository.py
+│   ├── test_integration.py
+│   ├── test_ui_components.py
+│   └── README.md           # Documentação de testes
 ├── .gitignore
+├── pytest.ini              # Configuração de testes
 ├── requirements.txt
 └── README.md
 ```
@@ -140,6 +172,52 @@ Contribuições são bem-vindas! Siga estes passos:
 
 Este projeto está sob a licença MIT. Consulte o arquivo LICENSE para obter mais detalhes.
 
+## 🧪 Testes Automatizados
+
+O projeto utiliza pytest como framework principal de testes, com cobertura mínima de 70%.
+
+### Executando os Testes
+
+```bash
+# Executar todos os testes
+pytest
+
+# Com relatório de cobertura HTML
+pytest --cov=src/ozempic_seguro --cov-report=html
+
+# Executar por categoria
+pytest -m unit         # Testes unitários
+pytest -m integration  # Testes de integração
+pytest -m ui          # Testes de interface
+```
+
+### Estrutura de Testes
+
+- **Testes Unitários**
+  - `test_user_service.py`: Autenticação, CRUD, validações (17 testes)
+  - `test_session_manager.py`: Sessão, timeouts, bloqueios (20 testes)
+  - `test_user_repository.py`: Operações de banco (14 testes)
+
+- **Testes de Integração**
+  - Ciclo completo de usuário
+  - Fluxo de segurança e bloqueios
+  - ServiceFactory e injeção de dependência
+
+- **Testes de UI**
+  - Componentes modernos (ModernButton, ResponsiveGrid)
+  - Teclado numérico touchscreen
+  - Diálogos de confirmação e notificações
+
+### Fixtures Disponíveis
+
+- `temp_db`: Banco SQLite temporário para testes
+- `mock_db`: Mock do DatabaseManager
+- `session_manager`: Instância limpa para testes
+- `mock_bcrypt`, `mock_datetime`: Mocks de dependências
+- `mock_customtkinter`: Mock de componentes UI
+
+Para mais detalhes sobre os testes, consulte `tests/README.md`.
+
 ## 📞 Suporte
 
 Para suporte, entre em contato através do email: caiqueazevedo2005@gmail.com
@@ -149,6 +227,15 @@ Para suporte, entre em contato através do email: caiqueazevedo2005@gmail.com
 Desenvolvido com ❤️ por Caique Azevedo
 
 ## 📌 Notas de Atualização
+
+### [1.3.0] - 2025-09-16 - **QUALITY ASSURANCE UPDATE**
+- **🧪 Testes Automatizados**: Implementação completa de testes com pytest
+  - Cobertura mínima de 70% configurada e monitorada
+  - 51+ testes unitários e de integração
+  - Testes específicos para UI moderna
+- **📚 Documentação**: Guia detalhado de testes em `tests/README.md`
+- **🧰 Fixtures**: Banco temporário e mocks para testes isolados
+- **🔧 CI/CD**: Configuração para integração contínua
 
 ### [1.2.0] - 2025-08-30 - **MAJOR SECURITY UPDATE**
 - **🔒 Hash bcrypt**: Migração completa de SHA256+salt para bcrypt (12 rounds)

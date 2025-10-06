@@ -5,7 +5,6 @@ from .gerenciamento_usuarios_view import GerenciamentoUsuariosFrame
 from .cadastro_usuario_view import CadastroUsuarioFrame
 from .diagnostico_view import DiagnosticoFrame
 from .parametro_sistemas_view import ParametroSistemasFrame
-from .estado_terminal_view import EstadoTerminalFrame
 from .historico_view import HistoricoView
 from .admin_gavetas_view import AdminGavetasFrame
 from .auditoria_view import AuditoriaFrame
@@ -39,8 +38,6 @@ class PainelAdministradorFrame(customtkinter.CTkFrame):
             {"text": "➕ Cadastro de Usuário", "command": self.cadastro_usuario, "style": "success"},
             {"text": "📋 Registro de Auditoria", "command": self.registro_auditoria, "style": "secondary"},
             {"text": "🔧 Diagnóstico", "command": self.diagnostico, "style": "warning"},
-            {"text": "⚙️ Parâmetros de Sistema", "command": self.parametro_sistemas, "style": "secondary"},
-            {"text": "📟 Estado do Terminal", "command": self.estado_terminal, "style": "secondary"},
             {"text": "📊 Histórico", "command": self.mostrar_historico, "style": "secondary"}
         ]
         
@@ -107,13 +104,3 @@ class PainelAdministradorFrame(customtkinter.CTkFrame):
         for widget in self.winfo_children():
             widget.destroy()
         DiagnosticoFrame(self, voltar_callback=self.criar_tela_principal)
-
-    def parametro_sistemas(self):
-        for widget in self.winfo_children():
-            widget.destroy()
-        ParametroSistemasFrame(self, voltar_callback=self.criar_tela_principal)
-
-    def estado_terminal(self):
-        for widget in self.winfo_children():
-            widget.destroy()
-        EstadoTerminalFrame(self, voltar_callback=self.criar_tela_principal)

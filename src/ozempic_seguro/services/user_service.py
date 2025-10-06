@@ -98,27 +98,36 @@ class UserService(BaseService):
         """
         Autentica usuário com validação robusta, controle de força bruta e logs detalhados.
         """
-        # Validação robusta de entrada
-        username_valid, username_error = InputValidator.validate_username(username)
-        password_valid, password_error = InputValidator.validate_password(senha)
+        # Validação básica - permite usuário "00" (admin padrão)
+        if not username or not senha:
+            return None
         
-        if not username_valid:
-            # Log tentativa com dados inválidos
-            security_context = SecurityLogger.log_security_violation(
-                violation_type='INVALID_USERNAME_FORMAT',
-                details={'username': InputValidator.sanitize_string(username, 50), 'error': username_error}
-            )
-            self.audit_repo.create_log(
-                usuario_id=None,
-                acao='SECURITY_VIOLATION',
-                tabela_afetada='USUARIOS',
-                dados_anteriores=security_context,
-                endereco_ip=security_context.get('ip_address')
-            )
-            return None
+        # Sanitiza entrada
+        username = username.strip()
+        
+        # Permite usuário admin padrão "00" sem validação rigorosa
+        if username != "00":
+            # Validação robusta apenas para outros usuários
+            username_valid, username_error = InputValidator.validate_username(username)
+            password_valid, password_error = InputValidator.validate_password(senha)
             
-        if not password_valid:
-            return None
+            if not username_valid:
+                # Log tentativa com dados inválidos
+                security_context = SecurityLogger.log_security_violation(
+                    violation_type='INVALID_USERNAME_FORMAT',
+                    details={'username': InputValidator.sanitize_string(username, 50), 'error': username_error}
+                )
+                self.audit_repo.create_log(
+                    usuario_id=None,
+                    acao='SECURITY_VIOLATION',
+                    tabela_afetada='USUARIOS',
+                    dados_anteriores=security_context,
+                    endereco_ip=security_context.get('ip_address')
+                )
+                return None
+                
+            if not password_valid:
+                return None
             
         # Verificar se usuário está bloqueado por tentativas excessivas
         from ..session import SessionManager
@@ -200,9 +209,15 @@ class UserService(BaseService):
         )
 
     def delete_user(self, usuario_id: int) -> Tuple[bool, str]:
-        """Exclui usuário e registra auditoria, impedindo remoção do único administrador."""
+        """Exclui usuário e registra auditoria, impedindo remoção do único administrador ou técnico."""
+        # Verificar se é um técnico
+        user = self.user_repo.get_user_by_id(usuario_id)
+        if user and user.get('tipo') == 'tecnico':
+            return False, "Não é possível excluir usuários do tipo técnico"
+        
         if self.user_repo.is_unique_admin(usuario_id):
             return False, "Não é possível excluir o único administrador"
+        
         sucesso = self.user_repo.delete_user(usuario_id)
         if sucesso:
             self.audit_repo.create_log(
@@ -220,6 +235,11 @@ class UserService(BaseService):
 
     def update_password(self, usuario_id: int, nova_senha: str, admin_user_id: Optional[int] = None) -> Tuple[bool, str]:
         """Atualiza senha de usuário com validação robusta e registra auditoria."""
+        # Verificar se é um técnico
+        user = self.user_repo.get_user_by_id(usuario_id)
+        if user and user.get('tipo') == 'tecnico':
+            return False, "Não é possível alterar a senha de usuários do tipo técnico"
+        
         # Validação robusta da nova senha
         password_valid, password_error = InputValidator.validate_password(nova_senha)
         

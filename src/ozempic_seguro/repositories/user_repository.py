@@ -23,14 +23,8 @@ class UserRepository:
 
     def authenticate_user(self, username: str, password: str) -> dict|None:
         """Autentica usuário e retorna dados se bem-sucedido."""
-        self.db.cursor.execute(
-            'SELECT * FROM usuarios WHERE username = ? AND ativo = 1',
-            (username,)
-        )
-        row = self.db.cursor.fetchone()
-        if row and verify_password(password, row['senha_hash']):
-            return dict(row)
-        return None
+        # Usa o método do DatabaseManager que já funciona corretamente
+        return self.db.autenticar_usuario(username, password)
 
     def delete_user(self, user_id: int) -> bool:
         """Exclui usuário por ID."""
@@ -50,15 +44,25 @@ class UserRepository:
 
     def is_unique_admin(self, user_id: int) -> bool:
         """Verifica se é o único administrador restante."""
-        self.db.cursor.execute('SELECT COUNT(*) FROM usuarios WHERE tipo = "administrador"')
-        total = self.db.cursor.fetchone()[0]
-        self.db.cursor.execute('SELECT tipo FROM usuarios WHERE id = ?', (user_id,))
-        user = self.db.cursor.fetchone()
-        return bool(user and user['tipo'] == 'administrador' and total == 1)
-
-    def get_users(self) -> list[dict]:
-        """Retorna todos os usuários."""
+        return self.db.eh_unico_administrador(user_id)
+    
+    def get_users(self):
+        """Obtém lista de todos os usuários."""
+        return self.db.get_usuarios()
+    
+    def get_user_by_id(self, user_id: int) -> dict|None:
+        """Obtém um usuário específico pelo ID."""
         self.db.cursor.execute(
-            'SELECT id, username, nome_completo, tipo, ativo, data_criacao FROM usuarios'
+            'SELECT id, username, nome_completo, tipo, ativo FROM usuarios WHERE id = ?',
+            (user_id,)
         )
-        return [dict(row) for row in self.db.cursor.fetchall()]
+        row = self.db.cursor.fetchone()
+        if row:
+            return {
+                'id': row[0],
+                'username': row[1],
+                'nome_completo': row[2],
+                'tipo': row[3],
+                'ativo': row[4]
+            }
+        return None

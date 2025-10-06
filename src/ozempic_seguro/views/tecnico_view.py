@@ -2,8 +2,8 @@ import customtkinter
 from tkinter import messagebox
 from .components import Header, FinalizarSessaoButton, ModernButton, ModernConfirmDialog, ToastNotification
 from .pages_adm.diagnostico_view import DiagnosticoFrame
-from .pages_adm.parametro_sistemas_view import ParametroSistemasFrame
-from .pages_adm.estado_terminal_view import EstadoTerminalFrame
+from .pages_adm.controle_timer_view import ControleTimerFrame
+from ..session import SessionManager
 
 class TecnicoFrame(customtkinter.CTkFrame):
     def __init__(self, master, finalizar_sessao_callback=None, *args, **kwargs):
@@ -42,17 +42,8 @@ class TecnicoFrame(customtkinter.CTkFrame):
         
         ModernButton(
             main_frame,
-            text="⚙️ Parâmetros de Sistema",
-            command=self.abrir_parametros_sistema,
-            style="secondary",
-            width=280,
-            height=60
-        ).pack(pady=15)
-        
-        ModernButton(
-            main_frame,
-            text="📟 Estado do Terminal",
-            command=self.abrir_estado_terminal,
+            text="⏱️ Controle de Timer",
+            command=self.abrir_controle_timer,
             style="secondary",
             width=280,
             height=60
@@ -72,6 +63,12 @@ class TecnicoFrame(customtkinter.CTkFrame):
             confirm_text="Sair",
             cancel_text="Cancelar"
         ):
+            # Reativar timer ao fazer logout do técnico
+            session = SessionManager.get_instance()
+            if not session.is_timer_enabled():
+                session.set_timer_enabled(True)
+                ToastNotification.show(self, "Timer reativado automaticamente", "info")
+            
             ToastNotification.show(self, "Sessão finalizada com sucesso", "success")
             if self.finalizar_sessao_callback:
                 self.after(1000, lambda: self._execute_logout())
@@ -89,17 +86,11 @@ class TecnicoFrame(customtkinter.CTkFrame):
             widget.destroy()
         DiagnosticoFrame(self, self.voltar_para_principal)
         
-    def abrir_parametros_sistema(self):
-        """Abre a tela de parâmetros do sistema"""
+    def abrir_controle_timer(self):
+        """Abre a tela de controle de timer"""
         for widget in self.winfo_children():
             widget.destroy()
-        ParametroSistemasFrame(self, self.voltar_para_principal)
-        
-    def abrir_estado_terminal(self):
-        """Abre a tela de estado do terminal"""
-        for widget in self.winfo_children():
-            widget.destroy()
-        EstadoTerminalFrame(self, self.voltar_para_principal)
+        ControleTimerFrame(self, self.voltar_para_principal)
         
     def voltar_para_principal(self):
         """Volta para a tela principal do técnico"""

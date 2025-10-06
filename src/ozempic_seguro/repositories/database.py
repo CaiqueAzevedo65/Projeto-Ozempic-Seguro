@@ -1,7 +1,5 @@
 import sqlite3
 import os
-import hashlib
-import secrets
 import json
 from datetime import datetime
 
@@ -117,25 +115,10 @@ class DatabaseManager:
         logger.info("Database initialization completed successfully")
 
 
-    def _hash_senha(self, senha, salt=None):
-        """Gera um hash seguro da senha"""
-        if salt is None:
-            salt = secrets.token_hex(16)
-        senha_salt = f"{senha}{salt}".encode('utf-8')
-        hash_obj = hashlib.sha256(senha_salt)
-        return f"{salt}${hash_obj.hexdigest()}"
-
-    def verificar_senha(self, senha, senha_hash):
-        """Verifica se a senha está correta"""
-        try:
-            salt, _ = senha_hash.split('$')
-            return senha_hash == self._hash_senha(senha, salt)
-        except:
-            return False
-
     def criar_usuario(self, username, senha, nome_completo, tipo):
-        """Cria um novo usuário"""
-        senha_hash = self._hash_senha(senha)
+        """Cria um novo usuário com bcrypt"""
+        from ..repositories.security import hash_password
+        senha_hash = hash_password(senha)
         try:
             self.cursor.execute(
                 'INSERT INTO usuarios (username, senha_hash, nome_completo, tipo) VALUES (?, ?, ?, ?)',
@@ -147,14 +130,15 @@ class DatabaseManager:
             return False
 
     def autenticar_usuario(self, username, senha):
-        """Autentica um usuário"""
+        """Autentica um usuário com bcrypt"""
+        from ..repositories.security import verify_password
         self.cursor.execute(
             'SELECT id, username, senha_hash, nome_completo, tipo FROM usuarios WHERE username = ? AND ativo = 1',
             (username,)
         )
         usuario = self.cursor.fetchone()
         
-        if usuario and self.verificar_senha(senha, usuario[2]):
+        if usuario and verify_password(senha, usuario[2]):
             return {
                 'id': usuario[0],
                 'username': usuario[1],
@@ -166,11 +150,19 @@ class DatabaseManager:
     def _migrar_usuarios_se_necessario(self):
         """Migra usuários do arquivo JSON para o banco de dados, se necessário"""
         try:
-            # Verifica se já existem usuários no banco
-            self.cursor.execute('SELECT COUNT(*) FROM usuarios')
-            if self.cursor.fetchone()[0] > 0:
-                return  # Já existem usuários, não precisa migrar
+            # Criar usuário administrador padrão se não existir
+            self.cursor.execute("SELECT COUNT(*) FROM usuarios WHERE username = '00'")
+            if self.cursor.fetchone()[0] == 0:
+                self._criar_usuario_admin_padrao()
+            
+            # Criar usuário técnico padrão se não existir
+            self.cursor.execute("SELECT COUNT(*) FROM usuarios WHERE username = '01'")
+            if self.cursor.fetchone()[0] == 0:
+                self._criar_usuario_tecnico_padrao()
                 
+            # Já existem usuários, não precisa migrar
+            return
+            
             # Lê os usuários do arquivo JSON
             usuarios_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'usuarios.json')
             with open(usuarios_path, 'r', encoding='utf-8') as f:
@@ -452,26 +444,23 @@ class DatabaseManager:
             self.conn.close()
 
     def _criar_usuario_admin_padrao(self):
-        """Cria um usuário administrador padrão"""
-        from hashlib import sha256
-        import secrets
+        """Cria um usuário administrador padrão com bcrypt"""
+        from ..repositories.security import hash_password
         
         # Dados do administrador padrão
         username = "00"
         senha = "1234"
-        nome_completo = "ADM"
+        nome_completo = "ADMINISTRADOR"
         
-        # Gera um salt aleatório
-        salt = secrets.token_hex(8)
-        # Cria o hash da senha
-        senha_hash = sha256(f"{senha}{salt}".encode('utf-8')).hexdigest()
+        # Gera hash bcrypt
+        senha_hash = hash_password(senha)
         
         try:
             # Insere o usuário administrador
             self.cursor.execute('''
             INSERT INTO usuarios (username, senha_hash, nome_completo, tipo, ativo)
             VALUES (?, ?, ?, 'administrador', 1)
-            ''', (username, f"{salt}${senha_hash}", nome_completo))
+            ''', (username, senha_hash, nome_completo))
             
             self.conn.commit()
             print("Usuário administrador padrão criado com sucesso!")
@@ -482,13 +471,39 @@ class DatabaseManager:
             # Se o usuário já existir, não faz nada
             self.conn.rollback()
             print("Usuário administrador padrão já existe.")
-        except Exception as e:
+    
+    def _criar_usuario_tecnico_padrao(self):
+        """Cria um usuário técnico padrão com bcrypt"""
+        from ..repositories.security import hash_password
+        
+        # Dados do técnico padrão
+        username = "01"
+        senha = "1234"
+        nome_completo = "TÉCNICO"
+        
+        # Gera hash bcrypt
+        senha_hash = hash_password(senha)
+        
+        try:
+            # Insere o usuário técnico
+            self.cursor.execute('''
+            INSERT INTO usuarios (username, senha_hash, nome_completo, tipo, ativo)
+            VALUES (?, ?, ?, 'tecnico', 1)
+            ''', (username, senha_hash, nome_completo))
+            
+            self.conn.commit()
+            print("Usuário técnico padrão criado com sucesso!")
+            print(f"Usuário: {username}")
+            print(f"Senha: {senha}")
+            
+        except sqlite3.IntegrityError:
+            # Se o usuário já existir, não faz nada
             self.conn.rollback()
-            print(f"Erro ao criar usuário administrador padrão: {e}")
-
-    def registrar_auditoria(self, usuario_id, acao, tabela_afetada, id_afetado=None, dados_anteriores=None, dados_novos=None, endereco_ip=None):
-        """
-        Registra uma ação na tabela de auditoria
+            print("Usuário técnico padrão já existe.")
+    
+    def registrar_auditoria(self, usuario_id, acao, tabela_afetada, id_afetado=None, 
+                          dados_anteriores=None, dados_novos=None, endereco_ip=None):
+        """Registra uma ação na tabela de auditoria
         
         Args:
             usuario_id (int): ID do usuário que realizou a ação

@@ -235,6 +235,7 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
     
     def exibir_detalhes_usuario(self, user_id, username, nome_completo, tipo, ativo, data_criacao):
         self.usuario_selecionado = user_id
+        self.tipo_usuario_selecionado = tipo  # Armazenar o tipo do usuário selecionado
         
         # Limpar frame de detalhes
         for widget in self.frame_detalhes.winfo_children():
@@ -252,12 +253,22 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         )
         lbl_titulo.grid(row=0, column=0, columnspan=2, pady=(0, 20), sticky="n")
         
+        # Formatar data de criação
+        try:
+            if data_criacao and isinstance(data_criacao, str):
+                data_formatada = data_criacao.split(' ')[0] if ' ' in data_criacao else data_criacao
+            else:
+                data_formatada = "N/A"
+        except:
+            data_formatada = "N/A"
+        
         # Informações do usuário
         campos = [
             ("Usuário:", username),
             ("Nome Completo:", nome_completo),
             ("Tipo:", tipo.capitalize()),
-            ("Data de Criação:", data_criacao.split(' ')[0])
+            ("Status:", "Ativo" if ativo else "Inativo"),
+            ("Data de Criação:", data_formatada)
         ]
         
         for idx, (label, valor) in enumerate(campos):
@@ -291,25 +302,46 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         self.frame_botoes.columnconfigure(0, weight=1)
         self.frame_botoes.columnconfigure(1, weight=1)
         
-        # Botão Alterar Senha
+        # Verificar se é um usuário técnico
+        is_tecnico = tipo.lower() == 'tecnico'
+        
+        # Botão Alterar Senha - desabilitado para técnicos
         btn_alterar_senha = ModernButton(
             self.frame_botoes,
             text="🔑 Alterar Senha",
-            command=self.abrir_janela_alterar_senha,
-            style="success",
+            command=self.abrir_janela_alterar_senha if not is_tecnico else self.mostrar_aviso_tecnico,
+            style="success" if not is_tecnico else "secondary",
             height=50
         )
         btn_alterar_senha.grid(row=0, column=0, padx=5, pady=10, sticky="nsew")
         
-        # Botão Excluir Usuário
+        # Botão Excluir Usuário - desabilitado para técnicos
         btn_excluir = ModernButton(
             self.frame_botoes,
             text="🗑️ Excluir Usuário",
-            command=self.confirmar_exclusao,
-            style="danger",
+            command=self.confirmar_exclusao if not is_tecnico else self.mostrar_aviso_tecnico,
+            style="danger" if not is_tecnico else "secondary",
             height=50
         )
         btn_excluir.grid(row=0, column=1, padx=5, pady=10, sticky="nsew")
+        
+        # Se for técnico, mostrar aviso
+        if is_tecnico:
+            aviso_frame = customtkinter.CTkFrame(
+                self.frame_detalhes,
+                fg_color="#FFF3CD",
+                corner_radius=8
+            )
+            aviso_frame.grid(row=len(campos)+2, column=0, columnspan=2, padx=10, pady=20, sticky="ew")
+            
+            lbl_aviso = customtkinter.CTkLabel(
+                aviso_frame,
+                text="⚠️ Usuários técnicos não podem ser modificados ou excluídos",
+                font=("Arial", 11, "bold"),
+                text_color="#856404",
+                wraplength=300
+            )
+            lbl_aviso.pack(padx=10, pady=10)
         
         # Esconder instrução
         self.lbl_instrucao.grid_forget()
@@ -596,6 +628,15 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         except Exception as e:
             ToastNotification.show(self, f"❌ Erro ao excluir usuário: {str(e)}", "error")
     
+    def mostrar_aviso_tecnico(self):
+        """Mostra aviso de que usuários técnicos não podem ser modificados"""
+        from tkinter import messagebox
+        messagebox.showwarning(
+            "Ação Não Permitida",
+            "Usuários do tipo técnico não podem ser modificados ou excluídos.\n\n"
+            "Esta é uma medida de segurança do sistema."
+        )
+    
     def limpar_painel_detalhes(self):
         # Esconder frames de detalhes e botões
         self.frame_detalhes.grid_forget()
@@ -606,6 +647,7 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         
         # Limpar usuário selecionado
         self.usuario_selecionado = None
+        self.tipo_usuario_selecionado = None
     
     def mostrar_mensagem_erro(self, mensagem):
         """

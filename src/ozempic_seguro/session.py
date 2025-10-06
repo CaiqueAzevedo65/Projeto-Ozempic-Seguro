@@ -39,6 +39,23 @@ class SessionManager:
         """Retorna o usuário atual da sessão"""
         return self._current_user
     
+    def is_logged_in(self):
+        """Verifica se há um usuário logado"""
+        return self._current_user is not None
+    
+    def logout(self):
+        """Faz logout do usuário atual"""
+        self.set_current_user(None)
+    
+    def update_activity(self):
+        """Atualiza o timestamp da última atividade"""
+        if self._current_user:
+            self._last_activity = datetime.now()
+            # Reinicia o timer se estiver ativo
+            if self._timeout_timer:
+                self._stop_timeout_timer()
+                self._start_timeout_timer()
+    
     def is_admin(self):
         """Verifica se o usuário atual é administrador"""
         return self._current_user and self._current_user.get('tipo') == 'administrador'
@@ -299,14 +316,75 @@ class SessionManager:
         if remaining_attempts < self._max_login_attempts:
             return {
                 'locked': False,
-                'message': f"Restam {remaining_attempts} tentativa(s)",
-                'detailed_message': f"⚠️ Cuidado! Você tem {remaining_attempts} tentativa(s) restante(s) antes do bloqueio automático",
+                'message': f"Atenção: {remaining_attempts} tentativa(s) restante(s)",
                 'remaining_attempts': remaining_attempts
             }
         
         return {
             'locked': False,
-            'message': "Login disponível",
-            'detailed_message': "Digite suas credenciais para acessar o sistema",
+            'message': "",
             'remaining_attempts': remaining_attempts
         }
+    
+    def increment_login_attempts(self, username):
+        """Incrementa tentativas de login (alias para record_login_attempt)"""
+        self.record_login_attempt(username, success=False)
+    
+    def reset_login_attempts(self, username):
+        """Reseta tentativas de login"""
+        if username in self._login_attempts:
+            self._login_attempts[username] = {
+                'count': 0,
+                'first_attempt': None,
+                'locked_until': None
+            }
+    
+    def is_user_blocked(self, username):
+        """Verifica se usuário está bloqueado (alias para is_user_locked)"""
+        return self.is_user_locked(username)
+    
+    def is_user_blocked_by_time(self, username):
+        """Verifica se usuário está bloqueado por tempo"""
+        if username not in self._login_attempts:
+            return False
+        
+        attempt_data = self._login_attempts[username]
+        if attempt_data['locked_until'] is None:
+            return False
+        
+        return datetime.now() < attempt_data['locked_until']
+    
+    def block_user(self, username):
+        """Bloqueia usuário por tempo determinado"""
+        if username not in self._login_attempts:
+            self._login_attempts[username] = {
+                'count': 0,
+                'first_attempt': None,
+                'locked_until': None
+            }
+        
+        self._login_attempts[username]['locked_until'] = datetime.now() + timedelta(minutes=self._lockout_duration)
+    
+    def cleanup(self):
+        """Limpa a sessão e para timers"""
+        # Para o timer de timeout
+        self._stop_timeout_timer()
+        
+        # Registra logout se houver usuário
+        if self._current_user:
+            try:
+                from .services.service_factory import get_audit_service
+                audit_service = get_audit_service()
+                audit_service.log_action(
+                    user_id=self._current_user.get('id'),
+                    action='SESSION_CLEANUP',
+                    details='Sessão encerrada via cleanup'
+                )
+            except:
+                pass
+        
+        # Limpa dados da sessão
+        self._current_user = None
+        self._last_activity = None
+        self._timeout_timer = None
+        self._blocked_until = None

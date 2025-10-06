@@ -153,10 +153,12 @@ class LoginFrame(customtkinter.CTkFrame):
             status = self.session_manager.get_login_status_message(usuario)
             
             if status['locked']:
-                messagebox.showerror("Conta Bloqueada", status['detailed_message'])
+                message = status.get('detailed_message', status.get('message', 'Conta bloqueada'))
+                messagebox.showerror("Conta Bloqueada", message)
                 self.iniciar_timer_bloqueio(usuario)
             else:
-                messagebox.showerror("Login Inválido", status['detailed_message'])
+                message = status.get('detailed_message', status.get('message', 'Usuário ou senha incorretos'))
+                messagebox.showerror("Login Inválido", message)
             
             # Atualiza status visual
             self.atualizar_status_login()
