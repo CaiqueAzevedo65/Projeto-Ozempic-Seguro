@@ -29,7 +29,22 @@ var/
 *.db
 *.sqlite
 *.sqlite3
+*.db-shm
+*.db-wal
 src/data/*.db
+src/ozempic_seguro/data/*.db*
+data/*.db*
+
+# Encryption keys
+*.key
+encryption.key
+secret.key
+
+# Logs
+*.log
+logs/
+src/logs/
+src/ozempic_seguro/logs/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -88,11 +103,7 @@ Desktop.ini
 !/src/assets/*.jpg
 !/src/assets/*.jpeg
 !/src/assets/*.pdf 
-src/data/ozempic_seguro.db
-
-.db-shm
-.db-wal
-src/ozempic_seguro/data/ozempic_seguro.db-shm
-src/ozempic_seguro/data/ozempic_seguro.db-wal
-src/logs/app_20250830.log
-src/ozempic_seguro/migrations/001_initial.sql
+# Temporary test files
+tests/test_database.py.bak
+temp/
+tmp/
