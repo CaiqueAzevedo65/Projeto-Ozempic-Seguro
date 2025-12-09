@@ -1,5 +1,6 @@
 import customtkinter
 from .controllers.navigation_controller import NavigationController
+from .core.logger import logger
 
 
 class MainApp(customtkinter.CTk):
@@ -43,15 +44,21 @@ class MainApp(customtkinter.CTk):
             sys.exit(0)
             
         except Exception as e:
-            print(f"Erro ao encerrar aplicação: {e}")
+            logger.error(f"Erro ao encerrar aplicação: {e}")
             # Forçar encerramento mesmo com erro
             import sys
             sys.exit(1)
 
 def main():
     """Função principal para iniciar a aplicação"""
-    app = MainApp()
-    app.mainloop()
+    try:
+        app = MainApp()
+        app.mainloop()
+    except KeyboardInterrupt:
+        # Encerramento via Ctrl+C ou fechamento abrupto
+        pass
+    except Exception as e:
+        logger.error(f"Erro fatal na aplicação: {e}")
 
 if __name__ == "__main__":
     main()

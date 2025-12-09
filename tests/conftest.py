@@ -20,18 +20,29 @@ def temp_db():
     temp_dir = tempfile.mkdtemp()
     db_path = os.path.join(temp_dir, 'test_ozempic.db')
     
+    # Reset singleton antes de criar novo
+    DatabaseManager._instance = None
+    
     # Configurar DatabaseManager para usar DB temporário
     with patch('ozempic_seguro.repositories.database.DatabaseManager._get_db_path') as mock_path:
         mock_path.return_value = db_path
         db_manager = DatabaseManager()
-        db_manager.create_tables()
+        # Tabelas são criadas automaticamente via migrations no __init__
         
         yield db_manager
         
+        # Fechar conexão antes de limpar
+        if hasattr(db_manager, 'conn'):
+            db_manager.conn.close()
+        DatabaseManager._instance = None
+        
     # Cleanup
-    if os.path.exists(db_path):
-        os.remove(db_path)
-    os.rmdir(temp_dir)
+    try:
+        if os.path.exists(db_path):
+            os.remove(db_path)
+        os.rmdir(temp_dir)
+    except:
+        pass  # Ignora erros de cleanup
 
 
 @pytest.fixture

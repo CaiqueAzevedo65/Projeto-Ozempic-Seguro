@@ -148,7 +148,7 @@ class DatabaseManager:
         return None
     
     def _migrar_usuarios_se_necessario(self):
-        """Migra usuários do arquivo JSON para o banco de dados, se necessário"""
+        """Garante que os usuários padrão existam no banco de dados"""
         try:
             # Criar usuário administrador padrão se não existir
             self.cursor.execute("SELECT COUNT(*) FROM usuarios WHERE username = '00'")
@@ -160,25 +160,8 @@ class DatabaseManager:
             if self.cursor.fetchone()[0] == 0:
                 self._criar_usuario_tecnico_padrao()
                 
-            # Já existem usuários, não precisa migrar
-            return
-            
-            # Lê os usuários do arquivo JSON
-            usuarios_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'usuarios.json')
-            with open(usuarios_path, 'r', encoding='utf-8') as f:
-                usuarios = json.load(f)
-                
-            # Insere cada usuário no banco
-            for user in usuarios:
-                self.criar_usuario(
-                    username=user['usuario'],
-                    senha=user['senha'],  # Senha será hasheada no método criar_usuario
-                    nome_completo=user['usuario'].capitalize(),  # Nome padrão baseado no username
-                    tipo=user['tipo']
-                )
-            
         except Exception as e:
-            print(f"Erro ao migrar usuários: {e}")
+            logger.error(f"Erro ao verificar usuários padrão: {e}")
     
     def get_estado_gaveta(self, numero_gaveta):
         """Obtém o estado atual de uma gaveta"""
@@ -355,7 +338,7 @@ class DatabaseManager:
             self.conn.commit()
             return self.cursor.rowcount > 0
         except sqlite3.Error as e:
-            print(f"Erro ao excluir usuário: {e}")
+            logger.error(f"Erro ao excluir usuário: {e}")
             return False
 
     def eh_unico_administrador(self, usuario_id):
@@ -383,7 +366,7 @@ class DatabaseManager:
             return total_admins <= 1
             
         except Exception as e:
-            print(f"Erro ao verificar se é único administrador: {e}")
+            logger.error(f"Erro ao verificar se é único administrador: {e}")
             return True  # Em caso de erro, previne a exclusão por segurança
 
     def atualizar_senha(self, usuario_id, nova_senha):
@@ -397,6 +380,8 @@ class DatabaseManager:
         Returns:
             bool: True se a senha foi atualizada com sucesso, False caso contrário
         """
+        from ..repositories.security import hash_password
+        
         try:
             # Primeiro, obter o nome de usuário para o log
             self.cursor.execute('SELECT username FROM usuarios WHERE id = ?', (usuario_id,))
@@ -406,7 +391,7 @@ class DatabaseManager:
                 return False
                 
             username = resultado[0]
-            senha_hash = self._hash_senha(nova_senha)
+            senha_hash = hash_password(nova_senha)
             
             # Registrar a alteração de senha na auditoria
             self.registrar_auditoria(
@@ -435,7 +420,7 @@ class DatabaseManager:
                 id_afetado=usuario_id,
                 dados_anteriores={'erro': str(e), 'hora_erro': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             )
-            print(f"Erro ao atualizar senha: {e}")
+            logger.error(f"Erro ao atualizar senha: {e}")
             return False
 
     def close(self):
@@ -463,14 +448,12 @@ class DatabaseManager:
             ''', (username, senha_hash, nome_completo))
             
             self.conn.commit()
-            print("Usuário administrador padrão criado com sucesso!")
-            print(f"Usuário: {username}")
-            print(f"Senha: {senha}")
+            logger.info(f"Usuário administrador padrão criado: {username}")
             
         except sqlite3.IntegrityError:
             # Se o usuário já existir, não faz nada
             self.conn.rollback()
-            print("Usuário administrador padrão já existe.")
+            logger.debug("Usuário administrador padrão já existe.")
     
     def _criar_usuario_tecnico_padrao(self):
         """Cria um usuário técnico padrão com bcrypt"""
@@ -492,14 +475,12 @@ class DatabaseManager:
             ''', (username, senha_hash, nome_completo))
             
             self.conn.commit()
-            print("Usuário técnico padrão criado com sucesso!")
-            print(f"Usuário: {username}")
-            print(f"Senha: {senha}")
+            logger.info(f"Usuário técnico padrão criado: {username}")
             
         except sqlite3.IntegrityError:
             # Se o usuário já existir, não faz nada
             self.conn.rollback()
-            print("Usuário técnico padrão já existe.")
+            logger.debug("Usuário técnico padrão já existe.")
     
     def registrar_auditoria(self, usuario_id, acao, tabela_afetada, id_afetado=None, 
                           dados_anteriores=None, dados_novos=None, endereco_ip=None):
@@ -532,7 +513,7 @@ class DatabaseManager:
             return self.cursor.lastrowid
             
         except Exception as e:
-            print(f"Erro ao registrar auditoria: {e}")
+            logger.error(f"Erro ao registrar auditoria: {e}")
             self.conn.rollback()
             return None
     
@@ -622,7 +603,7 @@ class DatabaseManager:
             return resultados
             
         except Exception as e:
-            print(f"Erro ao buscar logs de auditoria: {e}")
+            logger.error(f"Erro ao buscar logs de auditoria: {e}")
             return []
     
     def contar_logs_auditoria(self, filtro_usuario=None, filtro_acao=None, filtro_tabela=None, 
@@ -669,5 +650,5 @@ class DatabaseManager:
             return self.cursor.fetchone()[0]
             
         except Exception as e:
-            print(f"Erro ao contar logs de auditoria: {e}")
+            logger.error(f"Erro ao contar logs de auditoria: {e}")
             return 0

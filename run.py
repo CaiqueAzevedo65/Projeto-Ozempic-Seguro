@@ -14,4 +14,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 from ozempic_seguro.main import main
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        # Encerramento silencioso via Ctrl+C
+        sys.exit(0)
+    except Exception:
+        sys.exit(1)

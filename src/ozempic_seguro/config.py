@@ -2,6 +2,10 @@
 Configurações centralizadas do sistema Ozempic Seguro
 """
 import os
+import logging
+
+# Logger para este módulo (não usa core.logger para evitar dependência circular)
+_config_logger = logging.getLogger(__name__)
 
 class SecurityConfig:
     """Configurações de segurança"""
@@ -176,10 +180,10 @@ def validate_config() -> bool:
         return True
         
     except AssertionError as e:
-        print(f"Erro de configuração: {e}")
+        _config_logger.error(f"Erro de configuração: {e}")
         return False
     except Exception as e:
-        print(f"Erro inesperado na validação de configuração: {e}")
+        _config_logger.error(f"Erro inesperado na validação de configuração: {e}")
         return False
 
 
@@ -210,3 +214,56 @@ class EnvironmentConfig:
                 'detailed_logging': SecurityConfig.ENABLE_DETAILED_LOGGING,
                 'session_timeout': SecurityConfig.SESSION_TIMEOUT_MINUTES,
             }
+
+
+class UIConfig:
+    """Constantes de interface do usuário"""
+    
+    # Cores principais
+    PRIMARY_BG_COLOR = "#3B6A7D"
+    SECONDARY_BG_COLOR = "#2C5364"
+    WHITE = "#FFFFFF"
+    
+    # Cores de status
+    SUCCESS_COLOR = "#28A745"
+    SUCCESS_BG = "#E8F5E9"
+    SUCCESS_TEXT = "#2E7D32"
+    
+    WARNING_COLOR = "#FFC107"
+    WARNING_BG = "#FFF3CD"
+    WARNING_TEXT = "#856404"
+    
+    ERROR_COLOR = "#DC3545"
+    ERROR_BG = "#FFEBEE"
+    ERROR_TEXT = "#C62828"
+    
+    INFO_COLOR = "#2E86C1"
+    
+    # Cores de texto
+    TEXT_PRIMARY = "#333333"
+    TEXT_SECONDARY = "#666666"
+    TEXT_LIGHT = "#999999"
+    
+    # Cores de borda
+    BORDER_COLOR = "#E0E0E0"
+    BORDER_LIGHT = "#CCCCCC"
+    
+    # Configurações de toast
+    TOAST_START_X = 1.3
+    TOAST_END_X = 0.98
+    TOAST_Y = 0.02
+    TOAST_ANIMATION_STEP = 0.04
+    TOAST_ANIMATION_INTERVAL = 15  # ms
+    TOAST_DEFAULT_DURATION = 3000  # ms
+    
+    # Configurações de transição
+    TRANSITION_OVERLAY_COLOR = PRIMARY_BG_COLOR
+    
+    # Fontes
+    FONT_FAMILY = "Arial"
+    FONT_SIZE_SMALL = 11
+    FONT_SIZE_NORMAL = 12
+    FONT_SIZE_MEDIUM = 13
+    FONT_SIZE_LARGE = 14
+    FONT_SIZE_TITLE = 16
+    FONT_SIZE_HEADER = 24

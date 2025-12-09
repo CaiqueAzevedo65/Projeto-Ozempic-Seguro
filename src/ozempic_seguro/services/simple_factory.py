@@ -1,6 +1,11 @@
 """
 Factory simplificado para gerenciamento de serviços.
-Substitui o ServiceFactory complexo por uma implementação mais limpa.
+
+Esta é uma alternativa mais simples ao ServiceFactory principal.
+Útil para testes ou quando não é necessário o sistema completo de logging e validação.
+
+NOTA: O código principal usa ServiceFactory de service_factory.py.
+Este módulo é mantido como alternativa para casos específicos.
 """
 from typing import Dict, Any, Type, TypeVar, Optional
 import threading

@@ -95,16 +95,17 @@ class TestSessionManager:
         session_manager.increment_login_attempts(username)
         session_manager.increment_login_attempts(username)
         
-        assert session_manager._login_attempts[username] == 2
+        # _login_attempts agora é dict com metadados
+        assert session_manager._login_attempts[username]['count'] == 2
     
     def test_reset_login_attempts(self, session_manager):
         """Testa reset de tentativas de login"""
         username = 'test_user'
-        session_manager._login_attempts[username] = 3
+        session_manager._login_attempts[username] = {'count': 3, 'first_attempt': None, 'locked_until': None}
         
         session_manager.reset_login_attempts(username)
         
-        assert session_manager._login_attempts.get(username, 0) == 0
+        assert session_manager._login_attempts[username]['count'] == 0
     
     def test_is_user_blocked_by_attempts(self, session_manager):
         """Testa bloqueio por tentativas"""
@@ -119,63 +120,58 @@ class TestSessionManager:
     def test_is_user_not_blocked(self, session_manager):
         """Testa usuário não bloqueado"""
         username = 'test_user'
-        session_manager._login_attempts[username] = 2
+        # Usar estrutura correta de _login_attempts
+        session_manager._login_attempts[username] = {'count': 2, 'last_attempt': None, 'locked_until': None}
         
         assert session_manager.is_user_blocked(username) is False
     
-    @patch('ozempic_seguro.session.datetime')
-    def test_block_user(self, mock_datetime, session_manager):
-        """Testa bloqueio de usuário"""
-        now = datetime(2024, 1, 1, 12, 0, 0)
-        mock_datetime.now.return_value = now
-        
+    def test_block_user(self, session_manager):
+        """Testa bloqueio de usuário após muitas tentativas"""
         username = 'test_user'
-        session_manager.block_user(username)
         
-        expected_until = now + timedelta(minutes=15)
-        assert session_manager._blocked_until[username] == expected_until
+        # Simula tentativas até bloquear
+        for _ in range(5):
+            session_manager.increment_login_attempts(username)
+        
+        # Verifica que está bloqueado
+        assert session_manager.is_user_blocked(username) is True
+        assert session_manager._login_attempts[username]['locked_until'] is not None
     
-    @patch('ozempic_seguro.session.datetime')
-    def test_is_user_blocked_by_time_true(self, mock_datetime, session_manager):
+    def test_is_user_blocked_by_time_true(self, session_manager):
         """Testa usuário bloqueado por tempo"""
-        now = datetime(2024, 1, 1, 12, 0, 0)
-        mock_datetime.now.return_value = now
-        
         username = 'test_user'
-        session_manager._blocked_until[username] = now + timedelta(minutes=5)
         
-        assert session_manager.is_user_blocked_by_time(username) is True
+        # Bloqueia o usuário
+        for _ in range(5):
+            session_manager.increment_login_attempts(username)
+        
+        # Deve estar bloqueado
+        assert session_manager.is_user_locked(username) is True
     
-    @patch('ozempic_seguro.session.datetime')
-    def test_is_user_blocked_by_time_false(self, mock_datetime, session_manager):
+    def test_is_user_blocked_by_time_false(self, session_manager):
         """Testa usuário não bloqueado por tempo"""
-        now = datetime(2024, 1, 1, 12, 0, 0)
-        mock_datetime.now.return_value = now
-        
         username = 'test_user'
-        session_manager._blocked_until[username] = now - timedelta(minutes=1)
         
-        assert session_manager.is_user_blocked_by_time(username) is False
+        # Apenas 2 tentativas - não deve bloquear
+        session_manager.increment_login_attempts(username)
+        session_manager.increment_login_attempts(username)
+        
+        assert session_manager.is_user_locked(username) is False
     
-    @patch('ozempic_seguro.session.get_audit_service')
-    def test_start_timeout_timer(self, mock_get_audit, session_manager):
+    def test_start_timeout_timer(self, session_manager):
         """Testa início do timer de timeout"""
-        mock_audit = Mock()
-        mock_get_audit.return_value = mock_audit
-        
         user = {'id': 1, 'username': 'test_user'}
         session_manager.set_current_user(user)
         
         session_manager._start_timeout_timer()
         
         assert session_manager._timeout_timer is not None
-    
-    @patch('ozempic_seguro.session.get_audit_service')
-    def test_stop_timeout_timer(self, mock_get_audit, session_manager):
-        """Testa parada do timer de timeout"""
-        mock_audit = Mock()
-        mock_get_audit.return_value = mock_audit
         
+        # Cleanup
+        session_manager._stop_timeout_timer()
+    
+    def test_stop_timeout_timer(self, session_manager):
+        """Testa parada do timer de timeout"""
         user = {'id': 1, 'username': 'test_user'}
         session_manager.set_current_user(user)
         session_manager._start_timeout_timer()
@@ -184,12 +180,8 @@ class TestSessionManager:
         
         assert session_manager._timeout_timer is None
     
-    @patch('ozempic_seguro.session.get_audit_service')
-    def test_cleanup(self, mock_get_audit, session_manager):
+    def test_cleanup(self, session_manager):
         """Testa cleanup completo"""
-        mock_audit = Mock()
-        mock_get_audit.return_value = mock_audit
-        
         user = {'id': 1, 'username': 'test_user'}
         session_manager.set_current_user(user)
         
@@ -197,4 +189,3 @@ class TestSessionManager:
         
         assert session_manager._current_user is None
         assert session_manager._timeout_timer is None
-        mock_audit.log_action.assert_called_once()

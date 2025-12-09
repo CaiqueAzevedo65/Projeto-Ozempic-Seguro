@@ -3,9 +3,8 @@ Tela de Controle de Timer - Exclusiva para usuários técnicos.
 Permite desativar temporariamente o timer enquanto o técnico está logado.
 """
 import customtkinter
-from ..components import Header, VoltarButton
+from ..components import Header, VoltarButton, ModernConfirmDialog, ToastNotification
 from ...session import SessionManager
-from tkinter import messagebox
 
 class ControleTimerFrame(customtkinter.CTkFrame):
     def __init__(self, master, voltar_callback=None, *args, **kwargs):
@@ -19,7 +18,7 @@ class ControleTimerFrame(customtkinter.CTkFrame):
         
         # Frame principal para o conteúdo
         self.main_content = customtkinter.CTkFrame(self, fg_color="transparent")
-        self.main_content.pack(fill="both", expand=True, padx=40, pady=(20, 100))
+        self.main_content.pack(fill="both", expand=True, padx=20, pady=(20, 80))
         
         # Criar controle de timer
         self.criar_controle_timer()
@@ -57,21 +56,21 @@ class ControleTimerFrame(customtkinter.CTkFrame):
         lbl_descricao.pack(pady=(0, 30))
         
         # Frame para status
-        frame_status = customtkinter.CTkFrame(
+        self.frame_status = customtkinter.CTkFrame(
             frame_central,
-            fg_color="#f0f0f0",
+            fg_color="#E8F5E9",
             corner_radius=10
         )
-        frame_status.pack(pady=20)
+        self.frame_status.pack(pady=20, padx=40)
         
         # Indicador de status
         self.lbl_status = customtkinter.CTkLabel(
-            frame_status,
+            self.frame_status,
             text="",
-            font=("Arial", 16, "bold"),
+            font=("Arial", 18, "bold"),
             text_color="#333333"
         )
-        self.lbl_status.pack(padx=40, pady=20)
+        self.lbl_status.pack(padx=50, pady=25)
         
         # Botão de controle
         self.btn_controle = customtkinter.CTkButton(
@@ -87,11 +86,12 @@ class ControleTimerFrame(customtkinter.CTkFrame):
         # Informação adicional
         lbl_info = customtkinter.CTkLabel(
             frame_central,
-            text="⚠️ Esta configuração é temporária e válida apenas durante esta sessão",
+            text="⚠️ Esta configuração é temporária e válida\napenas durante esta sessão",
             font=("Arial", 11),
-            text_color="#FF6B6B"
+            text_color="#FF6B6B",
+            justify="center"
         )
-        lbl_info.pack(pady=(10, 30))
+        lbl_info.pack(pady=(10, 20), padx=20)
         
         # Atualizar estado inicial
         self.atualizar_estado()
@@ -101,30 +101,37 @@ class ControleTimerFrame(customtkinter.CTkFrame):
         # Verifica se o usuário é técnico
         usuario = self.session_manager.get_current_user()
         if not usuario or usuario.get('tipo') != 'tecnico':
-            messagebox.showerror("Acesso Negado", "Apenas técnicos podem alterar esta configuração.")
+            ToastNotification.show(self, "Acesso negado! Apenas técnicos podem alterar.", "error")
             return
         
-        # Alterna o estado
-        novo_estado = not self.session_manager.is_timer_enabled()
-        self.session_manager.set_timer_enabled(novo_estado)
+        timer_atual = self.session_manager.is_timer_enabled()
         
-        # Mensagem de confirmação
-        if novo_estado:
-            messagebox.showinfo("Timer Ativado", 
-                "O timer de sessão foi ATIVADO.\nO sistema voltará a bloquear por inatividade.")
+        if timer_atual:
+            # Vai desativar - pedir confirmação
+            if ModernConfirmDialog.ask(
+                self,
+                "Desativar Timer",
+                "Tem certeza que deseja DESATIVAR o timer?\n\nO sistema não bloqueará por inatividade.",
+                icon="warning",
+                confirm_text="Desativar",
+                cancel_text="Cancelar"
+            ):
+                self.session_manager.set_timer_enabled(False)
+                ToastNotification.show(self, "Timer DESATIVADO!", "warning")
+                self.atualizar_estado()
         else:
-            messagebox.showwarning("Timer Desativado", 
-                "⚠️ ATENÇÃO: Timer de sessão DESATIVADO!\n\n"
-                "O sistema NÃO bloqueará por inatividade.\n"
-                "Lembre-se de reativar antes de sair.")
-        
-        # Atualizar interface
-        self.atualizar_estado()
+            # Vai ativar - sem confirmação necessária
+            self.session_manager.set_timer_enabled(True)
+            ToastNotification.show(self, "Timer ATIVADO com sucesso!", "success")
+            self.atualizar_estado()
     
     def atualizar_estado(self):
         """Atualiza a interface de acordo com o estado do timer"""
-        if self.session_manager.is_timer_enabled():
-            # Timer ativado
+        timer_ativo = self.session_manager.is_timer_enabled()
+        
+        if timer_ativo:
+            # Timer ativado - fundo verde claro
+            self.frame_status.configure(fg_color="#E8F5E9")
             self.lbl_status.configure(
                 text="🟢 Timer ATIVADO",
                 text_color="#2E7D32"
@@ -135,7 +142,8 @@ class ControleTimerFrame(customtkinter.CTkFrame):
                 hover_color="#D32F2F"
             )
         else:
-            # Timer desativado
+            # Timer desativado - fundo vermelho claro
+            self.frame_status.configure(fg_color="#FFEBEE")
             self.lbl_status.configure(
                 text="🔴 Timer DESATIVADO",
                 text_color="#C62828"
@@ -145,6 +153,11 @@ class ControleTimerFrame(customtkinter.CTkFrame):
                 fg_color="#4CAF50",
                 hover_color="#388E3C"
             )
+        
+        # Forçar atualização visual
+        self.frame_status.update()
+        self.lbl_status.update()
+        self.btn_controle.update()
     
     def criar_botao_voltar(self):
         """Cria o botão voltar"""

@@ -1,15 +1,28 @@
+"""
+Script para resetar o banco de dados.
+
+ATENÇÃO: Este script remove TODOS os dados existentes!
+Use apenas em ambiente de desenvolvimento ou para recuperação.
+"""
 import os
 import sqlite3
-import hashlib
-import secrets
+
+from .security import hash_password
+
 
 def reset_database():
     """
     Remove o banco de dados existente e cria um novo com as configurações iniciais,
     incluindo um usuário administrador padrão.
+    
+    Returns:
+        bool: True se sucesso, False se erro
     """
     # Obtém o caminho do banco de dados
-    db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ozempic_seguro.db')
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    data_dir = os.path.join(base_dir, 'data')
+    os.makedirs(data_dir, exist_ok=True)
+    db_path = os.path.join(data_dir, 'ozempic_seguro.db')
     
     # Remove o banco de dados existente, se existir
     if os.path.exists(db_path):
@@ -21,7 +34,6 @@ def reset_database():
             return False
     
     try:
-        # Conecta ao novo banco de dados
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
@@ -43,8 +55,8 @@ def reset_database():
         CREATE TABLE IF NOT EXISTS gavetas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             numero_gaveta TEXT NOT NULL UNIQUE,
-            aberta BOOLEAN NOT NULL DEFAULT 0,
-            data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            esta_aberta BOOLEAN NOT NULL DEFAULT 0,
+            ultima_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         ''')
         
@@ -61,31 +73,52 @@ def reset_database():
         )
         ''')
         
-        # Função para criar hash da senha
-        def _hash_senha(senha, salt=None):
-            if salt is None:
-                salt = secrets.token_hex(16)
-            senha_salt = f"{senha}{salt}".encode('utf-8')
-            hash_obj = hashlib.sha256(senha_salt)
-            return f"{salt}${hash_obj.hexdigest()}"
+        # Tabela de auditoria
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS auditoria (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id INTEGER,
+            acao TEXT NOT NULL,
+            tabela_afetada TEXT,
+            id_afetado INTEGER,
+            dados_anteriores TEXT,
+            dados_novos TEXT,
+            endereco_ip TEXT,
+            data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
+        )
+        ''')
         
-        # Cria o usuário administrador padrão
-        senha_admin = "1234"
-        senha_hash = _hash_senha(senha_admin)
+        # Tabela de migrations
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS migrations (
+            version INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''')
         
+        # Cria usuário administrador padrão com bcrypt
+        senha_hash = hash_password("1234")
         cursor.execute(
             'INSERT INTO usuarios (username, senha_hash, nome_completo, tipo) VALUES (?, ?, ?, ?)',
-            ('adm', senha_hash, 'Administrador', 'administrador')
+            ('00', senha_hash, 'ADMINISTRADOR', 'administrador')
         )
         
-        # Confirma as alterações
+        # Cria usuário técnico padrão
+        senha_hash_tecnico = hash_password("1234")
+        cursor.execute(
+            'INSERT INTO usuarios (username, senha_hash, nome_completo, tipo) VALUES (?, ?, ?, ?)',
+            ('01', senha_hash_tecnico, 'TÉCNICO', 'tecnico')
+        )
+        
         conn.commit()
         
         print("\nBanco de dados recriado com sucesso!")
         print("\nCredenciais de acesso:")
-        print(f"Usuário: adm")
-        print(f"Senha: 1234")
-        print("\nPor segurança, altere a senha após o primeiro login.")
+        print("  Administrador: 00 / 1234")
+        print("  Técnico: 01 / 1234")
+        print("\nPor segurança, altere as senhas após o primeiro login.")
         
         return True
         
@@ -96,12 +129,14 @@ def reset_database():
         if 'conn' in locals():
             conn.close()
 
+
 if __name__ == "__main__":
     print("=== RECRIAÇÃO DO BANCO DE DADOS ===\n")
-    print("Este processo irá:\n")
-    print("1. Remover o banco de dados existente (se houver)")
-    print("2. Criar um novo banco de dados com a estrutura atualizada")
-    print("3. Adicionar um usuário administrador padrão (usuário: adm, senha: 1234)\n")
+    print("ATENÇÃO: Este processo irá APAGAR todos os dados existentes!\n")
+    print("Este processo irá:")
+    print("  1. Remover o banco de dados existente")
+    print("  2. Criar um novo banco de dados")
+    print("  3. Adicionar usuários padrão (admin: 00/1234, técnico: 01/1234)\n")
     
     confirmacao = input("Deseja continuar? (s/n): ").strip().lower()
     

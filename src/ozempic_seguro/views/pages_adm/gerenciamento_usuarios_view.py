@@ -259,7 +259,7 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
                 data_formatada = data_criacao.split(' ')[0] if ' ' in data_criacao else data_criacao
             else:
                 data_formatada = "N/A"
-        except:
+        except (ValueError, AttributeError, IndexError):
             data_formatada = "N/A"
         
         # Informações do usuário
@@ -504,7 +504,7 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
             sucesso, mensagem = self.user_service.change_password(self.usuario_selecionado, nova_senha)
             if sucesso:
                 self.lbl_mensagem.configure(text=f"✅ {mensagem}", text_color="#28a745")
-                ToastNotification.show(self, f"✅ Senha alterada com sucesso!", "success")
+                ToastNotification.show(self, "Senha alterada com sucesso!", "success")
                 # Aguardar 2 segundos antes de fechar
                 self.after(2000, self.dialog.destroy)
             else:
@@ -595,7 +595,7 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
             usuarios = self.user_service.get_all_users()
             usuario_data = next((u for u in usuarios if u[0] == self.usuario_selecionado), None)
             if not usuario_data:
-                ToastNotification.show(self, "❌ Usuário não encontrado", "error")
+                ToastNotification.show(self, "Usuário não encontrado", "error")
                 return
             
             nome_usuario = usuario_data[2]  # nome_completo
@@ -621,12 +621,12 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
                 # Recarregar dados e limpar detalhes
                 self.carregar_dados()
                 self.limpar_painel_detalhes()
-                ToastNotification.show(self, f"✅ {mensagem}", "success")
+                ToastNotification.show(self, mensagem, "success")
             else:
-                ToastNotification.show(self, f"❌ {mensagem}", "error")
+                ToastNotification.show(self, mensagem, "error")
                 
         except Exception as e:
-            ToastNotification.show(self, f"❌ Erro ao excluir usuário: {str(e)}", "error")
+            ToastNotification.show(self, f"Erro ao excluir usuário: {str(e)}", "error")
     
     def mostrar_aviso_tecnico(self):
         """Mostra aviso de que usuários técnicos não podem ser modificados"""

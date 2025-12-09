@@ -124,11 +124,18 @@ class SessionManager:
         Returns:
             bool: True se a alteração foi feita, False se o usuário não tem permissão
         """
-        if not self.is_admin():
+        # Permite admin ou técnico alterar o timer
+        if not self.is_admin() and not self.is_tecnico():
             return False
             
         self._timer_enabled = enabled
         return True
+    
+    def is_tecnico(self):
+        """Verifica se o usuário atual é técnico"""
+        if self._current_user is None:
+            return False
+        return self._current_user.get('tipo') == 'tecnico'
     
     def is_timer_enabled(self):
         """
@@ -380,8 +387,8 @@ class SessionManager:
                     action='SESSION_CLEANUP',
                     details='Sessão encerrada via cleanup'
                 )
-            except:
-                pass
+            except Exception:
+                pass  # Serviço de auditoria pode não estar disponível
         
         # Limpa dados da sessão
         self._current_user = None

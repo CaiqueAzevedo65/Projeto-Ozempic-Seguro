@@ -31,7 +31,7 @@ class AdminGavetasFrame(customtkinter.CTkFrame):
 
     def mostrar_historico_gaveta(self, gaveta_id):
         """Mostra o histórico de uma gaveta específica"""
-        ToastNotification.show(self, f"📊 Carregando histórico da gaveta {gaveta_id}...", "info")
+        ToastNotification.show(self, f"Carregando histórico da gaveta {gaveta_id}...", "info")
         temp_button = GavetaButton(
             self, 
             text=gaveta_id, 

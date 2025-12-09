@@ -252,10 +252,10 @@ class CadastroUsuarioFrame(customtkinter.CTkFrame):
         
         if sucesso:
             # Mostra notificação de sucesso moderna
-            ToastNotification.show(self, f"✅ Usuário '{nome}' cadastrado com sucesso!", "success")
+            ToastNotification.show(self, f"Usuário '{nome}' cadastrado com sucesso!", "success")
             self.limpar_campos()
         else:
-            ToastNotification.show(self, f"❌ Erro: {mensagem}", "error")
+            ToastNotification.show(self, f"Erro: {mensagem}", "error")
     
     def mostrar_mensagem(self, mensagem, tipo):
         cores = {
