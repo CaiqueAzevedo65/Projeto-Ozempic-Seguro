@@ -1,25 +1,31 @@
 # Ozempic Seguro
 
-Sistema de gerenciamento para controle de segurança de medicamentos, com foco especial no Ozempic.
+Sistema de gerenciamento de gavetas para controle seguro de medicamentos.
 
-## 🚀 Visão Geral
+## Características
 
+| Categoria | Recursos |
+|-----------|----------|
+| **Segurança** | 100% offline, bcrypt (12 rounds), proteção SQL/XSS, auditoria completa |
+| **Arquitetura** | MVC, Service Layer, Repository Pattern, Cache LRU |
+| **Usuários** | 4 tipos (admin, vendedor, repositor, técnico), RBAC, bloqueio por tentativas |
 O Ozempic Seguro é uma aplicação desktop desenvolvida em Python com interface gráfica moderna usando CustomTkinter. O sistema foi projetado para gerenciar o controle de acesso e estoque de medicamentos, com foco na segurança e rastreabilidade de remédios termolábeis, controlando o tempo em que cada medicameto pode ser removido do refrigerador.
 
-## ✨ Funcionalidades Principais
+## Tecnologias
 
-- **Autenticação de Usuários**
-  - Login seguro com diferentes níveis de acesso (administrador, vendedor, repositor)
-  - Gerenciamento de contas de usuário
-  - Controle de sessão
+- **Python 3.13** + CustomTkinter 5.2.2
+- **SQLite3** + bcrypt + Pillow
+- **pytest** (cobertura mínima 70%)
 
-- **Gerenciamento de Usuários**
-  - Cadastro de novos usuários
-  - Edição de perfis
-  - Controle de acesso baseado em funções
-  - Alteração segura de senhas
-  - Validação para impedir exclusão do último administrador
+## Instalação
 
+```bash
+git clone https://github.com/CaiqueAzevedo65/Projeto-Ozempic-Seguro.git
+cd Projeto-Ozempic-Seguro
+python -m venv venv && .\venv\Scripts\activate  # Windows
+pip install -r requirements.txt
+python run.py
+```
 - **Segurança**
   - Senhas criptografadas
   - Registro de auditoria de atividades
@@ -57,77 +63,76 @@ O Ozempic Seguro é uma aplicação desktop desenvolvida em Python com interface
 
 ## 🏃 Executando o Projeto
 
-1. **Inicie a aplicação**
-   ```bash
-   python -m src.main
-   ```
+**Credenciais padrão:**
+- Admin: `00` / `1234`
+- Técnico: `01` / `1234`
 
-2. **Credenciais de Acesso**
-   - **Admin Padrão**:
-     - Usuário: `00`
-     - Senha: `1234` (altere após o primeiro acesso)
+> ⚠️ Sessão expira após 10 min de inatividade. Bloqueio após 3 tentativas falhas (5 min).
 
-## 🗃️ Estrutura do Projeto
+## Estrutura
 
 ```
-Projeto-Ozempic-Seguro/
-├── src/
-│   ├── assets/           # Recursos de imagem e ícones
-│   ├── data/             # Arquivos de banco de dados
-│   ├── views/            # Telas da aplicação
-│   │   ├── pages_adm/    # Telas administrativas
-│   │   │   ├── painel_administrador_view.py
-│   │   │   └── gerenciamento_usuarios_view.py
-│   │   ├── pages_iniciais/
-│   │   └── ...
-│   ├── auth.py          # Lógica de autenticação
-│   ├── database.py       # Gerenciamento do banco de dados
-│   └── main.py           # Ponto de entrada da aplicação
-├── .gitignore
-├── requirements.txt
-└── README.md
+src/ozempic_seguro/
+├── controllers/      # NavigationController
+├── core/            # Cache, Logger, Validators
+├── repositories/    # DatabaseManager, UserRepository
+├── services/        # UserService, AuditService, ServiceFactory
+├── views/
+│   ├── components/  # Componentes UI modulares
+│   ├── pages_adm/   # Telas administrativas
+│   └── pages_iniciais/
+├── config.py        # Configurações centralizadas
+├── session.py       # Gerenciamento de sessão
+└── main.py
 ```
 
-## 🔒 Política de Segurança
+## Testes
 
-- Todas as senhas são armazenadas usando hash seguro (bcrypt)
-- Proteção contra injeção SQL usando parâmetros preparados
-- Controle de acesso baseado em funções (RBAC)
-- Registro de atividades sensíveis
-- Validação de entrada em todos os campos
-- Proteção contra exclusão acidental de usuários críticos
+```bash
+pytest                                    # Todos os testes
+pytest --cov=src/ozempic_seguro          # Com cobertura
+pytest -m unit|integration|ui            # Por categoria
+```
 
-## 🐛 Reportando Problemas
+## Segurança
 
-Encontrou um bug ou tem uma sugestão? Por favor, [abra uma issue](https://github.com/CaiqueAzevedo65/Projeto-Ozempic-Seguro/issues) no GitHub.
+- **Autenticação**: bcrypt 12 rounds, timeout 10 min, bloqueio 5 min após 3 falhas
+- **Validação**: Sanitização SQL/XSS, escape HTML, RBAC
+- **Auditoria**: Logs com IP, timestamp ISO 8601, contexto completo
 
-## 🤝 Contribuição
+## Contribuição
 
-Contribuições são bem-vindas! Siga estes passos:
+1. Fork → 2. Branch (`feature/...`) → 3. Commit → 4. PR
 
-1. Faça um fork do projeto
-2. Crie sua feature branch (`git checkout -b feature/nova-funcionalidade`)
-3. Commit suas alterações (`git commit -m 'Adiciona nova funcionalidade'`)
-4. Push para a branch (`git push origin feature/nova-funcionalidade`)
-5. Abra um Pull Request
+## Contato
 
-## 📝 Licença
-
-Este projeto está sob a licença MIT. Consulte o arquivo LICENSE para obter mais detalhes.
-
-## 📞 Suporte
-
-Para suporte, entre em contato através do email: [caiqueazevedo2005@gmail.com](caiqueazevedo2005@gmail.com)
+📧 caiqueazevedo2005@gmail.com
 
 ---
 
-Desenvolvido com ❤️ por Caique Azevedo
+**Licença MIT** | Desenvolvido por Caique Azevedo
 
-## 📌 Notas de Atualização
+## Changelog
+Para suporte, entre em contato através do email: [caiqueazevedo2005@gmail.com](caiqueazevedo2005@gmail.com)
+
+### [1.3.1] - 2025-12-09
+- Refatoração de componentes UI em módulos (`views/components/`)
+- Substituição de `print()` por logging estruturado
+- Remoção de código legado e duplicado
+- Unificação de validadores (`InputValidator` → `Validators`)
+- Correção de hash SHA256 legado → bcrypt em `reset_database.py`
+
+### [1.3.0] - 2025-09-16
+- Testes automatizados com pytest (70%+ cobertura)
+- Fixtures e mocks para testes isolados
+
+### [1.2.0] - 2025-08-30
+- Migração bcrypt, timeout de sessão, proteção força bruta
+- Logs de segurança, validação robusta, configurações centralizadas
+
+### [1.1.0] - 2025-06-25
+- Service Layer com injeção de dependência
+- Remoção de `AuthManager` legado
 
 ### [1.0.0] - 2024-05-30
-- Adicionada validação para impedir exclusão do último administrador
-- Corrigido fluxo de autenticação de usuários
-- Melhorias no sistema de logs e auditoria
-- Atualizadas dependências para as versões mais recentes
-- Documentação atualizada
+- Versão inicial com autenticação e auditoria
