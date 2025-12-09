@@ -9,6 +9,7 @@ Sistema de gerenciamento de gavetas para controle seguro de medicamentos.
 | **Segurança** | 100% offline, bcrypt (12 rounds), proteção SQL/XSS, auditoria completa |
 | **Arquitetura** | MVC, Service Layer, Repository Pattern, Cache LRU |
 | **Usuários** | 4 tipos (admin, vendedor, repositor, técnico), RBAC, bloqueio por tentativas |
+O Ozempic Seguro é uma aplicação desktop desenvolvida em Python com interface gráfica moderna usando CustomTkinter. O sistema foi projetado para gerenciar o controle de acesso e estoque de medicamentos, com foco na segurança e rastreabilidade de remédios termolábeis, controlando o tempo em que cada medicameto pode ser removido do refrigerador.
 
 ## Tecnologias
 
@@ -25,6 +26,42 @@ python -m venv venv && .\venv\Scripts\activate  # Windows
 pip install -r requirements.txt
 python run.py
 ```
+- **Segurança**
+  - Senhas criptografadas
+  - Registro de auditoria de atividades
+  - Controle de acesso baseado em permissões
+  - Proteção contra operações críticas não autorizadas
+
+## 🛠️ Tecnologias Utilizadas
+
+- **Linguagem**: Python 3.13
+- **Interface Gráfica**: CustomTkinter 5.2.2
+- **Banco de Dados**: SQLite3 (embutido no Python)
+- **Gerenciamento de Dependências**: pip
+- **Outras Bibliotecas**:
+  - Pillow 10.2.0 (processamento de imagens)
+  - Bcrypt (hash de senhas)
+
+## 📦 Pré-requisitos
+
+- Python 3.13 ou superior
+- pip (gerenciador de pacotes do Python)
+- Git (para clonar o repositório)
+
+## 🚀 Instalação
+
+1. **Clone o repositório**
+   ```bash
+   git clone https://github.com/CaiqueAzevedo65/Projeto-Ozempic-Seguro.git
+   cd Projeto-Ozempic-Seguro
+   ```
+
+2. **Instale as dependências**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+## 🏃 Executando o Projeto
 
 **Credenciais padrão:**
 - Admin: `00` / `1234`
@@ -76,6 +113,7 @@ pytest -m unit|integration|ui            # Por categoria
 **Licença MIT** | Desenvolvido por Caique Azevedo
 
 ## Changelog
+Para suporte, entre em contato através do email: [caiqueazevedo2005@gmail.com](caiqueazevedo2005@gmail.com)
 
 ### [1.3.1] - 2025-12-09
 - Refatoração de componentes UI em módulos (`views/components/`)
