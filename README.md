@@ -1,6 +1,8 @@
 # Ozempic Seguro
 
-Sistema de gerenciamento de gavetas para controle seguro de medicamentos.
+Sistema de gerenciamento de gavetas para controle seguro de medicamentos termolábeis.
+
+O Ozempic Seguro é uma aplicação desktop desenvolvida em Python com interface gráfica moderna usando CustomTkinter. O sistema foi projetado para gerenciar o controle de acesso e estoque de medicamentos, com foco na segurança e rastreabilidade, controlando o tempo em que cada medicamento pode ser removido do refrigerador.
 
 ## Características
 
@@ -9,13 +11,18 @@ Sistema de gerenciamento de gavetas para controle seguro de medicamentos.
 | **Segurança** | 100% offline, bcrypt (12 rounds), proteção SQL/XSS, auditoria completa |
 | **Arquitetura** | MVC, Service Layer, Repository Pattern, Cache LRU |
 | **Usuários** | 4 tipos (admin, vendedor, repositor, técnico), RBAC, bloqueio por tentativas |
-O Ozempic Seguro é uma aplicação desktop desenvolvida em Python com interface gráfica moderna usando CustomTkinter. O sistema foi projetado para gerenciar o controle de acesso e estoque de medicamentos, com foco na segurança e rastreabilidade de remédios termolábeis, controlando o tempo em que cada medicameto pode ser removido do refrigerador.
 
 ## Tecnologias
 
 - **Python 3.13** + CustomTkinter 5.2.2
 - **SQLite3** + bcrypt + Pillow
 - **pytest** (cobertura mínima 70%)
+
+## Pré-requisitos
+
+- Python 3.13 ou superior
+- pip (gerenciador de pacotes do Python)
+- Git (para clonar o repositório)
 
 ## Instalação
 
@@ -24,48 +31,15 @@ git clone https://github.com/CaiqueAzevedo65/Projeto-Ozempic-Seguro.git
 cd Projeto-Ozempic-Seguro
 python -m venv venv && .\venv\Scripts\activate  # Windows
 pip install -r requirements.txt
+cp .env.example .env  # Configure as credenciais
 python run.py
 ```
-- **Segurança**
-  - Senhas criptografadas
-  - Registro de auditoria de atividades
-  - Controle de acesso baseado em permissões
-  - Proteção contra operações críticas não autorizadas
 
-## 🛠️ Tecnologias Utilizadas
+## Executando o Projeto
 
-- **Linguagem**: Python 3.13
-- **Interface Gráfica**: CustomTkinter 5.2.2
-- **Banco de Dados**: SQLite3 (embutido no Python)
-- **Gerenciamento de Dependências**: pip
-- **Outras Bibliotecas**:
-  - Pillow 10.2.0 (processamento de imagens)
-  - Bcrypt (hash de senhas)
-
-## 📦 Pré-requisitos
-
-- Python 3.13 ou superior
-- pip (gerenciador de pacotes do Python)
-- Git (para clonar o repositório)
-
-## 🚀 Instalação
-
-1. **Clone o repositório**
-   ```bash
-   git clone https://github.com/CaiqueAzevedo65/Projeto-Ozempic-Seguro.git
-   cd Projeto-Ozempic-Seguro
-   ```
-
-2. **Instale as dependências**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-## 🏃 Executando o Projeto
-
-**Credenciais padrão:**
-- Admin: `00` / `1234`
-- Técnico: `01` / `1234`
+**Credenciais padrão** (configure em `.env`):
+- Admin: `00` / `admin@2025`
+- Técnico: `01` / `tecnico@2025`
 
 > ⚠️ Sessão expira após 10 min de inatividade. Bloqueio após 3 tentativas falhas (5 min).
 
@@ -113,7 +87,20 @@ pytest -m unit|integration|ui            # Por categoria
 **Licença MIT** | Desenvolvido por Caique Azevedo
 
 ## Changelog
-Para suporte, entre em contato através do email: [caiqueazevedo2005@gmail.com](caiqueazevedo2005@gmail.com)
+
+### [1.3.2] - 2025-12-11
+- **Arquitetura**: Refatoração completa da camada de persistência
+  - Nova classe `DatabaseConnection` para gerenciamento de conexão
+  - Repositórios (`UserRepository`, `AuditRepository`, `GavetaRepository`) com implementação direta
+  - `DatabaseManager` marcado como deprecated (wrapper de compatibilidade)
+- **Segurança**: Senhas via variáveis de ambiente (`.env.example`)
+- **Código**: 
+  - Correção de `UIConfig` duplicada
+  - Unificação de validadores (`core/validators.py`)
+  - Correção de import circular em `SessionManager` (callback pattern)
+  - Type hints consistentes nos módulos principais
+  - `__all__` adicionado aos pacotes (`repositories`, `services`, `core`)
+- **Limpeza**: Remoção de código morto (`flet_app/`), reorganização do README
 
 ### [1.3.1] - 2025-12-09
 - Refatoração de componentes UI em módulos (`views/components/`)

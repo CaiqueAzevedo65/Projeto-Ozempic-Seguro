@@ -108,31 +108,43 @@ class Validators:
         return result
     
     @classmethod
-    def validate_password(cls, password: str) -> ValidationResult:
+    def validate_password(cls, password: str, strict: bool = False) -> ValidationResult:
         """
-        Valida senha com critérios de segurança.
+        Valida senha.
         
-        Regras:
+        Regras básicas (padrão):
+        - Mínimo 4 caracteres (conforme SecurityConfig.MIN_PASSWORD_LENGTH)
+        - Máximo 128 caracteres
+        - Sem caracteres de controle
+        
+        Regras estritas (strict=True):
         - Mínimo 8 caracteres
         - Pelo menos 1 letra maiúscula
         - Pelo menos 1 letra minúscula
         - Pelo menos 1 número
-        - Opcionalmente caracteres especiais
         """
+        from ..config import SecurityConfig
+        
         result = ValidationResult(is_valid=True, errors=[])
         
         if not password:
             result.add_error("Senha é obrigatória")
             return result
         
-        if len(password) < 8:
-            result.add_error("Senha deve ter pelo menos 8 caracteres")
+        min_length = 8 if strict else SecurityConfig.MIN_PASSWORD_LENGTH
         
-        if len(password) > 128:
-            result.add_error("Senha não pode ter mais de 128 caracteres")
+        if len(password) < min_length:
+            result.add_error(f"Senha deve ter pelo menos {min_length} caracteres")
         
-        if result.is_valid:
-            # Verifica força da senha
+        if len(password) > SecurityConfig.MAX_PASSWORD_LENGTH:
+            result.add_error(f"Senha não pode ter mais de {SecurityConfig.MAX_PASSWORD_LENGTH} caracteres")
+        
+        # Verifica caracteres de controle
+        if any(ord(char) < 32 for char in password):
+            result.add_error("Senha contém caracteres inválidos")
+        
+        # Validação estrita (opcional)
+        if strict and result.is_valid:
             has_upper = any(c.isupper() for c in password)
             has_lower = any(c.islower() for c in password)
             has_digit = any(c.isdigit() for c in password)
@@ -146,7 +158,6 @@ class Validators:
             if not has_digit:
                 result.add_error("Senha deve conter pelo menos um número")
         
-        # Não sanitiza senha, apenas valida
         result.sanitized_value = password if result.is_valid else None
         
         return result

@@ -1,5 +1,7 @@
 """
 Serviço de usuários: camada de negócio isolada entre controllers e repositories.
+
+Utiliza exceções customizadas para tratamento de erros consistente.
 """
 from typing import Optional, Tuple, List, Dict
 import datetime
@@ -10,6 +12,16 @@ from ..repositories.security_logger import SecurityLogger
 from ..repositories.input_validator import InputValidator
 from ..config import SecurityConfig
 from ..core.base_views import BaseService
+from ..core.exceptions import (
+    UserNotFoundError,
+    UserAlreadyExistsError,
+    LastAdminError,
+    InvalidCredentialsError,
+    AccountLockedError,
+    WeakPasswordError,
+    InvalidUserDataError,
+    InsufficientPermissionsError,
+)
 
 class UserService(BaseService):
     def __init__(self):
@@ -20,6 +32,10 @@ class UserService(BaseService):
     def create_user(self, nome: str, username: str, senha: str, tipo: str, usuario_criador_id: Optional[int] = None) -> Tuple[bool, str]:
         """
         Cadastra um novo usuário com validações robustas e registra log de auditoria.
+        
+        Raises:
+            InvalidUserDataError: Se os dados de entrada forem inválidos
+            UserAlreadyExistsError: Se o username já existir
         """
         # Validação robusta de entrada usando método da classe base
         validation_data = {
@@ -30,7 +46,7 @@ class UserService(BaseService):
         }
         
         if not self._validate_input(validation_data):
-            return False, "Dados de entrada inválidos"
+            raise InvalidUserDataError('input', 'Dados de entrada inválidos ou incompletos')
         
         validation_result = InputValidator.validate_and_sanitize_user_input(
             username=username,
@@ -40,7 +56,8 @@ class UserService(BaseService):
         )
         
         if not validation_result['valid']:
-            return False, "; ".join(validation_result['errors'])
+            errors = "; ".join(validation_result['errors'])
+            raise InvalidUserDataError('validation', errors)
         
         # Usar dados sanitizados
         sanitized_data = validation_result['sanitized_data']
@@ -51,7 +68,7 @@ class UserService(BaseService):
         try:
             novo_id = self.user_repo.create_user(username_sanitizado, senha, nome_sanitizado, tipo_sanitizado)
             if not novo_id:
-                return False, "Nome de usuário já está em uso"
+                raise UserAlreadyExistsError(username_sanitizado)
 
             # Log de criação com contexto de segurança
             security_context = SecurityLogger.log_user_management(
@@ -76,8 +93,10 @@ class UserService(BaseService):
             )
             return True, "Usuário cadastrado com sucesso!"
 
+        except (InvalidUserDataError, UserAlreadyExistsError):
+            raise
         except Exception as e:
-            return False, f"Erro ao cadastrar usuário: {str(e)}"
+            raise InvalidUserDataError('database', f"Erro ao cadastrar usuário: {str(e)}")
     
     def _validate_input(self, validation_data: Dict) -> bool:
         """Implementação da validação de entrada obrigatória da classe base"""
@@ -94,13 +113,20 @@ class UserService(BaseService):
             
         return True
 
-    def authenticate(self, username: str, senha: str, endereco_ip: Optional[str] = None) -> Optional[Dict]:
+    def authenticate(self, username: str, senha: str, endereco_ip: Optional[str] = None) -> Dict:
         """
         Autentica usuário com validação robusta, controle de força bruta e logs detalhados.
+        
+        Returns:
+            Dict com dados do usuário autenticado
+            
+        Raises:
+            InvalidCredentialsError: Se credenciais forem inválidas
+            AccountLockedError: Se conta estiver bloqueada
         """
         # Validação básica - permite usuário "00" (admin padrão)
         if not username or not senha:
-            return None
+            raise InvalidCredentialsError(username)
         
         # Sanitiza entrada
         username = username.strip()
@@ -124,10 +150,10 @@ class UserService(BaseService):
                     dados_anteriores=security_context,
                     endereco_ip=security_context.get('ip_address')
                 )
-                return None
+                raise InvalidCredentialsError(username, "Formato de usuário inválido")
                 
             if not password_valid:
-                return None
+                raise InvalidCredentialsError(username, "Formato de senha inválido")
             
         # Verificar se usuário está bloqueado por tentativas excessivas
         from ..session import SessionManager
@@ -147,7 +173,7 @@ class UserService(BaseService):
                 dados_anteriores=security_context,
                 endereco_ip=security_context.get('ip_address')
             )
-            return None
+            raise AccountLockedError(username, locked_until=f"{remaining_time} minutos")
             
         user = self.user_repo.authenticate_user(username, senha)
         
@@ -189,7 +215,7 @@ class UserService(BaseService):
                 dados_anteriores=security_context,
                 endereco_ip=security_context.get('ip_address')
             )
-            return None
+            raise InvalidCredentialsError(username)
 
     def logout(self, usuario_id: int, username: str, endereco_ip: Optional[str] = None) -> None:
         """Registra logout de usuário com contexto de segurança."""
@@ -209,14 +235,29 @@ class UserService(BaseService):
         )
 
     def delete_user(self, usuario_id: int) -> Tuple[bool, str]:
-        """Exclui usuário e registra auditoria, impedindo remoção do único administrador ou técnico."""
-        # Verificar se é um técnico
+        """
+        Exclui usuário e registra auditoria.
+        
+        Raises:
+            UserNotFoundError: Se usuário não existir
+            InsufficientPermissionsError: Se tentar excluir técnico
+            LastAdminError: Se tentar excluir único admin
+        """
+        # Verificar se usuário existe
         user = self.user_repo.get_user_by_id(usuario_id)
-        if user and user.get('tipo') == 'tecnico':
-            return False, "Não é possível excluir usuários do tipo técnico"
+        if not user:
+            raise UserNotFoundError(usuario_id)
+        
+        # Verificar se é um técnico
+        if user.get('tipo') == 'tecnico':
+            raise InsufficientPermissionsError(
+                action='excluir_usuario',
+                required_role='administrador',
+                user_role='tecnico'
+            )
         
         if self.user_repo.is_unique_admin(usuario_id):
-            return False, "Não é possível excluir o único administrador"
+            raise LastAdminError()
         
         sucesso = self.user_repo.delete_user(usuario_id)
         if sucesso:
@@ -227,24 +268,39 @@ class UserService(BaseService):
                 id_afetado=usuario_id
             )
             return True, "Usuário excluído com sucesso!"
-        return False, "Falha ao excluir usuário"
+        raise UserNotFoundError(usuario_id)
 
     def get_all_users(self) -> List[Dict]:
         """Retorna lista de todos os usuários."""
         return self.user_repo.get_users()
 
     def update_password(self, usuario_id: int, nova_senha: str, admin_user_id: Optional[int] = None) -> Tuple[bool, str]:
-        """Atualiza senha de usuário com validação robusta e registra auditoria."""
-        # Verificar se é um técnico
+        """
+        Atualiza senha de usuário com validação robusta e registra auditoria.
+        
+        Raises:
+            UserNotFoundError: Se usuário não existir
+            InsufficientPermissionsError: Se tentar alterar senha de técnico
+            WeakPasswordError: Se senha não atender requisitos
+        """
+        # Verificar se usuário existe
         user = self.user_repo.get_user_by_id(usuario_id)
-        if user and user.get('tipo') == 'tecnico':
-            return False, "Não é possível alterar a senha de usuários do tipo técnico"
+        if not user:
+            raise UserNotFoundError(usuario_id)
+        
+        # Verificar se é um técnico
+        if user.get('tipo') == 'tecnico':
+            raise InsufficientPermissionsError(
+                action='alterar_senha',
+                required_role='administrador',
+                user_role='tecnico'
+            )
         
         # Validação robusta da nova senha
         password_valid, password_error = InputValidator.validate_password(nova_senha)
         
         if not password_valid:
-            return False, f"Senha inválida: {password_error}"
+            raise WeakPasswordError([password_error])
             
         try:
             sucesso = self.user_repo.update_password(usuario_id, nova_senha)
@@ -267,7 +323,9 @@ class UserService(BaseService):
                     endereco_ip=security_context.get('ip_address')
                 )
                 return True, "Senha atualizada com sucesso"
-            return False, "Falha ao atualizar senha"
+            raise UserNotFoundError(usuario_id)
+        except (UserNotFoundError, InsufficientPermissionsError, WeakPasswordError):
+            raise
         except Exception as e:
             # Log erro de segurança
             security_context = SecurityLogger.log_security_violation(
@@ -283,4 +341,4 @@ class UserService(BaseService):
                 dados_anteriores=security_context,
                 endereco_ip=security_context.get('ip_address')
             )
-            return False, f"Erro ao atualizar senha: {str(e)}"
+            raise InvalidUserDataError('password', f"Erro ao atualizar senha: {str(e)}")

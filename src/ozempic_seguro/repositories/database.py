@@ -1,122 +1,70 @@
+"""
+DatabaseManager - Wrapper de compatibilidade (DEPRECATED).
+
+.. deprecated:: 1.3.2
+    Este módulo é mantido apenas para compatibilidade com código legado.
+    Para novos desenvolvimentos, use diretamente:
+    - DatabaseConnection para conexão
+    - UserRepository para operações de usuários
+    - AuditRepository para operações de auditoria
+    - GavetaRepository para operações de gavetas
+"""
 import sqlite3
 import os
 import json
+import warnings
 from datetime import datetime
+from typing import Optional, List, Dict, Any, Tuple
 
-from ..core.logger import logger, log_exceptions, DatabaseException
+from ..core.logger import logger
 from ..config import Config
 
+
+def _deprecation_warning(method_name: str, alternative: str) -> None:
+    """Emite aviso de deprecação para métodos legados"""
+    warnings.warn(
+        f"DatabaseManager.{method_name}() está deprecated. "
+        f"Use {alternative} em vez disso.",
+        DeprecationWarning,
+        stacklevel=3
+    )
+
+
 class DatabaseManager:
+    """
+    Wrapper de compatibilidade para código legado (DEPRECATED).
+    
+    .. deprecated:: 1.3.2
+        Esta classe será removida em versões futuras.
+        Use os repositórios específicos:
+        - DatabaseConnection para conexão
+        - UserRepository para operações de usuários
+        - AuditRepository para operações de auditoria
+        - GavetaRepository para operações de gavetas
+    """
     _instance = None
     
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(DatabaseManager, cls).__new__(cls)
-            cls._instance._initialize_database()
+            cls._instance._initialize()
         return cls._instance
     
-    @log_exceptions("Database Path Resolution")
-    def _get_db_path(self):
-        """Retorna o caminho para o arquivo do banco de dados usando configurações centralizadas"""
-        base_dir = os.path.dirname(os.path.dirname(__file__))
-        data_dir = os.path.join(base_dir, Config.App.DATA_DIR)
-        os.makedirs(data_dir, exist_ok=True)
-        
-        db_path = os.path.join(data_dir, Config.Database.DB_NAME)
-        logger.debug(f"Database path resolved: {db_path}")
-        return db_path
-    
-    @log_exceptions("Database Migrations")
-    def _run_migrations(self):
-        """Executa scripts SQL de migrations usando configurações centralizadas"""
-        base_dir = os.path.dirname(os.path.dirname(__file__))
-        migrations_dir = os.path.join(base_dir, Config.App.MIGRATIONS_DIR)
-        os.makedirs(migrations_dir, exist_ok=True)
-        
-        logger.info(f"Running migrations from: {migrations_dir}")
-        # Cria tabela de controle de migrations
-        self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS migrations (
-            version INTEGER PRIMARY KEY,
-            name TEXT NOT NULL,
-            applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        ''')
-        self.conn.commit()
-        # Detecta versões já aplicadas
-        applied = {row[0] for row in self.cursor.execute('SELECT version FROM migrations')}
-        # Aplica novos scripts com logging
-        migration_files = [f for f in sorted(os.listdir(migrations_dir)) if f.endswith('.sql')]
-        logger.info(f"Found {len(migration_files)} migration files")
-        
-        for fname in migration_files:
-            version = int(fname.split('_')[0])
-            if version in applied:
-                logger.debug(f"Skipping already applied migration: {fname}")
-                continue
-                
-            logger.info(f"Applying migration: {fname}")
-            path = os.path.join(migrations_dir, fname)
-            
-            try:
-                with open(path, 'r', encoding='utf-8') as f:
-                    sql_script = f.read()
-                self.conn.executescript(sql_script)
-                self.cursor.execute(
-                    'INSERT INTO migrations (version, name) VALUES (?, ?)',
-                    (version, fname)
-                )
-                self.conn.commit()
-                logger.info(f"Migration applied successfully: {fname}")
-            except Exception as e:
-                logger.error(f"Failed to apply migration {fname}: {str(e)}")
-                raise DatabaseException(f"Migration failed: {fname}")
-
-    @log_exceptions("Database Initialization")
-    def _initialize_database(self):
-        """Inicializa o banco executando migrations e criando usuário admin"""
-        logger.info("Starting database initialization")
-        
-        db_path = self._get_db_path()
-        is_new = not os.path.exists(db_path)
-        logger.info(f"Database is {'new' if is_new else 'existing'}: {db_path}")
-        
-        # Usar configurações centralizadas para conexão
-        self.conn = sqlite3.connect(
-            db_path,
-            timeout=Config.Database.DB_TIMEOUT,
-            check_same_thread=Config.Database.DB_CHECK_SAME_THREAD
-        )
-        self.conn.row_factory = sqlite3.Row
-        self.cursor = self.conn.cursor()
-        
-        # Configurações de performance usando Config
-        if Config.Database.ENABLE_FOREIGN_KEYS:
-            self.cursor.execute('PRAGMA foreign_keys = ON;')
-        
-        if Config.Database.ENABLE_WAL_MODE:
-            self.cursor.execute('PRAGMA journal_mode = WAL;')
-            
-        self.cursor.execute(f'PRAGMA cache_size = {Config.Database.CACHE_SIZE};')
-        self.conn.commit()
-        
-        logger.debug("Database pragmas configured")
-        # Executa migrations SQL
-        self._run_migrations()
-        
-        # Cria admin padrão em banco novo
-        if is_new:
-            logger.info("Creating default admin user for new database")
-            self._criar_usuario_admin_padrao()
-        
-        # Migra usuários de JSON
-        self._migrar_usuarios_se_necessario()
-        
-        logger.info("Database initialization completed successfully")
-
+    def _initialize(self):
+        """Inicializa conexão via DatabaseConnection"""
+        from .connection import DatabaseConnection
+        self._db = DatabaseConnection.get_instance()
+        self.conn = self._db.conn
+        self.cursor = self._db.cursor
 
     def criar_usuario(self, username, senha, nome_completo, tipo):
-        """Cria um novo usuário com bcrypt"""
+        """
+        Cria um novo usuário com bcrypt.
+        
+        .. deprecated:: 1.3.2
+            Use UserRepository.create_user() em vez disso.
+        """
+        _deprecation_warning('criar_usuario', 'UserRepository.create_user()')
         from ..repositories.security import hash_password
         senha_hash = hash_password(senha)
         try:
@@ -430,11 +378,12 @@ class DatabaseManager:
 
     def _criar_usuario_admin_padrao(self):
         """Cria um usuário administrador padrão com bcrypt"""
+        import os
         from ..repositories.security import hash_password
         
-        # Dados do administrador padrão
-        username = "00"
-        senha = "1234"
+        # Dados do administrador padrão (usa variáveis de ambiente ou valores padrão)
+        username = os.getenv('OZEMPIC_ADMIN_USERNAME', '00')
+        senha = os.getenv('OZEMPIC_ADMIN_PASSWORD', 'admin@2025')
         nome_completo = "ADMINISTRADOR"
         
         # Gera hash bcrypt
@@ -457,11 +406,12 @@ class DatabaseManager:
     
     def _criar_usuario_tecnico_padrao(self):
         """Cria um usuário técnico padrão com bcrypt"""
+        import os
         from ..repositories.security import hash_password
         
-        # Dados do técnico padrão
-        username = "01"
-        senha = "1234"
+        # Dados do técnico padrão (usa variáveis de ambiente ou valores padrão)
+        username = os.getenv('OZEMPIC_TECNICO_USERNAME', '01')
+        senha = os.getenv('OZEMPIC_TECNICO_PASSWORD', 'tecnico@2025')
         nome_completo = "TÉCNICO"
         
         # Gera hash bcrypt
@@ -652,3 +602,31 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Erro ao contar logs de auditoria: {e}")
             return 0
+
+    # =========================================================================
+    # Aliases em inglês para padronização de nomenclatura
+    # Mantidos para compatibilidade com código existente em português
+    # =========================================================================
+    
+    # User methods
+    create_user = criar_usuario
+    authenticate_user = autenticar_usuario
+    update_password = atualizar_senha
+    delete_user = excluir_usuario
+    get_users = get_usuarios
+    is_unique_admin = eh_unico_administrador
+    
+    # Drawer (gaveta) methods
+    get_drawer_state = get_estado_gaveta
+    set_drawer_state = set_estado_gaveta
+    get_drawer_history = get_historico_gaveta
+    get_drawer_history_paginated = get_historico_paginado
+    get_total_drawer_history = get_total_historico
+    get_all_history = get_todo_historico
+    get_all_history_paginated = get_todo_historico_paginado
+    get_total_all_history = get_total_todo_historico
+    
+    # Audit methods
+    create_audit_log = registrar_auditoria
+    search_audit_logs = buscar_logs_auditoria
+    count_audit_logs = contar_logs_auditoria

@@ -40,26 +40,26 @@ class TestValidators:
         assert len(result.errors) == 0
     
     def test_validate_password_weak(self):
-        """Testa senha fraca"""
-        result = Validators.validate_password("weak")
+        """Testa senha fraca (modo estrito)"""
+        result = Validators.validate_password("weak", strict=True)
         assert result.is_valid is False
         assert "pelo menos 8 caracteres" in result.errors[0]
     
     def test_validate_password_no_uppercase(self):
-        """Testa senha sem maiúscula"""
-        result = Validators.validate_password("weakpass123")
+        """Testa senha sem maiúscula (modo estrito)"""
+        result = Validators.validate_password("weakpass123", strict=True)
         assert result.is_valid is False
         assert "letra maiúscula" in result.errors[0]
     
     def test_validate_password_no_lowercase(self):
-        """Testa senha sem minúscula"""
-        result = Validators.validate_password("WEAKPASS123")
+        """Testa senha sem minúscula (modo estrito)"""
+        result = Validators.validate_password("WEAKPASS123", strict=True)
         assert result.is_valid is False
         assert "letra minúscula" in result.errors[0]
     
     def test_validate_password_no_digit(self):
-        """Testa senha sem número"""
-        result = Validators.validate_password("WeakPassword")
+        """Testa senha sem número (modo estrito)"""
+        result = Validators.validate_password("WeakPassword", strict=True)
         assert result.is_valid is False
         assert "um número" in result.errors[0]
     

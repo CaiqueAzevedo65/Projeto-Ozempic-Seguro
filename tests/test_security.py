@@ -92,9 +92,10 @@ class TestInputValidator:
         assert Validators.validate_password("").is_valid is False
         assert Validators.validate_password("123").is_valid is False  # Too short
         assert Validators.validate_password("a" * 129).is_valid is False  # Too long
-        assert Validators.validate_password("password123").is_valid is False  # No uppercase
-        assert Validators.validate_password("PASSWORD123").is_valid is False  # No lowercase
-        assert Validators.validate_password("Password").is_valid is False  # No digit
+        # Testes de modo estrito (requer maiúscula, minúscula e número)
+        assert Validators.validate_password("password123", strict=True).is_valid is False  # No uppercase
+        assert Validators.validate_password("PASSWORD123", strict=True).is_valid is False  # No lowercase
+        assert Validators.validate_password("Password", strict=True).is_valid is False  # No digit
 
     def test_escape_html(self):
         """Testa escape de HTML"""
@@ -106,12 +107,12 @@ class TestInputValidator:
         assert "&lt;/script&gt;" in escaped
 
     def test_is_strong_password(self):
-        """Testa validação de força de senha"""
-        # Senhas fracas (não atendem aos critérios)
-        assert Validators.validate_password("123").is_valid is False
-        assert Validators.validate_password("password").is_valid is False
-        assert Validators.validate_password("12345678").is_valid is False
+        """Testa validação de força de senha (modo estrito)"""
+        # Senhas fracas (não atendem aos critérios estritos)
+        assert Validators.validate_password("123", strict=True).is_valid is False
+        assert Validators.validate_password("password", strict=True).is_valid is False
+        assert Validators.validate_password("12345678", strict=True).is_valid is False
         
         # Senhas fortes (8+ chars, maiúscula, minúscula e números)
-        assert Validators.validate_password("Password123").is_valid is True
-        assert Validators.validate_password("SecurePass2024").is_valid is True
+        assert Validators.validate_password("Password123", strict=True).is_valid is True
+        assert Validators.validate_password("SecurePass2024", strict=True).is_valid is True

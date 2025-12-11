@@ -1,0 +1,122 @@
+[project]
+name = "ozempic-seguro"
+version = "1.3.2"
+description = "Sistema de gerenciamento de gavetas para controle seguro de medicamentos termolábeis"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Caique Azevedo", email = "caiqueazevedo2005@gmail.com"}
+]
+requires-python = ">=3.13"
+keywords = ["medicamentos", "controle", "segurança", "desktop", "customtkinter"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Healthcare Industry",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Desktop Environment",
+]
+
+dependencies = [
+    "customtkinter==5.2.2",
+    "Pillow>=10.3,<12",
+    "bcrypt==4.2.1",
+    "cryptography==44.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.4",
+    "pytest-cov==7.0.0",
+    "pytest-mock==3.15.1",
+    "black==24.10.0",
+    "flake8==7.1.1",
+    "mypy==1.13.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/CaiqueAzevedo65/Projeto-Ozempic-Seguro"
+Repository = "https://github.com/CaiqueAzevedo65/Projeto-Ozempic-Seguro.git"
+
+[project.scripts]
+ozempic-seguro = "ozempic_seguro.main:main"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ["py313"]
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+    | \.venv
+    | __pycache__
+    | \.mypy_cache
+    | build
+    | dist
+)/
+'''
+
+[tool.flake8]
+max-line-length = 100
+exclude = [
+    ".git",
+    "__pycache__",
+    ".venv",
+    "build",
+    "dist",
+]
+ignore = ["E501", "W503"]
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+exclude = [
+    "tests/",
+    "build/",
+    "dist/",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--verbose",
+    "--cov=src/ozempic_seguro",
+    "--cov-report=html:htmlcov",
+    "--cov-report=term-missing",
+    "--cov-fail-under=70",
+    "--tb=short",
+]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow running tests",
+    "ui: UI related tests",
+]
+
+[tool.coverage.run]
+source = ["src/ozempic_seguro"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]

@@ -1,15 +1,44 @@
+"""
+Módulo principal da aplicação Ozempic Seguro.
+
+Inicializa a interface gráfica e configura os componentes do sistema.
+"""
 import customtkinter
 from .controllers.navigation_controller import NavigationController
 from .core.logger import logger
 
 
+def _setup_audit_callback() -> None:
+    """Configura callback de auditoria para SessionManager (evita import circular)"""
+    from .session import SessionManager
+    from .services.audit_service import AuditService
+    
+    audit_service = AuditService()
+    
+    def audit_callback(user_id: int, acao: str, tabela: str, dados: dict) -> None:
+        audit_service.create_log(
+            usuario_id=user_id,
+            acao=acao,
+            tabela_afetada=tabela,
+            dados_anteriores=dados
+        )
+    
+    SessionManager.set_audit_callback(audit_callback)
+
+
 class MainApp(customtkinter.CTk):
     def __init__(self):
         super().__init__()
-        self.title("Ozempic Seguro")
-        self.geometry("1000x600")
-        customtkinter.set_appearance_mode("light")
-        customtkinter.set_default_color_theme("blue")
+        from .config import UIConfig, AppConfig
+        
+        # Configura callback de auditoria
+        _setup_audit_callback()
+        
+        self.title(AppConfig.APP_NAME)
+        self.geometry(f"{UIConfig.WINDOW_WIDTH}x{UIConfig.WINDOW_HEIGHT}")
+        self.minsize(UIConfig.WINDOW_MIN_WIDTH, UIConfig.WINDOW_MIN_HEIGHT)
+        customtkinter.set_appearance_mode(UIConfig.THEME_MODE)
+        customtkinter.set_default_color_theme(UIConfig.THEME_COLOR)
         
         # Container principal para todas as telas
         self.container = customtkinter.CTkFrame(self)

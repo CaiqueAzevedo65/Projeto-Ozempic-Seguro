@@ -5,6 +5,12 @@ import pytest
 from unittest.mock import Mock, patch
 from ozempic_seguro.services.user_service import UserService
 from ozempic_seguro.services.audit_service import AuditService
+from ozempic_seguro.core.exceptions import (
+    InvalidCredentialsError,
+    InvalidUserDataError,
+    LastAdminError,
+    UserNotFoundError,
+)
 
 
 class TestUserService:
@@ -60,12 +66,11 @@ class TestUserService:
         assert result == mock_user
     
     def test_authenticate_user_failure(self, user_service_with_mocks, mock_user_repo):
-        """Testa falha na autenticação"""
+        """Testa falha na autenticação - deve lançar InvalidCredentialsError"""
         mock_user_repo.authenticate_user.return_value = None
         
-        result = user_service_with_mocks.authenticate('invalid', 'wrong')
-        
-        assert result is None
+        with pytest.raises(InvalidCredentialsError):
+            user_service_with_mocks.authenticate('invalid', 'wrong')
     
     def test_create_user_success(self, user_service_with_mocks, mock_user_repo):
         """Testa criação de usuário bem-sucedida"""
@@ -81,15 +86,14 @@ class TestUserService:
         assert result is True
     
     def test_create_user_invalid_input(self, user_service_with_mocks):
-        """Testa falha na criação com dados inválidos"""
-        result, msg = user_service_with_mocks.create_user(
-            nome='',
-            username='u',
-            senha='123',
-            tipo='invalido'
-        )
-        
-        assert result is False
+        """Testa falha na criação com dados inválidos - deve lançar InvalidUserDataError"""
+        with pytest.raises(InvalidUserDataError):
+            user_service_with_mocks.create_user(
+                nome='',
+                username='u',
+                senha='123',
+                tipo='invalido'
+            )
     
     def test_get_all_users(self, user_service_with_mocks, mock_user_repo):
         """Testa listagem de todos os usuários"""
@@ -123,10 +127,9 @@ class TestUserService:
         assert result is True
     
     def test_delete_last_admin_prevented(self, user_service_with_mocks, mock_user_repo):
-        """Testa prevenção de exclusão do último admin"""
+        """Testa prevenção de exclusão do último admin - deve lançar LastAdminError"""
         mock_user_repo.is_unique_admin.return_value = True
         mock_user_repo.get_user_by_id.return_value = {'id': 1, 'tipo': 'administrador'}
         
-        result, msg = user_service_with_mocks.delete_user(1)
-        
-        assert result is False
+        with pytest.raises(LastAdminError):
+            user_service_with_mocks.delete_user(1)

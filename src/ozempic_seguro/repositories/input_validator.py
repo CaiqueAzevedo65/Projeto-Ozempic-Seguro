@@ -1,18 +1,22 @@
 """
-Módulo de validação robusta de entrada para prevenir ataques e garantir integridade dos dados.
+Módulo de validação de entrada - Wrapper para compatibilidade.
 
-Este módulo delega para core.validators para evitar duplicação de código.
-Mantido para compatibilidade com código existente.
+Este módulo delega completamente para core.validators.
+Mantido apenas para compatibilidade com código existente.
+
+NOTA: Para novos desenvolvimentos, use diretamente core.validators.Validators
 """
 from typing import Optional, Dict, Any, Tuple
 
-from ..core.validators import Validators
+from ..core.validators import Validators, ValidationResult
 
 
 class InputValidator:
     """
-    Classe para validação e sanitização de entradas.
-    Delega para core.validators para implementação centralizada.
+    Wrapper de compatibilidade para validação de entradas.
+    Delega todas as operações para core.validators.Validators.
+    
+    Para novos desenvolvimentos, prefira usar Validators diretamente.
     """
     
     @staticmethod
@@ -30,34 +34,40 @@ class InputValidator:
     
     @staticmethod
     def validate_password(password: str) -> Tuple[bool, str]:
-        """
-        Valida senha (validação básica para compatibilidade).
-        Usa regras simplificadas: 4-128 caracteres.
-        """
-        if not password or not isinstance(password, str):
-            return False, "Senha é obrigatória"
-        if len(password) < 4:
-            return False, "Senha deve ter pelo menos 4 caracteres"
-        if len(password) > 128:
-            return False, "Senha não pode ter mais de 128 caracteres"
-        if any(ord(char) < 32 for char in password):
-            return False, "Senha contém caracteres inválidos"
-        return True, ""
+        """Valida senha usando regras centralizadas de SecurityConfig"""
+        result = Validators.validate_password(password, strict=False)
+        if result.is_valid:
+            return True, ""
+        return False, result.errors[0] if result.errors else "Senha inválida"
     
     @staticmethod
-    def validate_name(name: str) -> Tuple[bool, str]:
-        """Valida nome completo (sem exigir sobrenome para compatibilidade)"""
+    def validate_password_strict(password: str) -> Tuple[bool, str]:
+        """Valida senha com regras estritas (maiúscula, minúscula, número)"""
+        result = Validators.validate_password(password, strict=True)
+        if result.is_valid:
+            return True, ""
+        return False, "; ".join(result.errors) if result.errors else "Senha inválida"
+    
+    @staticmethod
+    def validate_name(name: str, require_surname: bool = False) -> Tuple[bool, str]:
+        """Valida nome completo"""
         if not name or not isinstance(name, str):
             return False, "Nome é obrigatório"
+        
         name = name.strip()
+        
         if len(name) < 2:
             return False, "Nome deve ter pelo menos 2 caracteres"
         if len(name) > 100:
             return False, "Nome não pode ter mais de 100 caracteres"
-        # Permite apenas letras, espaços e acentos
+        
         import re
-        if not re.match(r'^[a-zA-ZÀ-ÿ\s]{2,100}$', name):
-            return False, "Nome deve conter apenas letras e espaços"
+        if not re.match(r'^[a-zA-ZÀ-ÿ\s\-\']{2,100}$', name):
+            return False, "Nome deve conter apenas letras, espaços, hífens e apóstrofos"
+        
+        if require_surname and len(name.split()) < 2:
+            return False, "Por favor, informe nome e sobrenome"
+        
         return True, ""
     
     @staticmethod

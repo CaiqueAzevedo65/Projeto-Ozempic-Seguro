@@ -1,26 +1,69 @@
+"""
+Gerenciador de sessão do sistema Ozempic Seguro.
+
+Responsável por controlar sessões de usuário, timeouts e bloqueios.
+"""
 from datetime import datetime, timedelta
 import threading
+from typing import Optional, Dict, Any, Callable
+
 from .config import Config
+from .core.logger import logger
+
 
 class SessionManager:
-    _instance = None
+    """
+    Gerenciador de sessão singleton thread-safe.
     
-    def __new__(cls):
+    Responsabilidades:
+    - Gerenciamento de usuário logado
+    - Controle de timeout de sessão
+    - Controle de bloqueio por tentativas de login
+    - Controle de timer do sistema
+    
+    Uso:
+        session = SessionManager.get_instance()
+        session.set_current_user(user_dict)
+    """
+    _instance: Optional['SessionManager'] = None
+    _lock = threading.Lock()
+    
+    # Callback para auditoria (evita import circular)
+    _audit_callback: Optional[Callable[[int, str, str, Dict], None]] = None
+    
+    def __new__(cls) -> 'SessionManager':
         if cls._instance is None:
-            cls._instance = super(SessionManager, cls).__new__(cls)
-            cls._instance._blocked_until = None
-            cls._instance._current_user = None
-            cls._instance._timer_enabled = True  # Timer ativado por padrão
-            cls._instance._last_activity = None
-            cls._instance._session_timeout = 10  # 10 minutos padrão
-            cls._instance._timeout_timer = None
-            cls._instance._login_attempts = {}
-            cls._instance._max_login_attempts = Config.Security.MAX_LOGIN_ATTEMPTS
-            cls._instance._lockout_duration = Config.Security.LOCKOUT_DURATION_MINUTES
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super(SessionManager, cls).__new__(cls)
+                    cls._instance._initialize()
         return cls._instance
+    
+    def _initialize(self) -> None:
+        """Inicializa atributos da instância"""
+        self._blocked_until: Optional[datetime] = None
+        self._current_user: Optional[Dict[str, Any]] = None
+        self._timer_enabled: bool = True
+        self._last_activity: Optional[datetime] = None
+        self._session_timeout: int = Config.Security.SESSION_TIMEOUT_MINUTES
+        self._timeout_timer: Optional[threading.Timer] = None
+        self._login_attempts: Dict[str, Dict] = {}
+        self._max_login_attempts: int = Config.Security.MAX_LOGIN_ATTEMPTS
+        self._lockout_duration: int = Config.Security.LOCKOUT_DURATION_MINUTES
+    
+    @classmethod
+    def set_audit_callback(cls, callback: Callable[[int, str, str, Dict], None]) -> None:
+        """
+        Define callback para auditoria (evita import circular).
+        
+        Args:
+            callback: Função que recebe (user_id, acao, tabela, dados)
+        """
+        cls._audit_callback = callback
     
     @classmethod
     def get_instance(cls):
+        """Retorna a instância singleton do SessionManager"""
         if cls._instance is None:
             cls._instance = cls()
         return cls._instance
@@ -48,13 +91,14 @@ class SessionManager:
         self.set_current_user(None)
     
     def update_activity(self):
-        """Atualiza o timestamp da última atividade"""
+        """Atualiza o timestamp da última atividade e reinicia timer"""
         if self._current_user:
             self._last_activity = datetime.now()
-            # Reinicia o timer se estiver ativo
-            if self._timeout_timer:
-                self._stop_timeout_timer()
-                self._start_timeout_timer()
+            self._stop_timeout_timer()
+            self._start_timeout_timer()
+    
+    # Alias para compatibilidade
+    update_last_activity = update_activity
     
     def is_admin(self):
         """Verifica se o usuário atual é administrador"""
@@ -157,13 +201,6 @@ class SessionManager:
             return self._current_user['id']
         return None
 
-    def update_last_activity(self):
-        """Atualiza timestamp da última atividade"""
-        if self._current_user:
-            self._last_activity = datetime.now()
-            # Reinicia o timer de timeout
-            self._start_timeout_timer()
-    
     def is_session_expired(self):
         """Verifica se a sessão expirou por inatividade"""
         if not self._current_user or not self._last_activity:
@@ -190,18 +227,24 @@ class SessionManager:
             self._timeout_timer.cancel()
             self._timeout_timer = None
     
-    def _expire_session(self):
+    def _expire_session(self) -> None:
         """Expira a sessão por inatividade"""
         if self._current_user:
-            # Log da expiração da sessão
-            from .services.service_factory import get_audit_service
-            audit_service = get_audit_service()
-            audit_service.create_log(
-                usuario_id=self._current_user.get('id'),
-                acao='SESSAO_EXPIRADA',
-                tabela_afetada='SESSOES',
-                dados_anteriores={'motivo': 'timeout_inatividade'}
-            )
+            user_id = self._current_user.get('id')
+            
+            # Log via callback (evita import circular)
+            if self._audit_callback:
+                try:
+                    self._audit_callback(
+                        user_id,
+                        'SESSAO_EXPIRADA',
+                        'SESSOES',
+                        {'motivo': 'timeout_inatividade'}
+                    )
+                except Exception as e:
+                    logger.error(f"Error logging session expiration: {e}")
+            
+            logger.info(f"Session expired for user {user_id}")
             
             # Limpa a sessão
             self._current_user = None
@@ -333,62 +376,41 @@ class SessionManager:
             'remaining_attempts': remaining_attempts
         }
     
-    def increment_login_attempts(self, username):
-        """Incrementa tentativas de login (alias para record_login_attempt)"""
-        self.record_login_attempt(username, success=False)
-    
     def reset_login_attempts(self, username):
-        """Reseta tentativas de login"""
+        """Reseta tentativas de login de um usuário"""
         if username in self._login_attempts:
             self._login_attempts[username] = {
                 'count': 0,
-                'first_attempt': None,
+                'last_attempt': None,
                 'locked_until': None
             }
+    
+    # Aliases para compatibilidade com código existente
+    def increment_login_attempts(self, username):
+        """Alias para record_login_attempt(success=False) - mantido para compatibilidade"""
+        self.record_login_attempt(username, success=False)
     
     def is_user_blocked(self, username):
-        """Verifica se usuário está bloqueado (alias para is_user_locked)"""
+        """Alias para is_user_locked - mantido para compatibilidade"""
         return self.is_user_locked(username)
     
-    def is_user_blocked_by_time(self, username):
-        """Verifica se usuário está bloqueado por tempo"""
-        if username not in self._login_attempts:
-            return False
-        
-        attempt_data = self._login_attempts[username]
-        if attempt_data['locked_until'] is None:
-            return False
-        
-        return datetime.now() < attempt_data['locked_until']
+    is_user_blocked_by_time = is_user_blocked
     
-    def block_user(self, username):
-        """Bloqueia usuário por tempo determinado"""
-        if username not in self._login_attempts:
-            self._login_attempts[username] = {
-                'count': 0,
-                'first_attempt': None,
-                'locked_until': None
-            }
-        
-        self._login_attempts[username]['locked_until'] = datetime.now() + timedelta(minutes=self._lockout_duration)
-    
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Limpa a sessão e para timers"""
-        # Para o timer de timeout
         self._stop_timeout_timer()
         
-        # Registra logout se houver usuário
-        if self._current_user:
+        # Log via callback se houver usuário
+        if self._current_user and self._audit_callback:
             try:
-                from .services.service_factory import get_audit_service
-                audit_service = get_audit_service()
-                audit_service.log_action(
-                    user_id=self._current_user.get('id'),
-                    action='SESSION_CLEANUP',
-                    details='Sessão encerrada via cleanup'
+                self._audit_callback(
+                    self._current_user.get('id'),
+                    'SESSION_CLEANUP',
+                    'SESSOES',
+                    {'details': 'Sessão encerrada via cleanup'}
                 )
-            except Exception:
-                pass  # Serviço de auditoria pode não estar disponível
+            except Exception as e:
+                logger.debug(f"Could not log cleanup: {e}")
         
         # Limpa dados da sessão
         self._current_user = None

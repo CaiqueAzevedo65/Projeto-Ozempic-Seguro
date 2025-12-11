@@ -63,22 +63,68 @@ class UIConfig:
     """Configurações da interface do usuário"""
     
     # Configurações de tema
-    THEME_MODE = "dark"
+    THEME_MODE = "light"
     THEME_COLOR = "blue"
     
     # Configurações de janela
-    WINDOW_WIDTH = 1200
-    WINDOW_HEIGHT = 800
+    WINDOW_WIDTH = 1000
+    WINDOW_HEIGHT = 600
     WINDOW_MIN_WIDTH = 800
     WINDOW_MIN_HEIGHT = 600
     
     # Configurações de fonte
     FONT_SIZE = 12
-    FONT_FAMILY = "Segoe UI"
+    FONT_FAMILY = "Arial"
+    FONT_SIZE_SMALL = 11
+    FONT_SIZE_NORMAL = 12
+    FONT_SIZE_MEDIUM = 13
+    FONT_SIZE_LARGE = 14
+    FONT_SIZE_TITLE = 16
+    FONT_SIZE_HEADER = 24
     
     # Configurações de layout
     SIDEBAR_WIDTH = 250
     CONTENT_PADDING = 20
+    
+    # Cores principais
+    PRIMARY_BG_COLOR = "#3B6A7D"
+    SECONDARY_BG_COLOR = "#2C5364"
+    WHITE = "#FFFFFF"
+    
+    # Cores de status
+    SUCCESS_COLOR = "#28A745"
+    SUCCESS_BG = "#E8F5E9"
+    SUCCESS_TEXT = "#2E7D32"
+    
+    WARNING_COLOR = "#FFC107"
+    WARNING_BG = "#FFF3CD"
+    WARNING_TEXT = "#856404"
+    
+    ERROR_COLOR = "#DC3545"
+    ERROR_BG = "#FFEBEE"
+    ERROR_TEXT = "#C62828"
+    
+    INFO_COLOR = "#2E86C1"
+    
+    # Cores de texto
+    TEXT_PRIMARY = "#333333"
+    TEXT_SECONDARY = "#666666"
+    TEXT_LIGHT = "#999999"
+    
+    # Cores de borda
+    BORDER_COLOR = "#E0E0E0"
+    BORDER_LIGHT = "#CCCCCC"
+    
+    # Configurações de toast
+    TOAST_START_X = 1.3
+    TOAST_END_X = 0.98
+    TOAST_Y = 0.02
+    TOAST_ANIMATION_STEP = 0.04
+    TOAST_ANIMATION_INTERVAL = 15  # ms
+    TOAST_DEFAULT_DURATION = 3000  # ms
+    
+    # Configurações de transição
+    TRANSITION_OVERLAY_COLOR = "#3B6A7D"
 
 
 class LoggingConfig:
@@ -104,7 +150,7 @@ class AppConfig:
     
     # Informações da aplicação
     APP_NAME = "Ozempic Seguro"
-    APP_VERSION = "1.2.0"
+    APP_VERSION = "1.3.2"
     APP_AUTHOR = "Caique Azevedo"
     
     # Configurações de sistema
@@ -216,54 +262,3 @@ class EnvironmentConfig:
             }
 
 
-class UIConfig:
-    """Constantes de interface do usuário"""
-    
-    # Cores principais
-    PRIMARY_BG_COLOR = "#3B6A7D"
-    SECONDARY_BG_COLOR = "#2C5364"
-    WHITE = "#FFFFFF"
-    
-    # Cores de status
-    SUCCESS_COLOR = "#28A745"
-    SUCCESS_BG = "#E8F5E9"
-    SUCCESS_TEXT = "#2E7D32"
-    
-    WARNING_COLOR = "#FFC107"
-    WARNING_BG = "#FFF3CD"
-    WARNING_TEXT = "#856404"
-    
-    ERROR_COLOR = "#DC3545"
-    ERROR_BG = "#FFEBEE"
-    ERROR_TEXT = "#C62828"
-    
-    INFO_COLOR = "#2E86C1"
-    
-    # Cores de texto
-    TEXT_PRIMARY = "#333333"
-    TEXT_SECONDARY = "#666666"
-    TEXT_LIGHT = "#999999"
-    
-    # Cores de borda
-    BORDER_COLOR = "#E0E0E0"
-    BORDER_LIGHT = "#CCCCCC"
-    
-    # Configurações de toast
-    TOAST_START_X = 1.3
-    TOAST_END_X = 0.98
-    TOAST_Y = 0.02
-    TOAST_ANIMATION_STEP = 0.04
-    TOAST_ANIMATION_INTERVAL = 15  # ms
-    TOAST_DEFAULT_DURATION = 3000  # ms
-    
-    # Configurações de transição
-    TRANSITION_OVERLAY_COLOR = PRIMARY_BG_COLOR
-    
-    # Fontes
-    FONT_FAMILY = "Arial"
-    FONT_SIZE_SMALL = 11
-    FONT_SIZE_NORMAL = 12
-    FONT_SIZE_MEDIUM = 13
-    FONT_SIZE_LARGE = 14
-    FONT_SIZE_TITLE = 16
-    FONT_SIZE_HEADER = 24

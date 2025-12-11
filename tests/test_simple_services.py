@@ -28,16 +28,14 @@ class TestSimpleServices:
         from ozempic_seguro.session import SessionManager
         assert SessionManager is not None
     
-    @patch('ozempic_seguro.repositories.database.DatabaseManager._get_db_path')
-    def test_database_manager_singleton(self, mock_path):
+    def test_database_manager_singleton(self):
         """Testa padrão singleton do DatabaseManager"""
         from ozempic_seguro.repositories.database import DatabaseManager
+        from ozempic_seguro.repositories.connection import DatabaseConnection
         
-        # Reset singleton
+        # Reset singletons
         DatabaseManager._instance = None
-        
-        # Mock path para evitar criação de banco real
-        mock_path.return_value = ':memory:'
+        DatabaseConnection._instance = None
         
         db1 = DatabaseManager()
         db2 = DatabaseManager()
@@ -51,6 +49,7 @@ class TestSimpleServices:
             except:
                 pass
         DatabaseManager._instance = None
+        DatabaseConnection._instance = None
     
     def test_validators_import(self):
         """Testa importação dos Validators"""

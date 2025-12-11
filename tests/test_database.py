@@ -1,3 +1,8 @@
+"""
+Testes para DatabaseManager e DatabaseConnection.
+
+Testa a camada de persistência usando banco SQLite.
+"""
 import pytest
 import tempfile
 import os
@@ -12,28 +17,30 @@ class TestDatabaseManager:
     @pytest.fixture(autouse=True)
     def reset_singleton(self):
         """Reset do singleton antes e depois de cada teste"""
-        # Importa aqui para evitar problemas de importação circular
         from ozempic_seguro.repositories.database import DatabaseManager
+        from ozempic_seguro.repositories.connection import DatabaseConnection
         
         # Limpa antes
-        if hasattr(DatabaseManager, '_instance'):
-            if DatabaseManager._instance and hasattr(DatabaseManager._instance, 'conn'):
-                try:
-                    DatabaseManager._instance.conn.close()
-                except:
-                    pass
-            DatabaseManager._instance = None
+        for cls in [DatabaseManager, DatabaseConnection]:
+            if hasattr(cls, '_instance'):
+                if cls._instance and hasattr(cls._instance, 'conn'):
+                    try:
+                        cls._instance.conn.close()
+                    except:
+                        pass
+                cls._instance = None
         
         yield
         
         # Limpa depois
-        if hasattr(DatabaseManager, '_instance'):
-            if DatabaseManager._instance and hasattr(DatabaseManager._instance, 'conn'):
-                try:
-                    DatabaseManager._instance.conn.close()
-                except:
-                    pass
-            DatabaseManager._instance = None
+        for cls in [DatabaseManager, DatabaseConnection]:
+            if hasattr(cls, '_instance'):
+                if cls._instance and hasattr(cls._instance, 'conn'):
+                    try:
+                        cls._instance.conn.close()
+                    except:
+                        pass
+                cls._instance = None
 
     def test_singleton_pattern(self):
         """Testa se DatabaseManager é singleton"""
@@ -46,17 +53,14 @@ class TestDatabaseManager:
 
     def test_create_tables(self):
         """Testa criação de tabelas no banco através da inicialização"""
-        from ozempic_seguro.repositories.database import DatabaseManager
+        from ozempic_seguro.repositories.connection import DatabaseConnection
         
         with tempfile.TemporaryDirectory() as temp_dir:
             db_path = os.path.join(temp_dir, 'test.db')
             
-            with patch('ozempic_seguro.repositories.database.DatabaseManager._get_db_path') as mock_path:
-                mock_path.return_value = db_path
-                
+            with patch.object(DatabaseConnection, '_get_db_path', return_value=db_path):
                 try:
-                    # A inicialização já cria as tabelas via migrations
-                    db = DatabaseManager()
+                    db = DatabaseConnection.get_instance()
                     
                     # Verificar se tabelas foram criadas
                     db.cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
@@ -67,24 +71,23 @@ class TestDatabaseManager:
                     assert 'gavetas' in table_names
                     assert 'historico_gavetas' in table_names
                 finally:
-                    # Fechar conexão para evitar lock no Windows
-                    if hasattr(db, 'conn'):
-                        db.conn.close()
-                    DatabaseManager._instance = None
+                    if hasattr(db, '_conn'):
+                        db._conn.close()
+                    DatabaseConnection._instance = None
 
     def test_execute_query_success(self):
         """Testa execução de query com sucesso"""
         from ozempic_seguro.repositories.database import DatabaseManager
+        from ozempic_seguro.repositories.connection import DatabaseConnection
         
-        # Reset singleton para evitar conflitos
+        # Reset singletons
         DatabaseManager._instance = None
+        DatabaseConnection._instance = None
         
         with tempfile.TemporaryDirectory() as temp_dir:
             db_path = os.path.join(temp_dir, 'test.db')
             
-            with patch('ozempic_seguro.repositories.database.DatabaseManager._get_db_path') as mock_path:
-                mock_path.return_value = db_path
-                
+            with patch.object(DatabaseConnection, '_get_db_path', return_value=db_path):
                 try:
                     db = DatabaseManager()
                     
@@ -99,21 +102,23 @@ class TestDatabaseManager:
                     assert result is True
                     
                 finally:
-                    # Fechar conexão para evitar lock
                     if hasattr(db, 'conn'):
                         db.conn.close()
                     DatabaseManager._instance = None
+                    DatabaseConnection._instance = None
 
     def test_fetch_one(self):
         """Testa busca de um registro"""
         from ozempic_seguro.repositories.database import DatabaseManager
+        from ozempic_seguro.repositories.connection import DatabaseConnection
+        
+        DatabaseManager._instance = None
+        DatabaseConnection._instance = None
         
         with tempfile.TemporaryDirectory() as temp_dir:
             db_path = os.path.join(temp_dir, 'test.db')
             
-            with patch('ozempic_seguro.repositories.database.DatabaseManager._get_db_path') as mock_path:
-                mock_path.return_value = db_path
-                
+            with patch.object(DatabaseConnection, '_get_db_path', return_value=db_path):
                 try:
                     db = DatabaseManager()
                     
@@ -134,17 +139,20 @@ class TestDatabaseManager:
                     if hasattr(db, 'conn'):
                         db.conn.close()
                     DatabaseManager._instance = None
+                    DatabaseConnection._instance = None
 
     def test_fetch_all(self):
         """Testa busca de múltiplos registros"""
         from ozempic_seguro.repositories.database import DatabaseManager
+        from ozempic_seguro.repositories.connection import DatabaseConnection
+        
+        DatabaseManager._instance = None
+        DatabaseConnection._instance = None
         
         with tempfile.TemporaryDirectory() as temp_dir:
             db_path = os.path.join(temp_dir, 'test.db')
             
-            with patch('ozempic_seguro.repositories.database.DatabaseManager._get_db_path') as mock_path:
-                mock_path.return_value = db_path
-                
+            with patch.object(DatabaseConnection, '_get_db_path', return_value=db_path):
                 try:
                     db = DatabaseManager()
                     
@@ -168,17 +176,20 @@ class TestDatabaseManager:
                     if hasattr(db, 'conn'):
                         db.conn.close()
                     DatabaseManager._instance = None
+                    DatabaseConnection._instance = None
 
     def test_transaction_rollback(self):
         """Testa rollback de transação em caso de erro"""
         from ozempic_seguro.repositories.database import DatabaseManager
+        from ozempic_seguro.repositories.connection import DatabaseConnection
+        
+        DatabaseManager._instance = None
+        DatabaseConnection._instance = None
         
         with tempfile.TemporaryDirectory() as temp_dir:
             db_path = os.path.join(temp_dir, 'test.db')
             
-            with patch('ozempic_seguro.repositories.database.DatabaseManager._get_db_path') as mock_path:
-                mock_path.return_value = db_path
-                
+            with patch.object(DatabaseConnection, '_get_db_path', return_value=db_path):
                 try:
                     db = DatabaseManager()
                     
@@ -198,3 +209,4 @@ class TestDatabaseManager:
                     if hasattr(db, 'conn'):
                         db.conn.close()
                     DatabaseManager._instance = None
+                    DatabaseConnection._instance = None
