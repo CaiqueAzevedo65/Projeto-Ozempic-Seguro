@@ -10,6 +10,39 @@ from ..gaveta_state_manager import GavetaStateManager
 from ...session import SessionManager
 
 
+# Cache global de imagens de gavetas
+class _GavetaImageCache:
+    _gaveta_aberta = None
+    _gaveta_fechada = None
+    _assets_path = None
+    
+    @classmethod
+    def _get_assets_path(cls):
+        if cls._assets_path is None:
+            cls._assets_path = os.path.abspath(os.path.join(
+                os.path.dirname(__file__), "..", "..", "assets"
+            ))
+        return cls._assets_path
+    
+    @classmethod
+    def get_gaveta_aberta(cls):
+        if cls._gaveta_aberta is None:
+            cls._gaveta_aberta = customtkinter.CTkImage(
+                Image.open(os.path.join(cls._get_assets_path(), "gaveta.png")),
+                size=(120, 120)
+            )
+        return cls._gaveta_aberta
+    
+    @classmethod
+    def get_gaveta_fechada(cls):
+        if cls._gaveta_fechada is None:
+            cls._gaveta_fechada = customtkinter.CTkImage(
+                Image.open(os.path.join(cls._get_assets_path(), "gaveta_black.png")),
+                size=(120, 120)
+            )
+        return cls._gaveta_fechada
+
+
 class GavetaButton:
     """Componente de botão de gaveta para a grade"""
     
@@ -20,19 +53,9 @@ class GavetaButton:
         self.state_manager = GavetaStateManager.get_instance()
         self.tipo_usuario = tipo_usuario
         
-        # Carregar imagens
-        assets_path = os.path.abspath(os.path.join(
-            os.path.dirname(__file__), "..", "..", "assets"
-        ))
-        
-        self.gaveta_aberta = customtkinter.CTkImage(
-            Image.open(os.path.join(assets_path, "gaveta.png")),
-            size=(120, 120)
-        )
-        self.gaveta_fechada = customtkinter.CTkImage(
-            Image.open(os.path.join(assets_path, "gaveta_black.png")),
-            size=(120, 120)
-        )
+        # Usar cache de imagens (muito mais rápido)
+        self.gaveta_aberta = _GavetaImageCache.get_gaveta_aberta()
+        self.gaveta_fechada = _GavetaImageCache.get_gaveta_fechada()
 
         self.btn_gaveta = customtkinter.CTkButton(
             self.frame,

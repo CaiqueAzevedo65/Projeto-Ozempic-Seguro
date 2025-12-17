@@ -3,13 +3,15 @@ Repositório de gavetas: manipulação de estado e histórico.
 
 Implementa IGavetaRepository com lógica de persistência para gavetas.
 """
-from typing import Optional, List, Tuple, Any
+import sqlite3
+from typing import Optional, List, Tuple, Any, Dict
 
 from .connection import DatabaseConnection
+from .interfaces import IGavetaRepository
 from ..core.logger import logger
 
 
-class GavetaRepository:
+class GavetaRepository(IGavetaRepository):
     """
     Repositório para operações de gavetas no banco de dados.
     
@@ -108,8 +110,8 @@ class GavetaRepository:
             self._db.commit()
             return True, f"Gaveta {numero_gaveta} {acao or 'sem alteração'}"
             
-        except Exception as e:
-            logger.error(f"Error setting drawer state: {e}")
+        except sqlite3.Error as e:
+            logger.error(f"Database error setting drawer state: {e}")
             self._db.rollback()
             return False, f"Erro ao atualizar gaveta: {str(e)}"
 
@@ -227,3 +229,92 @@ class GavetaRepository:
         """
         self._db.execute('SELECT COUNT(*) FROM historico_gavetas')
         return self._db.fetchone()[0]
+
+    # Métodos da interface IRepository
+    def find_by_id(self, entity_id: int) -> Optional[Dict[str, Any]]:
+        """Implementação de IRepository.find_by_id"""
+        self._db.execute('SELECT id, numero_gaveta, esta_aberta FROM gavetas WHERE id = ?', (entity_id,))
+        row = self._db.fetchone()
+        if row:
+            return {'id': row[0], 'numero_gaveta': row[1], 'esta_aberta': bool(row[2])}
+        return None
+    
+    def find_all(self) -> List[Dict[str, Any]]:
+        """Implementação de IRepository.find_all"""
+        self._db.execute('SELECT id, numero_gaveta, esta_aberta FROM gavetas ORDER BY numero_gaveta')
+        return [
+            {'id': r[0], 'numero_gaveta': r[1], 'esta_aberta': bool(r[2])}
+            for r in self._db.fetchall()
+        ]
+    
+    def save(self, entity: Dict[str, Any]) -> bool:
+        """Implementação de IRepository.save"""
+        if 'id' in entity and entity['id']:
+            self._db.execute(
+                'UPDATE gavetas SET esta_aberta = ? WHERE id = ?',
+                (entity.get('esta_aberta', False), entity['id'])
+            )
+        else:
+            self._db.execute(
+                'INSERT INTO gavetas (numero_gaveta, esta_aberta) VALUES (?, ?)',
+                (entity.get('numero_gaveta', 0), entity.get('esta_aberta', False))
+            )
+        self._db.commit()
+        return True
+    
+    def delete(self, entity_id: int) -> bool:
+        """Implementação de IRepository.delete"""
+        self._db.execute('DELETE FROM gavetas WHERE id = ?', (entity_id,))
+        self._db.commit()
+        return self._db.cursor.rowcount > 0
+    
+    def exists(self, entity_id: int) -> bool:
+        """Implementação de IRepository.exists"""
+        return self.find_by_id(entity_id) is not None
+
+    # Métodos da interface IGavetaRepository
+    def find_by_numero(self, numero: int) -> Optional[Dict[str, Any]]:
+        """Implementação de IGavetaRepository.find_by_numero"""
+        self._db.execute('SELECT id, numero_gaveta, esta_aberta FROM gavetas WHERE numero_gaveta = ?', (numero,))
+        row = self._db.fetchone()
+        if row:
+            return {'id': row[0], 'numero_gaveta': row[1], 'esta_aberta': bool(row[2])}
+        return None
+    
+    def find_by_status(self, status: str) -> List[Dict[str, Any]]:
+        """Implementação de IGavetaRepository.find_by_status"""
+        is_open = status.lower() in ('aberta', 'open', 'true', '1')
+        self._db.execute('SELECT id, numero_gaveta, esta_aberta FROM gavetas WHERE esta_aberta = ?', (is_open,))
+        return [
+            {'id': r[0], 'numero_gaveta': r[1], 'esta_aberta': bool(r[2])}
+            for r in self._db.fetchall()
+        ]
+    
+    def find_by_user(self, user_id: int) -> List[Dict[str, Any]]:
+        """Implementação de IGavetaRepository.find_by_user"""
+        self._db.execute('''
+            SELECT DISTINCT g.id, g.numero_gaveta, g.esta_aberta 
+            FROM gavetas g
+            JOIN historico_gavetas h ON g.id = h.gaveta_id
+            WHERE h.usuario_id = ?
+        ''', (user_id,))
+        return [
+            {'id': r[0], 'numero_gaveta': r[1], 'esta_aberta': bool(r[2])}
+            for r in self._db.fetchall()
+        ]
+    
+    def update_status(self, gaveta_id: int, status: str) -> bool:
+        """Implementação de IGavetaRepository.update_status"""
+        is_open = status.lower() in ('aberta', 'open', 'true', '1')
+        self._db.execute('UPDATE gavetas SET esta_aberta = ? WHERE id = ?', (is_open, gaveta_id))
+        self._db.commit()
+        return self._db.cursor.rowcount > 0
+    
+    def assign_to_user(self, gaveta_id: int, user_id: int) -> bool:
+        """Implementação de IGavetaRepository.assign_to_user - Registra no histórico"""
+        self._db.execute(
+            'INSERT INTO historico_gavetas (gaveta_id, acao, usuario_id) VALUES (?, ?, ?)',
+            (gaveta_id, 'atribuida', user_id)
+        )
+        self._db.commit()
+        return True

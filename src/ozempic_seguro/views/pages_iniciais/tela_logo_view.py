@@ -2,17 +2,41 @@ import customtkinter
 from PIL import Image
 import os
 
+# Cache de imagem para evitar recarregamento
+_logo_img_cache = None
+
+def _get_logo_image():
+    global _logo_img_cache
+    if _logo_img_cache is None:
+        img_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "assets", "logo.jpg"))
+        _logo_img_cache = customtkinter.CTkImage(Image.open(img_path), size=(300, 300))
+    return _logo_img_cache
+
+
 class TelaLogoFrame(customtkinter.CTkFrame):
     def __init__(self, master, on_click_callback, *args, **kwargs):
         super().__init__(master, fg_color="white", *args, **kwargs)
-        self.pack(fill="both", expand=True)
-        self.label = customtkinter.CTkLabel(self, text="TOQUE NA TELA PARA COMEÇAR", font=("Arial", 32, "bold"), text_color="black")
+        
+        self.on_click = on_click_callback
+        
+        self.label = customtkinter.CTkLabel(
+            self, 
+            text="TOQUE NA TELA PARA COMEÇAR", 
+            font=("Arial", 32, "bold"), 
+            text_color="black"
+        )
         self.label.pack(pady=40)
-        # Mostra a imagem do logo
-        img_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "assets", "logo.jpg"))  # ajuste o caminho se necessário
-        self.img = customtkinter.CTkImage(Image.open(img_path), size=(300, 300))
+        
+        # Usar imagem do cache
+        self.img = _get_logo_image()
         self.img_label = customtkinter.CTkLabel(self, image=self.img, text="")
         self.img_label.pack(pady=20)
-        self.bind("<Button-1>", lambda e: on_click_callback())
-        self.label.bind("<Button-1>", lambda e: on_click_callback())
-        self.img_label.bind("<Button-1>", lambda e: on_click_callback()) 
+        
+        # Bind para clique
+        self.bind("<Button-1>", self._on_click)
+        self.label.bind("<Button-1>", self._on_click)
+        self.img_label.bind("<Button-1>", self._on_click)
+    
+    def _on_click(self, event=None):
+        if self.on_click:
+            self.on_click()

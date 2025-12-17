@@ -1,18 +1,30 @@
 import customtkinter
 from ..components import Header, VoltarButton
-from ..gaveta_state_manager import GavetaStateManager
+from ...services.drawer_service import get_drawer_service
 
 class HistoricoView(customtkinter.CTkFrame):
+    BG_COLOR = "#3B6A7D"
+    
     def __init__(self, master, voltar_callback=None, tipo_usuario="administrador", **kwargs):
-        super().__init__(master, fg_color="#3B6A7D", **kwargs)
+        super().__init__(master, fg_color=self.BG_COLOR, **kwargs)
         self.voltar_callback = voltar_callback
         self.tipo_usuario = tipo_usuario
-        self.state_manager = GavetaStateManager.get_instance()
+        self.drawer_service = get_drawer_service()
         self.current_page = 1
         self.items_per_page = 20
         
+        # Criar overlay para esconder construção
+        self._overlay = customtkinter.CTkFrame(master, fg_color=self.BG_COLOR)
+        self._overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self._overlay.lift()
+        master.update_idletasks()
+        
         self.pack(fill="both", expand=True)
         self.criar_interface()
+        
+        # Remover overlay após tudo estar pronto
+        self.update_idletasks()
+        self._overlay.destroy()
     
     def criar_interface(self):
         # Cabeçalho
@@ -126,21 +138,23 @@ class HistoricoView(customtkinter.CTkFrame):
             # Calcula o offset com base na página atual
             offset = (self.current_page - 1) * self.items_per_page
             
-            # Obtém os dados paginados
-            historico = self.state_manager.get_todo_historico_paginado(offset, self.items_per_page)
-            total_itens = self.state_manager.get_total_todo_historico()
+            # Obtém os dados paginados usando DrawerService
+            result = self.drawer_service.get_all_history(
+                page=self.current_page,
+                per_page=self.items_per_page
+            )
             
             # Atualiza controles de paginação
-            self.atualizar_controles_paginacao(total_itens)
+            self.atualizar_controles_paginacao(result.total)
             
             # Adicionar itens
-            for idx, (data_hora, gaveta_id, acao, usuario) in enumerate(historico):
+            for idx, item in enumerate(result.items):
                 self.adicionar_linha(
                     scrollable_frame,
-                    data_hora,
-                    gaveta_id,
-                    acao,
-                    usuario,
+                    item.data_hora,
+                    item.gaveta_id,
+                    item.acao,
+                    item.usuario,
                     idx % 2 == 0  # Alternar cor de fundo
                 )
         except Exception as e:

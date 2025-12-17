@@ -8,11 +8,12 @@ from typing import Optional, List, Dict, Any
 import sqlite3
 
 from .connection import DatabaseConnection
+from .interfaces import IUserRepository
 from .security import hash_password, verify_password
 from ..core.logger import logger
 
 
-class UserRepository:
+class UserRepository(IUserRepository):
     """
     Repositório para operações de usuários no banco de dados.
     
@@ -99,8 +100,8 @@ class UserRepository:
         except sqlite3.IntegrityError:
             logger.warning(f"Username already exists: {username}")
             return None
-        except Exception as e:
-            logger.error(f"Error creating user: {e}")
+        except sqlite3.Error as e:
+            logger.error(f"Database error creating user: {e}")
             self._db.rollback()
             return None
 
@@ -259,3 +260,74 @@ class UserRepository:
                 'ativo': row[4]
             }
         return None
+
+    # Métodos da interface IRepository
+    def find_by_id(self, entity_id: int) -> Optional[Dict[str, Any]]:
+        """Implementação de IRepository.find_by_id"""
+        return self.get_user_by_id(entity_id)
+    
+    def find_all(self) -> List[Dict[str, Any]]:
+        """Implementação de IRepository.find_all"""
+        users = self.get_users()
+        return [
+            {'id': u[0], 'username': u[1], 'nome_completo': u[2], 'tipo': u[3], 'ativo': u[4], 'data_criacao': u[5]}
+            for u in users
+        ]
+    
+    def save(self, entity: Dict[str, Any]) -> bool:
+        """Implementação de IRepository.save"""
+        if 'id' in entity and entity['id']:
+            # Update
+            return self.update_password(entity['id'], entity.get('senha', '')) if 'senha' in entity else True
+        else:
+            # Create
+            result = self.create_user(
+                entity.get('username', ''),
+                entity.get('senha', ''),
+                entity.get('nome_completo', ''),
+                entity.get('tipo', 'vendedor')
+            )
+            return result is not None
+    
+    def delete(self, entity_id: int) -> bool:
+        """Implementação de IRepository.delete"""
+        return self.delete_user(entity_id)
+    
+    def exists(self, entity_id: int) -> bool:
+        """Implementação de IRepository.exists"""
+        return self.get_user_by_id(entity_id) is not None
+
+    # Métodos da interface IUserRepository
+    def find_by_username(self, username: str) -> Optional[Dict[str, Any]]:
+        """Implementação de IUserRepository.find_by_username"""
+        return self.get_user_by_username(username)
+    
+    def find_by_type(self, user_type: str) -> List[Dict[str, Any]]:
+        """Implementação de IUserRepository.find_by_type"""
+        self._db.execute(
+            'SELECT id, username, nome_completo, tipo, ativo FROM usuarios WHERE tipo = ?',
+            (user_type,)
+        )
+        return [
+            {'id': r[0], 'username': r[1], 'nome_completo': r[2], 'tipo': r[3], 'ativo': r[4]}
+            for r in self._db.fetchall()
+        ]
+    
+    def find_active_users(self) -> List[Dict[str, Any]]:
+        """Implementação de IUserRepository.find_active_users"""
+        self._db.execute(
+            'SELECT id, username, nome_completo, tipo, ativo FROM usuarios WHERE ativo = 1'
+        )
+        return [
+            {'id': r[0], 'username': r[1], 'nome_completo': r[2], 'tipo': r[3], 'ativo': r[4]}
+            for r in self._db.fetchall()
+        ]
+    
+    def update_status(self, user_id: int, active: bool) -> bool:
+        """Implementação de IUserRepository.update_status"""
+        self._db.execute(
+            'UPDATE usuarios SET ativo = ? WHERE id = ?',
+            (1 if active else 0, user_id)
+        )
+        self._db.commit()
+        return self._db.cursor.rowcount > 0

@@ -7,6 +7,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 from ozempic_seguro.repositories.database import DatabaseManager
+from ozempic_seguro.repositories.user_repository import UserRepository
 from ozempic_seguro.repositories.security import verify_password
 from ozempic_seguro.session import SessionManager
 
@@ -35,9 +36,10 @@ def test_login():
     senha_correta = verify_password("1234", user[2])
     print(f"   - Senha '1234' está {'✓ CORRETA' if senha_correta else '✗ INCORRETA'}")
     
-    # Teste 3: Testar método autenticar_usuario
-    print("\n3. Testando método autenticar_usuario...")
-    result = db.autenticar_usuario("00", "1234")
+    # Teste 3: Testar método authenticate_user do UserRepository
+    print("\n3. Testando método authenticate_user...")
+    user_repo = UserRepository()
+    result = user_repo.authenticate_user("00", "1234")
     if result:
         print(f"   ✓ Autenticação bem-sucedida!")
         print(f"   - Usuário: {result['username']}")
@@ -48,8 +50,9 @@ def test_login():
     # Teste 4: Verificar SessionManager
     print("\n4. Verificando SessionManager...")
     session = SessionManager.get_instance()
-    print(f"   - MAX_LOGIN_ATTEMPTS: {session._max_login_attempts}")
-    print(f"   - LOCKOUT_DURATION: {session._lockout_duration} minutos")
+    from ozempic_seguro.config import Config
+    print(f"   - MAX_LOGIN_ATTEMPTS: {Config.Security.MAX_LOGIN_ATTEMPTS}")
+    print(f"   - LOCKOUT_DURATION: {Config.Security.LOCKOUT_DURATION_MINUTES} minutos")
     
     # Teste 5: Simular tentativas
     print("\n5. Simulando tentativas de login...")

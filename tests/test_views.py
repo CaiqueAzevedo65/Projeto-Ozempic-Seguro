@@ -49,9 +49,10 @@ class TestComponentsView:
 class TestNavigationController:
     """Testes para NavigationController"""
     
+    @patch('ozempic_seguro.controllers.navigation_controller.customtkinter.CTkFrame')
     @patch('ozempic_seguro.controllers.navigation_controller.TelaToqueFrame')
     @patch('ozempic_seguro.controllers.navigation_controller.TelaLogoFrame')
-    def test_navigation_controller_init(self, mock_logo, mock_toque):
+    def test_navigation_controller_init(self, mock_logo, mock_toque, mock_ctk_frame):
         """Testa inicialização do NavigationController"""
         from ozempic_seguro.controllers.navigation_controller import NavigationController
         
@@ -65,7 +66,8 @@ class TestNavigationController:
         assert controller.frames == {}
         assert controller.current_frame is None
     
-    def test_show_frame(self):
+    @patch('ozempic_seguro.controllers.navigation_controller.customtkinter.CTkFrame')
+    def test_show_frame(self, mock_ctk_frame):
         """Testa exibição de frame"""
         from ozempic_seguro.controllers.navigation_controller import NavigationController
         
@@ -81,10 +83,10 @@ class TestNavigationController:
         
         controller.show_frame('test')
         
-        mock_frame.pack.assert_called_once()
         assert controller.current_frame == mock_frame
     
-    def test_cleanup(self):
+    @patch('ozempic_seguro.controllers.navigation_controller.customtkinter.CTkFrame')
+    def test_cleanup(self, mock_ctk_frame):
         """Testa cleanup do controller"""
         from ozempic_seguro.controllers.navigation_controller import NavigationController
         

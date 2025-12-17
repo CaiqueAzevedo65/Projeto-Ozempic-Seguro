@@ -25,9 +25,14 @@ class DatabaseConnection:
         conn = DatabaseConnection.get_instance()
         cursor = conn.cursor
         cursor.execute("SELECT * FROM usuarios")
+    
+    Context Manager:
+        with DatabaseConnection.get_instance() as conn:
+            conn.execute("SELECT * FROM usuarios")
     """
     _instance: Optional['DatabaseConnection'] = None
     _lock = threading.Lock()
+    _initialized: bool = False
     
     def __new__(cls) -> 'DatabaseConnection':
         if cls._instance is None:
@@ -172,6 +177,41 @@ class DatabaseConnection:
     
     def close(self) -> None:
         """Fecha conexão"""
-        if self._conn:
-            self._conn.close()
-            logger.info("Database connection closed")
+        if hasattr(self, '_conn') and self._conn:
+            try:
+                self._conn.close()
+                logger.info("Database connection closed")
+            except Exception as e:
+                logger.warning(f"Error closing database connection: {e}")
+            finally:
+                self._conn = None
+                self._cursor = None
+    
+    def __del__(self) -> None:
+        """Destrutor - garante fechamento da conexão"""
+        self.close()
+    
+    def __enter__(self) -> 'DatabaseConnection':
+        """Context manager entry"""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        """Context manager exit - não fecha conexão singleton"""
+        # Não fechamos a conexão aqui pois é singleton
+        # Apenas fazemos commit ou rollback
+        if exc_type is not None:
+            self.rollback()
+        else:
+            self.commit()
+    
+    @classmethod
+    def reset_instance(cls) -> None:
+        """
+        Reseta a instância singleton (apenas para testes).
+        Fecha a conexão existente antes de resetar.
+        """
+        with cls._lock:
+            if cls._instance is not None:
+                cls._instance.close()
+                cls._instance = None
+                cls._initialized = False

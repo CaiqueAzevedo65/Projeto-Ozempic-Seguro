@@ -8,10 +8,6 @@ from .user_repository import UserRepository
 from .audit_repository import AuditRepository
 from .gaveta_repository import GavetaRepository
 from .security import hash_password, verify_password
-from .input_validator import InputValidator
-
-# Mantido para compatibilidade
-from .database import DatabaseManager
 
 __all__ = [
     # Conexão
@@ -25,8 +21,4 @@ __all__ = [
     # Segurança
     'hash_password',
     'verify_password',
-    'InputValidator',
-    
-    # Compatibilidade (deprecated)
-    'DatabaseManager',
 ]

@@ -1,17 +1,16 @@
 # Dependências do projeto Ozempic Seguro
-# Para instalação completa, use: pip install -e .[dev]
-# Veja pyproject.toml para configuração completa
+# 
+# NOTA: Este arquivo é mantido para compatibilidade com ferramentas que não
+# suportam pyproject.toml. A fonte de verdade é pyproject.toml.
+#
+# Para instalação completa com dependências de dev:
+#   pip install -e .[dev]
+#
+# Para instalação apenas de produção:
+#   pip install -e .
 
-# Dependências de produção
+# Dependências de produção (sincronizadas com pyproject.toml)
 customtkinter==5.2.2
 Pillow>=10.3,<12
 bcrypt==4.2.1
 cryptography==44.0.0
-
-# Dependências de desenvolvimento (opcional)
-# pytest==8.3.4
-# pytest-cov==7.0.0
-# pytest-mock==3.15.1
-# black==24.10.0
-# flake8==7.1.1
-# mypy==1.13.0

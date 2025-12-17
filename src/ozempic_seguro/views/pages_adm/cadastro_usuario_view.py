@@ -1,13 +1,22 @@
 import customtkinter
 import tkinter as tk
 from ..components import Header, VoltarButton, TecladoVirtual, ModernButton, ModernConfirmDialog, ToastNotification
-from ...services.service_factory import get_user_service
+from ...services.user_registration_service import get_user_registration_service
 
 class CadastroUsuarioFrame(customtkinter.CTkFrame):
+    BG_COLOR = "#3B6A7D"
+    
     def __init__(self, master, voltar_callback=None, *args, **kwargs):
         self.voltar_callback = voltar_callback
-        self.user_service = get_user_service()
-        super().__init__(master, fg_color="#3B6A7D", *args, **kwargs)
+        self.registration_service = get_user_registration_service()
+        super().__init__(master, fg_color=self.BG_COLOR, *args, **kwargs)
+        
+        # Criar overlay para esconder construção
+        self._overlay = customtkinter.CTkFrame(master, fg_color=self.BG_COLOR)
+        self._overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self._overlay.lift()
+        master.update_idletasks()
+        
         self.pack(fill="both", expand=True)
         
         # Configuração da validação de entrada
@@ -25,6 +34,10 @@ class CadastroUsuarioFrame(customtkinter.CTkFrame):
         
         # Variável para controlar qual campo está ativo
         self.campo_entrada_atual = None
+        
+        # Remover overlay após tudo estar pronto
+        self.update_idletasks()
+        self._overlay.destroy()
 
     def validar_entrada_numerica(self, valor):
         """Valida se a entrada contém apenas números e tem no máximo 8 caracteres"""
@@ -195,6 +208,7 @@ class CadastroUsuarioFrame(customtkinter.CTkFrame):
         VoltarButton(frame_voltar, self.voltar_callback)
     
     def salvar_usuario(self):
+        """Salva usuário usando UserRegistrationService"""
         nome = self.nome_entry.get().strip()
         usuario = self.usuario_entry.get().strip()
         senha = self.senha_entry.get()
@@ -202,39 +216,6 @@ class CadastroUsuarioFrame(customtkinter.CTkFrame):
         
         # Limpa mensagens de erro anteriores
         self.lbl_erro_senha.configure(text="")
-        
-        # Validação dos campos obrigatórios
-        if not all([nome, usuario, senha]):
-            self.mostrar_mensagem("Preencha todos os campos!", "erro")
-            return
-            
-        # Validação do tamanho do nome
-        if len(nome) > 26:
-            self.mostrar_mensagem("O nome deve ter no máximo 26 caracteres!", "erro")
-            return
-            
-        # Validação do tamanho do usuário
-        if len(usuario) > 8:
-            self.mostrar_mensagem("O usuário deve ter no máximo 8 dígitos!", "erro")
-            return
-            
-        # Validação do tamanho da senha
-        if len(senha) > 8:
-            self.mostrar_mensagem("A senha deve ter no máximo 8 dígitos!", "erro")
-            return
-            
-        if len(senha) < 4:
-            self.mostrar_mensagem("A senha deve ter no mínimo 4 caracteres!", "erro")
-            return
-            
-        # Validação de campos numéricos
-        if not usuario.isdigit():
-            self.mostrar_mensagem("O usuário deve conter apenas números!", "erro")
-            return
-            
-        if not senha.isdigit():
-            self.mostrar_mensagem("A senha deve conter apenas números!", "erro")
-            return
         
         # Confirmar antes de salvar
         if not ModernConfirmDialog.ask(
@@ -247,15 +228,16 @@ class CadastroUsuarioFrame(customtkinter.CTkFrame):
         ):
             return
         
-        # Chama o método de cadastro do AuthManager
-        sucesso, mensagem = self.user_service.create_user(nome, usuario, senha, tipo)
+        # Usa o serviço para registrar (validação + criação)
+        result = self.registration_service.register(nome, usuario, senha, tipo)
         
-        if sucesso:
-            # Mostra notificação de sucesso moderna
-            ToastNotification.show(self, f"Usuário '{nome}' cadastrado com sucesso!", "success")
+        if result.success:
+            ToastNotification.show(self, result.message, "success")
             self.limpar_campos()
         else:
-            ToastNotification.show(self, f"Erro: {mensagem}", "error")
+            # Mostra primeiro erro
+            error_msg = result.errors[0] if result.errors else result.message
+            self.mostrar_mensagem(error_msg, "erro")
     
     def mostrar_mensagem(self, mensagem, tipo):
         cores = {

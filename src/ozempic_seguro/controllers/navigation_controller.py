@@ -17,33 +17,54 @@ class NavigationController:
         self.telas = [self.show_tela_toque, self.show_tela_logo]
         self.after_id = None
         self.is_running = True
-        self._overlay = None
+        self._transitioning = False
+        
+        # Overlay para transições suaves
+        self._transition_overlay = customtkinter.CTkFrame(
+            self.container,
+            fg_color="#3B6A7D"
+        )
 
     def preload_frames(self):
-        # Carrega os frames iniciais
+        """Pré-carrega os frames iniciais de forma invisível"""
+        # Criar frames e renderizar fora da tela visível
         self.frames['toque'] = TelaToqueFrame(
             self.container,
             on_click_callback=self.show_iniciar_sessao
         )
+        self._prerender_frame(self.frames['toque'])
+        
         self.frames['logo'] = TelaLogoFrame(
             self.container,
             on_click_callback=self.show_iniciar_sessao
         )
+        self._prerender_frame(self.frames['logo'])
+        
         self.frames['iniciar'] = IniciarSessaoFrame(
             self.container,
             show_login_callback=self.show_login,
             voltar_callback=self.voltar_para_tela_inicial
         )
+        self._prerender_frame(self.frames['iniciar'])
+        
         self.frames['login'] = LoginFrame(
             self.container,
             show_iniciar_callback=self.show_iniciar_sessao
         )
+        self._prerender_frame(self.frames['login'])
+    
+    def _prerender_frame(self, frame):
+        """Pré-renderiza um frame de forma invisível"""
+        # Posicionar fora da tela para renderizar sem mostrar
+        frame.place(x=-9999, y=-9999)
+        self.app.update_idletasks()
+        frame.place_forget()
 
-        # Esconde todos os frames inicialmente
-        for frame in self.frames.values():
-            frame.pack_forget()
-
-    def show_frame(self, frame_name):
+    def show_frame(self, frame_name, animate=True):
+        """Mostra um frame específico com transição suave"""
+        if self._transitioning:
+            return False
+            
         # Verificar se precisa criar o frame
         needs_creation = (
             frame_name not in self.frames or 
@@ -52,72 +73,40 @@ class NavigationController:
         )
         
         if needs_creation:
-            # Mostrar overlay antes de criar
-            self._show_overlay()
-            
-            # Criar frame
             self._create_frame(frame_name)
-            
-            frame = self.frames.get(frame_name)
-            if frame:
-                # Renderizar completamente antes de mostrar
-                frame.update_idletasks()
-            
-            # Esconder overlay e mostrar frame
-            self.app.after(10, lambda: self._finish_transition(frame_name))
-            return True
         
-        # Frame já existe, transição direta
         frame = self.frames.get(frame_name)
         if not frame:
             return False
         
-        if self.current_frame:
-            self.current_frame.pack_forget()
+        # Se é o mesmo frame, não fazer nada
+        if self.current_frame == frame:
+            return True
         
-        frame.pack(fill="both", expand=True)
+        self._transitioning = True
+        old_frame = self.current_frame
+        
+        # 1. Mostrar overlay cobrindo tudo
+        self._transition_overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self._transition_overlay.lift()
+        self.app.update_idletasks()
+        
+        # 2. Esconder frame antigo
+        if old_frame:
+            old_frame.place_forget()
+            old_frame.pack_forget()
+        
+        # 3. Posicionar novo frame
+        frame.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self.app.update_idletasks()
+        
+        # 4. Trazer novo frame para frente e esconder overlay
+        frame.lift()
+        self._transition_overlay.place_forget()
+        
         self.current_frame = frame
+        self._transitioning = False
         return True
-    
-    def _show_overlay(self):
-        """Mostra overlay durante transição"""
-        if self._overlay:
-            try:
-                self._overlay.destroy()
-            except Exception:
-                pass  # Overlay já destruído
-        
-        self._overlay = customtkinter.CTkFrame(
-            self.container,
-            fg_color="#3B6A7D"
-        )
-        self._overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
-        self._overlay.update()
-    
-    def _hide_overlay(self):
-        """Esconde overlay"""
-        if self._overlay:
-            try:
-                self._overlay.destroy()
-            except Exception:
-                pass  # Overlay já destruído
-            self._overlay = None
-    
-    def _finish_transition(self, frame_name):
-        """Finaliza transição após frame estar pronto"""
-        frame = self.frames.get(frame_name)
-        if not frame:
-            self._hide_overlay()
-            return
-        
-        if self.current_frame:
-            self.current_frame.pack_forget()
-        
-        frame.pack(fill="both", expand=True)
-        self.current_frame = frame
-        
-        # Esconder overlay
-        self._hide_overlay()
     
     def _create_frame(self, frame_name):
         """Cria um frame específico"""
@@ -143,9 +132,7 @@ class NavigationController:
                 show_iniciar_callback=self.show_iniciar_sessao
             )
         
-        # Esconder imediatamente após criar para pré-renderizar
-        if frame_name in self.frames:
-            self.frames[frame_name].pack_forget()
+        self.app.update_idletasks()
 
     def voltar_para_tela_inicial(self):
         if self.after_id:

@@ -1,15 +1,25 @@
 import tkinter
 import customtkinter
 from ..components import Header, VoltarButton, ModernButton, ModernConfirmDialog, ToastNotification, ResponsiveFrame
-from ...services.service_factory import get_user_service
+from ...services.user_management_service import get_user_management_service
 
 class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
+    BG_COLOR = "#3B6A7D"
+    
     def __init__(self, master, voltar_callback=None, usuario_logado=None, *args, **kwargs):
         self.voltar_callback = voltar_callback
         self.usuario_logado = usuario_logado  # Store the logged-in user
-        super().__init__(master, fg_color="#3B6A7D", *args, **kwargs)
-        self.user_service = get_user_service()
+        super().__init__(master, fg_color=self.BG_COLOR, *args, **kwargs)
+        self.management_service = get_user_management_service()
         self.usuario_selecionado = None  # Armazenará o ID do usuário selecionado
+        self.usuario_selecionado_data = None  # Dados do usuário selecionado
+        
+        # Criar overlay para esconder construção
+        self._overlay = customtkinter.CTkFrame(master, fg_color=self.BG_COLOR)
+        self._overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self._overlay.lift()
+        master.update_idletasks()
+        
         self.pack(fill="both", expand=True)
         
         # Variáveis para controle de estado
@@ -20,6 +30,10 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
         self.criar_tabela_usuarios()
         self.criar_painel_direito()
         self.criar_botao_voltar()
+        
+        # Remover overlay após tudo estar pronto
+        self.update_idletasks()
+        self._overlay.destroy()
         
     def criar_topo(self):
         # Cabeçalho
@@ -99,11 +113,11 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
             widget.destroy()
         
         try:
-            # Obter usuários do banco de dados
-            usuarios = self.user_service.get_all_users()
+            # Obter usuários usando o serviço de gerenciamento
+            usuarios = self.management_service.get_all_users()
             
             # Adicionar itens
-            for idx, (user_id, username, nome_completo, tipo, ativo, data_criacao) in enumerate(usuarios):
+            for idx, user in enumerate(usuarios):
                 # Frame para uma linha da tabela
                 linha_frame = customtkinter.CTkFrame(
                     self.scrollable_frame,
@@ -116,8 +130,8 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
                 linha_frame.grid(row=idx, column=0, sticky="nsew", pady=2, padx=5)
                 linha_frame.grid_propagate(False)
                 
-                # Armazenar dados do usuário para uso no clique
-                linha_frame.dados_usuario = (user_id, username, nome_completo, tipo, ativo, data_criacao)
+                # Armazenar dados do usuário para uso no clique (usando UserData)
+                linha_frame.dados_usuario = (user.id, user.username, user.nome_completo, user.tipo, user.ativo, user.data_criacao)
                 
                 # Frame para o conteúdo da linha que preenche todo o espaço
                 conteudo_frame = customtkinter.CTkFrame(
@@ -130,11 +144,11 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
                 for i in range(3):
                     conteudo_frame.columnconfigure(i, weight=1)
                 
-                # Dados a serem exibidos
+                # Dados a serem exibidos (usando propriedades do UserData)
                 dados = [
-                    username,
-                    nome_completo,
-                    tipo.capitalize()
+                    user.username,
+                    user.nome_completo,
+                    user.tipo_display
                 ]
                 
                 # Adicionar os dados como labels dentro do frame
@@ -489,144 +503,49 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
             self.campo_ativo.insert(tkinter.END, valor)
     
     def salvar_nova_senha(self):
+        """Salva nova senha usando UserManagementService"""
         nova_senha = self.entry_nova_senha.get()
         confirmar_senha = self.entry_confirmar_senha.get()
         
-        if not nova_senha:
-            self.lbl_mensagem.configure(text="❌ Por favor, digite uma nova senha.", text_color="#dc3545")
-            return
+        # Usar o serviço para alterar senha (validação inclusa)
+        result = self.management_service.change_password(
+            self.usuario_selecionado, nova_senha, confirmar_senha
+        )
         
-        if nova_senha != confirmar_senha:
-            self.lbl_mensagem.configure(text="❌ As senhas não coincidem.", text_color="#dc3545")
-            return
-        
-        try:
-            sucesso, mensagem = self.user_service.change_password(self.usuario_selecionado, nova_senha)
-            if sucesso:
-                self.lbl_mensagem.configure(text=f"✅ {mensagem}", text_color="#28a745")
-                ToastNotification.show(self, "Senha alterada com sucesso!", "success")
-                # Aguardar 2 segundos antes de fechar
-                self.after(2000, self.dialog.destroy)
-            else:
-                self.lbl_mensagem.configure(text=f"❌ {mensagem}", text_color="#dc3545")
-        except Exception as e:
-            self.lbl_mensagem.configure(text=f"❌ Erro ao alterar senha: {str(e)}", text_color="#dc3545")
-    
-    def confirmar_exclusao(self):
-        if not self.usuario_selecionado:
-            return
-            
-        if not self.confirmando_exclusao:
-            # Primeiro clique - Mostrar confirmação
-            self.confirmando_exclusao = True
-            
-            # Limpar frame de mensagem
-            for widget in self.frame_mensagem.winfo_children():
-                widget.destroy()
-                
-            # Configurar frame de mensagem
-            self.frame_mensagem.grid(row=3, column=0, padx=20, pady=(0, 10), sticky="nsew")
-            
-            # Mensagem de confirmação
-            lbl_confirmacao = customtkinter.CTkLabel(
-                self.frame_mensagem,
-                text="Tem certeza que deseja excluir este usuário?\nEsta ação não pode ser desfeita.",
-                text_color="#333333",
-                font=("Arial", 12),
-                justify="left"
-            )
-            lbl_confirmacao.pack(side="left", padx=(0, 10))
-            
-            # Botão Confirmar
-            btn_confirmar = ModernButton(
-                self.frame_mensagem,
-                text="✅ Confirmar",
-                command=self.excluir_usuario,
-                style="danger",
-                width=100,
-                height=35
-            )
-            btn_confirmar.pack(side="left", padx=(0, 5))
-            
-            # Botão Cancelar
-            btn_cancelar = ModernButton(
-                self.frame_mensagem,
-                text="❌ Cancelar",
-                command=self.reiniciar_estado_exclusao,
-                style="secondary",
-                width=100,
-                height=35
-            )
-            btn_cancelar.pack(side="left")
-            
-            # Desabilitar botão de excluir
-            for widget in self.frame_botoes.winfo_children():
-                if widget.cget("text") == "Excluir Usuário":
-                    widget.configure(state="disabled")
-    
-    def cancelar_exclusao(self):
-        """Cancela a confirmação de exclusão"""
-        self.confirmando_exclusao = False
-        self.frame_mensagem.grid_forget()
-        
-        # Reativar botão de excluir
-        for widget in self.frame_botoes.winfo_children():
-            if widget.cget("text") == "Excluir Usuário":
-                widget.configure(state="normal")
-    
-
-    def reiniciar_estado_exclusao(self):
-        """Reinicia o estado dos botões após uma tentativa de exclusão"""
-        self.confirmando_exclusao = False
-        self.frame_mensagem.grid_forget()
-        
-        # Reativar botão de excluir
-        for widget in self.frame_botoes.winfo_children():
-            if widget.cget("text") == "Excluir Usuário":
-                widget.configure(state="normal")
-
-    def excluir_usuario(self):
-        """Exclui o usuário selecionado usando UserService"""
-        if not self.usuario_selecionado:
-            return
-            
+        if result.success:
+            self.lbl_mensagem.configure(text=f"✅ {result.message}", text_color="#28a745")
         # Obter dados do usuário para confirmação
-        try:
-            usuarios = self.user_service.get_all_users()
-            usuario_data = next((u for u in usuarios if u[0] == self.usuario_selecionado), None)
-            if not usuario_data:
-                ToastNotification.show(self, "Usuário não encontrado", "error")
-                return
-            
-            nome_usuario = usuario_data[2]  # nome_completo
-            username = usuario_data[1]      # username
-            
-            # Confirmação moderna antes de excluir
-            if not ModernConfirmDialog.ask(
-                self,
-                "Confirmar Exclusão",
-                f"Tem certeza que deseja excluir o usuário '{nome_usuario}' (ID: {username})?\n\nEsta ação não pode ser desfeita.",
-                icon="warning",
-                confirm_text="Excluir",
-                cancel_text="Cancelar"
-            ):
-                return
-            
-            sucesso, mensagem = self.user_service.delete_user(self.usuario_selecionado)
-            
-            # Reiniciar estado de exclusão
-            self.reiniciar_estado_exclusao()
-            
-            if sucesso:
-                # Recarregar dados e limpar detalhes
-                self.carregar_dados()
-                self.limpar_painel_detalhes()
-                ToastNotification.show(self, mensagem, "success")
-            else:
-                ToastNotification.show(self, mensagem, "error")
-                
-        except Exception as e:
-            ToastNotification.show(self, f"Erro ao excluir usuário: {str(e)}", "error")
+        user = self.management_service.get_user_by_id(self.usuario_selecionado)
+        if not user:
+            ToastNotification.show(self, "Usuário não encontrado", "error")
+            return
+        
+        # Confirmação moderna antes de excluir
+        if not ModernConfirmDialog.ask(
+            self,
+            "Confirmar Exclusão",
+            f"Tem certeza que deseja excluir o usuário '{user.nome_completo}' (ID: {user.username})?\n\nEsta ação não pode ser desfeita.",
+            icon="warning",
+            confirm_text="Excluir",
+            cancel_text="Cancelar"
+        ):
+            return
+        
+        # Obter ID do usuário logado para evitar auto-exclusão
+        current_user_id = self.usuario_logado.get('id') if self.usuario_logado else None
+        
+        # Usar o serviço para excluir
+        result = self.management_service.delete_user(self.usuario_selecionado, current_user_id)
+        
+        # Reiniciar estado de exclusão
+        self.reiniciar_estado_exclusao()
+        
+        if result.success:
+            self.carregar_dados()
+            self.limpar_painel_detalhes()
+            ToastNotification.show(self, result.message, "success")
+        else:
+            ToastNotification.show(self, result.message, "error")
     
     def mostrar_aviso_tecnico(self):
         """Mostra aviso de que usuários técnicos não podem ser modificados"""

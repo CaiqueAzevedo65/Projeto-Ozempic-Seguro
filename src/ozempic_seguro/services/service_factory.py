@@ -150,15 +150,6 @@ class ServiceFactory:
         
         return _registry.get_service('security_logger', create_security_logger)
     
-    @staticmethod
-    def get_input_validator():
-        """Retorna instância singleton de InputValidator"""
-        def create_input_validator():
-            from ..repositories.input_validator import InputValidator
-            return InputValidator()
-        
-        return _registry.get_service('input_validator', create_input_validator)
-    
     # Métodos para testes
     @staticmethod
     def set_mock_user_service(mock_service: Any) -> None:
@@ -190,7 +181,6 @@ class ServiceFactory:
                 'database_manager': 'database_manager' in _registry._services,
                 'session_manager': 'session_manager' in _registry._services,
                 'security_logger': 'security_logger' in _registry._services,
-                'input_validator': 'input_validator' in _registry._services,
             }
 
 

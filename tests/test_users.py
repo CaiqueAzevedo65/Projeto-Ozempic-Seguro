@@ -7,11 +7,13 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 from ozempic_seguro.repositories.database import DatabaseManager
+from ozempic_seguro.repositories.user_repository import UserRepository
 
 def test_users():
     print("=== VERIFICANDO USUÁRIOS ===\n")
     
     db = DatabaseManager()
+    user_repo = UserRepository()
     
     # Lista todos os usuários
     db.cursor.execute("SELECT id, username, nome_completo, tipo, ativo FROM usuarios ORDER BY id")
@@ -27,17 +29,17 @@ def test_users():
         print(f"  Ativo: {'Sim' if user[4] else 'Não'}")
         print()
     
-    # Testa login do admin
+    # Testa login do admin usando UserRepository
     print("Testando login do admin (00/1234)...")
-    result = db.autenticar_usuario("00", "1234")
+    result = user_repo.authenticate_user("00", "1234")
     if result:
         print(f"  ✓ Login bem-sucedido! Tipo: {result['tipo']}")
     else:
         print("  ✗ Login falhou!")
     
-    # Testa login do técnico
+    # Testa login do técnico usando UserRepository
     print("\nTestando login do técnico (01/1234)...")
-    result = db.autenticar_usuario("01", "1234")
+    result = user_repo.authenticate_user("01", "1234")
     if result:
         print(f"  ✓ Login bem-sucedido! Tipo: {result['tipo']}")
     else:

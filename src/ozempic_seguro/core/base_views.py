@@ -284,19 +284,18 @@ class ValidatedMixin:
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._input_validator = None
-    
-    @property
-    def input_validator(self):
-        """Lazy loading do InputValidator"""
-        if self._input_validator is None:
-            self._input_validator = ServiceFactory.get_input_validator()
-        return self._input_validator
     
     def validate_user_input(self, input_data: Dict[str, Any]) -> bool:
-        """Valida entrada do usuário usando o InputValidator"""
+        """Valida entrada do usuário usando Validators"""
+        from .validators import Validators
         try:
-            return self.input_validator.validate_all_fields(input_data)
+            result = Validators.validate_and_sanitize_user_input(
+                username=input_data.get('username'),
+                password=input_data.get('password'),
+                name=input_data.get('name'),
+                user_type=input_data.get('user_type')
+            )
+            return result['valid']
         except Exception as e:
             logger.error(f"Validation error: {str(e)}")
             return False

@@ -9,7 +9,7 @@ import datetime
 from ..repositories.user_repository import UserRepository
 from ..repositories.audit_repository import AuditRepository
 from ..repositories.security_logger import SecurityLogger
-from ..repositories.input_validator import InputValidator
+from ..core.validators import Validators
 from ..config import SecurityConfig
 from ..core.base_views import BaseService
 from ..core.exceptions import (
@@ -48,7 +48,7 @@ class UserService(BaseService):
         if not self._validate_input(validation_data):
             raise InvalidUserDataError('input', 'Dados de entrada inválidos ou incompletos')
         
-        validation_result = InputValidator.validate_and_sanitize_user_input(
+        validation_result = Validators.validate_and_sanitize_user_input(
             username=username,
             password=senha,
             name=nome,
@@ -134,14 +134,18 @@ class UserService(BaseService):
         # Permite usuário admin padrão "00" sem validação rigorosa
         if username != "00":
             # Validação robusta apenas para outros usuários
-            username_valid, username_error = InputValidator.validate_username(username)
-            password_valid, password_error = InputValidator.validate_password(senha)
+            username_result = Validators.validate_username(username)
+            password_result = Validators.validate_password(senha, strict=False)
+            username_valid = username_result.is_valid
+            username_error = username_result.errors[0] if username_result.errors else ''
+            password_valid = password_result.is_valid
+            password_error = password_result.errors[0] if password_result.errors else ''
             
             if not username_valid:
                 # Log tentativa com dados inválidos
                 security_context = SecurityLogger.log_security_violation(
                     violation_type='INVALID_USERNAME_FORMAT',
-                    details={'username': InputValidator.sanitize_string(username, 50), 'error': username_error}
+                    details={'username': Validators.sanitize_string(username, 50), 'error': username_error}
                 )
                 self.audit_repo.create_log(
                     usuario_id=None,
@@ -297,7 +301,9 @@ class UserService(BaseService):
             )
         
         # Validação robusta da nova senha
-        password_valid, password_error = InputValidator.validate_password(nova_senha)
+        password_result = Validators.validate_password(nova_senha, strict=False)
+        password_valid = password_result.is_valid
+        password_error = password_result.errors[0] if password_result.errors else ''
         
         if not password_valid:
             raise WeakPasswordError([password_error])

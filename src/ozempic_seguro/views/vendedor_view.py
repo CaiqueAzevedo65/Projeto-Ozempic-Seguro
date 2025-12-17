@@ -3,13 +3,26 @@ from tkinter import messagebox
 from .components import Header, FinalizarSessaoButton, GavetaButtonGrid, GavetaButton, ModernConfirmDialog, ToastNotification
 
 class VendedorFrame(customtkinter.CTkFrame):
+    BG_COLOR = "#3B6A7D"
+    
     def __init__(self, master, finalizar_sessao_callback=None, *args, **kwargs):
-        super().__init__(master, fg_color="#3B6A7D", *args, **kwargs)
+        super().__init__(master, fg_color=self.BG_COLOR, *args, **kwargs)
         self.finalizar_sessao_callback = finalizar_sessao_callback
+        
+        # Criar overlay para esconder construção
+        self._overlay = customtkinter.CTkFrame(master, fg_color=self.BG_COLOR)
+        self._overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self._overlay.lift()
+        master.update_idletasks()
+        
         self.pack(fill="both", expand=True)
         self.criar_topo()
         self.criar_grade_botoes()
         self.criar_botao_finalizar()
+        
+        # Remover overlay após tudo estar pronto
+        self.update_idletasks()
+        self._overlay.destroy()
 
     def criar_topo(self):
         Header(self, "Vendedor")

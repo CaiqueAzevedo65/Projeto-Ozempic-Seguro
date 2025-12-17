@@ -3,20 +3,19 @@ import tkinter as tk
 from tkinter import messagebox
 from .pages_adm.painel_administrador_view import PainelAdministradorFrame
 from .components import Header, ImageCache, VoltarButton, ModernButton, ToastNotification
-from ..services.service_factory import get_user_service
-from ..session import SessionManager
+from ..services.auth_service import get_auth_service, UserPanel
+from ..config import UIConfig
 from .repositor_view import RepositorFrame
 from .vendedor_view import VendedorFrame
 from .tecnico_view import TecnicoFrame
 
 class LoginFrame(customtkinter.CTkFrame):
     def __init__(self, master, show_iniciar_callback, *args, **kwargs):
-        super().__init__(master, fg_color="#346172", *args, **kwargs)
+        super().__init__(master, fg_color=UIConfig.LOGIN_FRAME_COLOR, *args, **kwargs)
         self.show_iniciar_callback = show_iniciar_callback
-        self.user_service = get_user_service()
-        self.session_manager = SessionManager.get_instance()
+        self.auth_service = get_auth_service()
         self.timer_job = None
-        self.pack(fill="both", expand=True)
+        # Não fazer pack aqui - NavigationController gerencia
         self.criar_topo()
         self.criar_interface_login()
         self.criar_teclado_numerico()
@@ -26,13 +25,13 @@ class LoginFrame(customtkinter.CTkFrame):
         Header(self, "Login")
 
     def criar_interface_login(self):
-        frame_login = customtkinter.CTkFrame(self, fg_color="#346172")
-        frame_login.place(x=40, y=100)
+        frame_login = customtkinter.CTkFrame(self, fg_color=UIConfig.LOGIN_FRAME_COLOR)
+        frame_login.place(x=UIConfig.LOGIN_FRAME_X, y=UIConfig.LOGIN_FRAME_Y)
         
         # Campo de usuário
         customtkinter.CTkLabel(frame_login, text="Usuário", font=("Arial", 16, "bold"), text_color="white").pack(anchor="w", pady=(0, 5))
-        self.usuario_entry = customtkinter.CTkEntry(frame_login, width=300, height=40)
-        self.usuario_entry.pack(pady=10)
+        self.usuario_entry = customtkinter.CTkEntry(frame_login, width=UIConfig.LOGIN_ENTRY_WIDTH, height=UIConfig.LOGIN_ENTRY_HEIGHT)
+        self.usuario_entry.pack(pady=UIConfig.LOGIN_ENTRY_PADY)
         self.usuario_entry.bind("<Button-1>", lambda e: self.definir_campo_ativo(self.usuario_entry))
         
         # Campo de senha
@@ -64,8 +63,8 @@ class LoginFrame(customtkinter.CTkFrame):
         VoltarButton(self, self.show_iniciar_callback)
 
     def criar_teclado_numerico(self):
-        teclado_frame = customtkinter.CTkFrame(self, fg_color="white", corner_radius=20)
-        teclado_frame.place(x=500, y=100)
+        teclado_frame = customtkinter.CTkFrame(self, fg_color=UIConfig.WHITE, corner_radius=20)
+        teclado_frame.place(x=UIConfig.LOGIN_KEYBOARD_X, y=UIConfig.LOGIN_KEYBOARD_Y)
         botoes = [
             ["1", "2", "3"],
             ["4", "5", "6"], 
@@ -120,48 +119,41 @@ class LoginFrame(customtkinter.CTkFrame):
         ).pack(side="left", padx=5)
 
     def verificar_login(self):
+        """Verifica credenciais usando AuthService"""
         usuario = self.usuario_entry.get().strip()
         senha = self.senha_entry.get()
         
-        # Verifica se usuário está bloqueado
-        if self.session_manager.is_user_locked(usuario):
-            status = self.session_manager.get_login_status_message(usuario)
-            messagebox.showerror("Conta Bloqueada", status['detailed_message'])
-            self.iniciar_timer_bloqueio(usuario)
-            return
+        # Usa AuthService para toda a lógica de login
+        result = self.auth_service.login(usuario, senha)
         
-        # Tenta autenticar
-        user = self.user_service.authenticate(usuario, senha)
-        if user:
-            # Sucesso - Reset tentativas e prossegue
-            self.session_manager.record_login_attempt(usuario, success=True)
-            self.session_manager.set_current_user(user)
-            
-            if user.get('tipo') == 'administrador':
-                self.abrir_painel_administrador()
-            elif user.get('tipo') == 'repositor':
-                self.abrir_painel_repositor()
-            elif user.get('tipo') == 'vendedor':
-                self.abrir_painel_vendedor()
-            elif user.get('tipo') == 'tecnico':
-                self.abrir_painel_tecnico()
-            else:
-                messagebox.showinfo("Sucesso", f"Login realizado como {user.get('tipo','usuário')}!") 
+        if result.success:
+            # Sucesso - abre painel apropriado
+            self._abrir_painel(result.panel)
         else:
-            # Falha - Registra tentativa e mostra aviso personalizado
-            self.session_manager.record_login_attempt(usuario, success=False)
-            status = self.session_manager.get_login_status_message(usuario)
-            
-            if status['locked']:
-                message = status.get('detailed_message', status.get('message', 'Conta bloqueada'))
-                messagebox.showerror("Conta Bloqueada", message)
+            # Falha - mostra mensagem de erro
+            if result.is_locked:
+                messagebox.showerror("Conta Bloqueada", result.error_message)
                 self.iniciar_timer_bloqueio(usuario)
             else:
-                message = status.get('detailed_message', status.get('message', 'Usuário ou senha incorretos'))
-                messagebox.showerror("Login Inválido", message)
+                messagebox.showerror("Login Inválido", result.error_message)
             
             # Atualiza status visual
             self.atualizar_status_login()
+
+    def _abrir_painel(self, panel: UserPanel):
+        """Abre o painel apropriado baseado no tipo de usuário"""
+        panel_handlers = {
+            UserPanel.ADMIN: self.abrir_painel_administrador,
+            UserPanel.REPOSITOR: self.abrir_painel_repositor,
+            UserPanel.VENDEDOR: self.abrir_painel_vendedor,
+            UserPanel.TECNICO: self.abrir_painel_tecnico,
+        }
+        
+        handler = panel_handlers.get(panel)
+        if handler:
+            handler()
+        else:
+            messagebox.showinfo("Sucesso", "Login realizado com sucesso!")
 
     def abrir_painel_tecnico(self):
         """Abre o painel do técnico"""
@@ -178,9 +170,8 @@ class LoginFrame(customtkinter.CTkFrame):
 
     def abrir_painel_administrador(self):
         self.pack_forget()
-        # Get the current user from SessionManager and pass it to PainelAdministradorFrame
-        session_manager = SessionManager.get_instance()
-        usuario_logado = session_manager.get_current_user()
+        # Get the current user from AuthService
+        usuario_logado = self.auth_service.get_current_user()
         PainelAdministradorFrame(
             self.master, 
             finalizar_sessao_callback=self.show_iniciar_callback,
@@ -222,7 +213,7 @@ class LoginFrame(customtkinter.CTkFrame):
             )
             return
         
-        status = self.session_manager.get_login_status_message(usuario)
+        status = self.auth_service.get_login_status(usuario)
         
         if status['locked']:
             self.status_label.configure(
@@ -250,7 +241,7 @@ class LoginFrame(customtkinter.CTkFrame):
 
     def atualizar_timer_bloqueio(self, usuario):
         """Atualiza o timer de bloqueio em tempo real"""
-        remaining_seconds = self.session_manager.get_lockout_remaining_seconds(usuario)
+        remaining_seconds = self.auth_service.get_lockout_remaining_seconds(usuario)
         
         if remaining_seconds <= 0:
             # Bloqueio expirou

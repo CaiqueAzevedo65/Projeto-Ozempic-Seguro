@@ -391,3 +391,63 @@ class Validators:
     def all_valid(cls, results: Dict[str, ValidationResult]) -> bool:
         """Verifica se todas as validações passaram"""
         return all(result.is_valid for result in results.values())
+    
+    @classmethod
+    def validate_and_sanitize_user_input(
+        cls,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        name: Optional[str] = None,
+        user_type: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Valida e sanitiza entrada completa de usuário.
+        
+        Args:
+            username: Nome de usuário
+            password: Senha
+            name: Nome completo
+            user_type: Tipo de usuário
+            
+        Returns:
+            Dict com 'valid', 'errors' e 'sanitized_data'
+        """
+        result = {
+            'valid': True,
+            'errors': [],
+            'sanitized_data': {}
+        }
+        
+        if username is not None:
+            validation = cls.validate_username(username)
+            if not validation.is_valid:
+                result['valid'] = False
+                result['errors'].extend([f"Usuário: {e}" for e in validation.errors])
+            else:
+                result['sanitized_data']['username'] = cls.sanitize_string(username, 50)
+        
+        if password is not None:
+            validation = cls.validate_password(password, strict=False)
+            if not validation.is_valid:
+                result['valid'] = False
+                result['errors'].extend([f"Senha: {e}" for e in validation.errors])
+            else:
+                result['sanitized_data']['password'] = password
+        
+        if name is not None:
+            validation = cls.validate_name(name)
+            if not validation.is_valid:
+                result['valid'] = False
+                result['errors'].extend([f"Nome: {e}" for e in validation.errors])
+            else:
+                result['sanitized_data']['name'] = cls.sanitize_string(name, 100)
+        
+        if user_type is not None:
+            validation = cls.validate_user_type(user_type)
+            if not validation.is_valid:
+                result['valid'] = False
+                result['errors'].extend([f"Tipo: {e}" for e in validation.errors])
+            else:
+                result['sanitized_data']['user_type'] = user_type.lower().strip()
+        
+        return result

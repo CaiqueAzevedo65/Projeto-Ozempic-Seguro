@@ -159,26 +159,12 @@ def log_method_call(include_args: bool = False):
     return decorator
 
 
-class DatabaseException(Exception):
-    """Exceção customizada para operações de banco"""
-    pass
-
-
-class ValidationException(Exception):
-    """Exceção customizada para validação de dados"""
-    pass
-
-
-class AuthenticationException(Exception):
-    """Exceção customizada para autenticação"""
-    pass
-
-
-class AuthorizationException(Exception):
-    """Exceção customizada para autorização"""
-    pass
-
-
-class SessionException(Exception):
-    """Exceção customizada para sessão"""
-    pass
+# Exceções movidas para core/exceptions.py
+# Imports mantidos para compatibilidade
+from .exceptions import (
+    DatabaseError as DatabaseException,
+    ValidationError as ValidationException,
+    AuthenticationError as AuthenticationException,
+    InsufficientPermissionsError as AuthorizationException,
+    SessionExpiredError as SessionException,
+)

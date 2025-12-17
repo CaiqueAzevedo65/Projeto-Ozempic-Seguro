@@ -46,7 +46,8 @@ def verify_password(senha: str, senha_hash: str) -> bool:
         senha_bytes = senha.encode('utf-8')
         hash_bytes = senha_hash.encode('utf-8')
         return bcrypt.checkpw(senha_bytes, hash_bytes)
-    except Exception:
+    except (ValueError, TypeError):
+        # Invalid hash format or encoding error
         return False
 
 

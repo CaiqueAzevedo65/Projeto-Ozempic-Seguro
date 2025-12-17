@@ -1,30 +1,22 @@
 """
-DatabaseManager - Wrapper de compatibilidade (DEPRECATED).
+DatabaseManager - Compatibility wrapper (DEPRECATED).
 
 .. deprecated:: 1.3.2
-    Este módulo é mantido apenas para compatibilidade com código legado.
-    Para novos desenvolvimentos, use diretamente:
-    - DatabaseConnection para conexão
-    - UserRepository para operações de usuários
-    - AuditRepository para operações de auditoria
-    - GavetaRepository para operações de gavetas
+    This module is kept only for backward compatibility.
+    For new development, use directly:
+    - DatabaseConnection for connection
+    - UserRepository for user operations
+    - AuditRepository for audit operations
+    - GavetaRepository for drawer operations
 """
-import sqlite3
-import os
-import json
 import warnings
-from datetime import datetime
 from typing import Optional, List, Dict, Any, Tuple
 
-from ..core.logger import logger
-from ..config import Config
 
-
-def _deprecation_warning(method_name: str, alternative: str) -> None:
-    """Emite aviso de deprecação para métodos legados"""
+def _warn(method: str, alt: str) -> None:
+    """Emit deprecation warning"""
     warnings.warn(
-        f"DatabaseManager.{method_name}() está deprecated. "
-        f"Use {alternative} em vez disso.",
+        f"DatabaseManager.{method}() is deprecated. Use {alt} instead.",
         DeprecationWarning,
         stacklevel=3
     )
@@ -32,580 +24,186 @@ def _deprecation_warning(method_name: str, alternative: str) -> None:
 
 class DatabaseManager:
     """
-    Wrapper de compatibilidade para código legado (DEPRECATED).
+    Compatibility wrapper for legacy code (DEPRECATED).
     
-    .. deprecated:: 1.3.2
-        Esta classe será removida em versões futuras.
-        Use os repositórios específicos:
-        - DatabaseConnection para conexão
-        - UserRepository para operações de usuários
-        - AuditRepository para operações de auditoria
-        - GavetaRepository para operações de gavetas
+    All methods delegate to specific repositories.
+    Will be removed in future versions.
     """
     _instance = None
     
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super(DatabaseManager, cls).__new__(cls)
+            cls._instance = super().__new__(cls)
             cls._instance._initialize()
         return cls._instance
     
     def _initialize(self):
-        """Inicializa conexão via DatabaseConnection"""
+        """Initialize via DatabaseConnection"""
         from .connection import DatabaseConnection
         self._db = DatabaseConnection.get_instance()
         self.conn = self._db.conn
         self.cursor = self._db.cursor
-
-    def criar_usuario(self, username, senha, nome_completo, tipo):
-        """
-        Cria um novo usuário com bcrypt.
         
-        .. deprecated:: 1.3.2
-            Use UserRepository.create_user() em vez disso.
-        """
-        _deprecation_warning('criar_usuario', 'UserRepository.create_user()')
-        from ..repositories.security import hash_password
-        senha_hash = hash_password(senha)
-        try:
-            self.cursor.execute(
-                'INSERT INTO usuarios (username, senha_hash, nome_completo, tipo) VALUES (?, ?, ?, ?)',
-                (username, senha_hash, nome_completo, tipo)
-            )
-            self.conn.commit()
-            return True
-        except sqlite3.IntegrityError:
-            return False
-
-    def autenticar_usuario(self, username, senha):
-        """Autentica um usuário com bcrypt"""
-        from ..repositories.security import verify_password
-        self.cursor.execute(
-            'SELECT id, username, senha_hash, nome_completo, tipo FROM usuarios WHERE username = ? AND ativo = 1',
-            (username,)
-        )
-        usuario = self.cursor.fetchone()
-        
-        if usuario and verify_password(senha, usuario[2]):
-            return {
-                'id': usuario[0],
-                'username': usuario[1],
-                'nome_completo': usuario[3],
-                'tipo': usuario[4]
-            }
-        return None
+        # Lazy-loaded repositories
+        self._user_repo = None
+        self._audit_repo = None
+        self._gaveta_repo = None
     
-    def _migrar_usuarios_se_necessario(self):
-        """Garante que os usuários padrão existam no banco de dados"""
-        try:
-            # Criar usuário administrador padrão se não existir
-            self.cursor.execute("SELECT COUNT(*) FROM usuarios WHERE username = '00'")
-            if self.cursor.fetchone()[0] == 0:
-                self._criar_usuario_admin_padrao()
-            
-            # Criar usuário técnico padrão se não existir
-            self.cursor.execute("SELECT COUNT(*) FROM usuarios WHERE username = '01'")
-            if self.cursor.fetchone()[0] == 0:
-                self._criar_usuario_tecnico_padrao()
-                
-        except Exception as e:
-            logger.error(f"Erro ao verificar usuários padrão: {e}")
+    @property
+    def _users(self):
+        if self._user_repo is None:
+            from .user_repository import UserRepository
+            self._user_repo = UserRepository()
+        return self._user_repo
     
-    def get_estado_gaveta(self, numero_gaveta):
-        """Obtém o estado atual de uma gaveta"""
-        self.cursor.execute(
-            'SELECT esta_aberta FROM gavetas WHERE numero_gaveta = ?',
-            (numero_gaveta,)
-        )
-        result = self.cursor.fetchone()
-        return result[0] if result else False
+    @property
+    def _audit(self):
+        if self._audit_repo is None:
+            from .audit_repository import AuditRepository
+            self._audit_repo = AuditRepository()
+        return self._audit_repo
     
-    def set_estado_gaveta(self, numero_gaveta, estado, usuario_tipo, usuario_id=None):
-        """Define o estado de uma gaveta e registra no histórico"""
-        try:
-            # Verifica se a gaveta já existe
-            self.cursor.execute(
-                'SELECT id, esta_aberta FROM gavetas WHERE numero_gaveta = ?',
-                (numero_gaveta,)
-            )
-            gaveta = self.cursor.fetchone()
-            
-            # Se a gaveta não existe, insere um novo registro
-            if not gaveta:
-                self.cursor.execute(
-                    'INSERT INTO gavetas (numero_gaveta, esta_aberta) VALUES (?, ?)',
-                    (numero_gaveta, estado)
-                )
-                gaveta_id = self.cursor.lastrowid
-                acao = 'aberta' if estado else 'fechada'
-            else:
-                gaveta_id = gaveta[0]
-                estado_anterior = bool(gaveta[1])
-                acao = 'aberta' if estado and not estado_anterior else 'fechada' if not estado and estado_anterior else None
-                
-                # Atualiza apenas se o estado for diferente
-                if acao:
-                    self.cursor.execute(
-                        'UPDATE gavetas SET esta_aberta = ?, ultima_atualizacao = CURRENT_TIMESTAMP WHERE id = ?',
-                        (estado, gaveta_id)
-                    )
-            
-            # Registra no histórico se houve mudança de estado
-            if acao and usuario_id:
-                self.cursor.execute(
-                    'INSERT INTO historico_gavetas (gaveta_id, acao, usuario_id) VALUES (?, ?, ?)',
-                    (gaveta_id, acao, usuario_id)
-                )
-            elif acao:  # Se não houver usuário, registra sem o ID do usuário
-                self.cursor.execute(
-                    'INSERT INTO historico_gavetas (gaveta_id, acao) VALUES (?, ?)',
-                    (gaveta_id, acao)
-                )
-            
-            self.conn.commit()
-            return True, f"Gaveta {numero_gaveta} {acao} com sucesso!"
-        except Exception as e:
-            self.conn.rollback()
-            return False, f"Erro ao atualizar o estado da gaveta: {str(e)}"
-    
-    def get_historico_gaveta(self, numero_gaveta, limite=10):
-        """Obtém o histórico de uma gaveta"""
-        self.cursor.execute('''
-            SELECT h.acao, u.username, strftime('%d/%m/%Y %H:%M:%S', h.data_hora, 'localtime')
-            FROM historico_gavetas h
-            JOIN usuarios u ON h.usuario_id = u.id
-            WHERE h.gaveta_id = (SELECT id FROM gavetas WHERE numero_gaveta = ?)
-            ORDER BY h.data_hora DESC
-            LIMIT ?
-        ''', (numero_gaveta, limite))
-        return self.cursor.fetchall()
-    
-    def get_historico_paginado(self, numero_gaveta, offset=0, limit=20):
-        """Obtém o histórico de uma gaveta com paginação"""
-        self.cursor.execute('''
-            SELECT h.acao, u.username, strftime('%d/%m/%Y %H:%M:%S', h.data_hora, 'localtime')
-            FROM historico_gavetas h
-            JOIN usuarios u ON h.usuario_id = u.id
-            WHERE h.gaveta_id = (SELECT id FROM gavetas WHERE numero_gaveta = ?)
-            ORDER BY h.data_hora DESC
-            LIMIT ? OFFSET ?
-        ''', (numero_gaveta, limit, offset))
-        return self.cursor.fetchall()
-    
-    def get_total_historico(self, numero_gaveta):
-        """Retorna o número total de registros de histórico para uma gaveta"""
-        self.cursor.execute('''
-            SELECT COUNT(*) 
-            FROM historico_gavetas 
-            WHERE gaveta_id = (SELECT id FROM gavetas WHERE numero_gaveta = ?)
-        ''', (numero_gaveta,))
-        return self.cursor.fetchone()[0]
-    
-    def get_todo_historico(self):
-        """Retorna todo o histórico de todas as gavetas"""
-        self.cursor.execute('''
-            SELECT 
-                strftime('%d/%m/%Y %H:%M:%S', h.data_hora, 'localtime') as data_hora,
-                p.numero_gaveta,
-                h.acao,
-                u.username as usuario
-            FROM historico_gavetas h
-            JOIN gavetas p ON h.gaveta_id = p.id
-            JOIN usuarios u ON h.usuario_id = u.id
-            ORDER BY h.data_hora DESC
-        ''')
-        return self.cursor.fetchall()
-    
-    def get_todo_historico_paginado(self, offset=0, limit=20):
-        """
-        Retorna o histórico de todas as gavetas com paginação
-        
-        Args:
-            offset (int): Número de registros a pular
-            limit (int): Número máximo de registros a retornar
-            
-        Returns:
-            list: Lista de tuplas (data_hora, numero_gaveta, acao, usuario)
-        """
-        self.cursor.execute('''
-            SELECT 
-                strftime('%d/%m/%Y %H:%M:%S', h.data_hora) as data_hora, 
-                p.numero_gaveta, 
-                h.acao, 
-                COALESCE(u.nome_completo, u.username, 'Sistema') as usuario
-            FROM historico_gavetas h
-            JOIN gavetas p ON h.gaveta_id = p.id
-            LEFT JOIN usuarios u ON h.usuario_id = u.id
-            ORDER BY h.data_hora DESC
-            LIMIT ? OFFSET ?
-        ''', (limit, offset))
-        
-        return self.cursor.fetchall()
-    
-    def get_total_todo_historico(self):
-        """
-        Retorna o número total de registros de histórico de todas as gavetas
-        
-        Returns:
-            int: Número total de registros
-        """
-        self.cursor.execute('SELECT COUNT(*) FROM historico_gavetas')
-        return self.cursor.fetchone()[0]
-    
-    def get_usuarios(self):
-        """Obtém a lista de todos os usuários"""
-        self.cursor.execute('''
-            SELECT id, username, nome_completo, tipo, ativo, data_criacao 
-            FROM usuarios
-            ORDER BY data_criacao DESC
-        ''')
-        return self.cursor.fetchall()
-
-    def excluir_usuario(self, usuario_id):
-        """
-        Exclui um usuário do banco de dados.
-        
-        Args:
-            usuario_id (int): ID do usuário a ser excluído
-            
-        Returns:
-            bool: True se o usuário foi excluído com sucesso, False caso contrário
-        """
-        try:
-            # Primeiro, verifica se existe um usuário com o ID fornecido
-            self.cursor.execute('SELECT id FROM usuarios WHERE id = ?', (usuario_id,))
-            if not self.cursor.fetchone():
-                return False
-                
-            # Verifica se o usuário é o único administrador
-            if self.eh_unico_administrador(usuario_id):
-                return False  # Não permite excluir o único administrador
-            
-            # Exclui o usuário
-            self.cursor.execute('DELETE FROM usuarios WHERE id = ?', (usuario_id,))
-            self.conn.commit()
-            return self.cursor.rowcount > 0
-        except sqlite3.Error as e:
-            logger.error(f"Erro ao excluir usuário: {e}")
-            return False
-
-    def eh_unico_administrador(self, usuario_id):
-        """
-        Verifica se o usuário é o único administrador no sistema.
-        
-        Args:
-            usuario_id (int): ID do usuário a ser verificado
-            
-        Returns:
-            bool: True se for o único administrador, False caso contrário
-        """
-        try:
-            # Primeiro, verifica se o usuário é administrador
-            self.cursor.execute('SELECT tipo FROM usuarios WHERE id = ?', (usuario_id,))
-            resultado = self.cursor.fetchone()
-            
-            if not resultado or resultado[0] != 'administrador':
-                return False  # Se não for admin, não precisa bloquear a exclusão
-                
-            # Conta quantos administradores existem
-            self.cursor.execute("SELECT COUNT(*) FROM usuarios WHERE tipo = 'administrador'")
-            total_admins = self.cursor.fetchone()[0]
-            
-            return total_admins <= 1
-            
-        except Exception as e:
-            logger.error(f"Erro ao verificar se é único administrador: {e}")
-            return True  # Em caso de erro, previne a exclusão por segurança
-
-    def atualizar_senha(self, usuario_id, nova_senha):
-        """
-        Atualiza a senha de um usuário.
-        
-        Args:
-            usuario_id (int): ID do usuário
-            nova_senha (str): Nova senha em texto plano
-            
-        Returns:
-            bool: True se a senha foi atualizada com sucesso, False caso contrário
-        """
-        from ..repositories.security import hash_password
-        
-        try:
-            # Primeiro, obter o nome de usuário para o log
-            self.cursor.execute('SELECT username FROM usuarios WHERE id = ?', (usuario_id,))
-            resultado = self.cursor.fetchone()
-            
-            if not resultado:
-                return False
-                
-            username = resultado[0]
-            senha_hash = hash_password(nova_senha)
-            
-            # Registrar a alteração de senha na auditoria
-            self.registrar_auditoria(
-                usuario_id=usuario_id,
-                acao='ALTERAR_SENHA',
-                tabela_afetada='USUARIOS',
-                id_afetado=usuario_id,
-                dados_anteriores={'usuario': username, 'acao': 'senha_alterada'},
-                dados_novos={'usuario': username, 'hora_alteracao': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-            )
-            
-            # Atualizar a senha no banco de dados
-            self.cursor.execute(
-                'UPDATE usuarios SET senha_hash = ? WHERE id = ?',
-                (senha_hash, usuario_id)
-            )
-            self.conn.commit()
-            return self.cursor.rowcount > 0
-            
-        except Exception as e:
-            # Registrar erro na auditoria
-            self.registrar_auditoria(
-                usuario_id=usuario_id,
-                acao='ERRO_ALTERAR_SENHA',
-                tabela_afetada='USUARIOS',
-                id_afetado=usuario_id,
-                dados_anteriores={'erro': str(e), 'hora_erro': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-            )
-            logger.error(f"Erro ao atualizar senha: {e}")
-            return False
-
-    def close(self):
-        """Fecha a conexão com o banco de dados"""
-        if hasattr(self, 'conn'):
-            self.conn.close()
-
-    def _criar_usuario_admin_padrao(self):
-        """Cria um usuário administrador padrão com bcrypt"""
-        import os
-        from ..repositories.security import hash_password
-        
-        # Dados do administrador padrão (usa variáveis de ambiente ou valores padrão)
-        username = os.getenv('OZEMPIC_ADMIN_USERNAME', '00')
-        senha = os.getenv('OZEMPIC_ADMIN_PASSWORD', 'admin@2025')
-        nome_completo = "ADMINISTRADOR"
-        
-        # Gera hash bcrypt
-        senha_hash = hash_password(senha)
-        
-        try:
-            # Insere o usuário administrador
-            self.cursor.execute('''
-            INSERT INTO usuarios (username, senha_hash, nome_completo, tipo, ativo)
-            VALUES (?, ?, ?, 'administrador', 1)
-            ''', (username, senha_hash, nome_completo))
-            
-            self.conn.commit()
-            logger.info(f"Usuário administrador padrão criado: {username}")
-            
-        except sqlite3.IntegrityError:
-            # Se o usuário já existir, não faz nada
-            self.conn.rollback()
-            logger.debug("Usuário administrador padrão já existe.")
-    
-    def _criar_usuario_tecnico_padrao(self):
-        """Cria um usuário técnico padrão com bcrypt"""
-        import os
-        from ..repositories.security import hash_password
-        
-        # Dados do técnico padrão (usa variáveis de ambiente ou valores padrão)
-        username = os.getenv('OZEMPIC_TECNICO_USERNAME', '01')
-        senha = os.getenv('OZEMPIC_TECNICO_PASSWORD', 'tecnico@2025')
-        nome_completo = "TÉCNICO"
-        
-        # Gera hash bcrypt
-        senha_hash = hash_password(senha)
-        
-        try:
-            # Insere o usuário técnico
-            self.cursor.execute('''
-            INSERT INTO usuarios (username, senha_hash, nome_completo, tipo, ativo)
-            VALUES (?, ?, ?, 'tecnico', 1)
-            ''', (username, senha_hash, nome_completo))
-            
-            self.conn.commit()
-            logger.info(f"Usuário técnico padrão criado: {username}")
-            
-        except sqlite3.IntegrityError:
-            # Se o usuário já existir, não faz nada
-            self.conn.rollback()
-            logger.debug("Usuário técnico padrão já existe.")
-    
-    def registrar_auditoria(self, usuario_id, acao, tabela_afetada, id_afetado=None, 
-                          dados_anteriores=None, dados_novos=None, endereco_ip=None):
-        """Registra uma ação na tabela de auditoria
-        
-        Args:
-            usuario_id (int): ID do usuário que realizou a ação
-            acao (str): Ação realizada (ex: 'LOGIN', 'LOGOUT', 'CRIAR', 'ATUALIZAR', 'EXCLUIR')
-            tabela_afetada (str): Nome da tabela afetada
-            id_afetado (int, optional): ID do registro afetado
-            dados_anteriores (dict, optional): Dados antes da alteração
-            dados_novos (dict, optional): Dados após a alteração
-            endereco_ip (str, optional): Endereço IP do usuário
-            
-        Returns:
-            int: ID do registro de auditoria criado
-        """
-        try:
-            # Converter dicionários para strings JSON
-            dados_anteriores_json = json.dumps(dados_anteriores, ensure_ascii=False) if dados_anteriores else None
-            dados_novos_json = json.dumps(dados_novos, ensure_ascii=False) if dados_novos else None
-            
-            self.cursor.execute('''
-                INSERT INTO auditoria 
-                (usuario_id, acao, tabela_afetada, id_afetado, dados_anteriores, dados_novos, endereco_ip)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (usuario_id, acao, tabela_afetada, id_afetado, dados_anteriores_json, dados_novos_json, endereco_ip))
-            
-            self.conn.commit()
-            return self.cursor.lastrowid
-            
-        except Exception as e:
-            logger.error(f"Erro ao registrar auditoria: {e}")
-            self.conn.rollback()
-            return None
-    
-    def buscar_logs_auditoria(self, offset=0, limit=50, filtro_usuario=None, filtro_acao=None, filtro_tabela=None, 
-                             data_inicio=None, data_fim=None):
-        """
-        Busca registros de auditoria com filtros opcionais
-        
-        Args:
-            offset (int): Número de registros para pular (paginação)
-            limit (int): Número máximo de registros a retornar
-            filtro_usuario (int, optional): ID do usuário para filtrar
-            filtro_acao (str, optional): Ação para filtrar
-            filtro_tabela (str, optional): Tabela para filtrar
-            data_inicio (str, optional): Data de início no formato 'YYYY-MM-DD'
-            data_fim (str, optional): Data de fim no formato 'YYYY-MM-DD'
-            
-        Returns:
-            list: Lista de dicionários com os registros de auditoria
-        """
-        try:
-            query = '''
-                SELECT 
-                    a.id,
-                    a.acao,
-                    a.tabela_afetada,
-                    a.id_afetado,
-                    a.dados_anteriores,
-                    a.dados_novos,
-                    a.data_hora,
-                    u.username as usuario
-                FROM auditoria a
-                LEFT JOIN usuarios u ON a.usuario_id = u.id
-                WHERE 1=1
-            '''
-            
-            params = []
-            
-            # Aplicar filtros
-            if filtro_usuario is not None:
-                query += ' AND a.usuario_id = ?'
-                params.append(filtro_usuario)
-                
-            if filtro_acao:
-                query += ' AND a.acao = ?'
-                params.append(filtro_acao)
-                
-            if filtro_tabela:
-                query += ' AND a.tabela_afetada = ?'
-                params.append(filtro_tabela)
-                
-            if data_inicio:
-                query += ' AND DATE(a.data_hora) >= ?'
-                params.append(data_inicio)
-                
-            if data_fim:
-                query += ' AND DATE(a.data_hora) <= ?'
-                params.append(data_fim)
-            
-            # Ordenar por data mais recente primeiro
-            query += ' ORDER BY a.data_hora DESC'
-            
-            # Adicionar paginação
-            query += ' LIMIT ? OFFSET ?'
-            params.extend([limit, offset])
-            
-            self.cursor.execute(query, params)
-            colunas = [desc[0] for desc in self.cursor.description]
-            
-            # Converter para lista de dicionários
-            resultados = []
-            for row in self.cursor.fetchall():
-                resultado = dict(zip(colunas, row))
-                # Converter strings JSON de volta para dicionários
-                if resultado.get('dados_anteriores'):
-                    resultado['dados_anteriores'] = json.loads(resultado['dados_anteriores'])
-                if resultado.get('dados_novos'):
-                    resultado['dados_novos'] = json.loads(resultado['dados_novos'])
-                
-                # Formatar data para exibição
-                if resultado.get('data_hora'):
-                    data_obj = datetime.strptime(resultado['data_hora'], '%Y-%m-%d %H:%M:%S')
-                    resultado['data_formatada'] = data_obj.strftime('%d/%m/%Y %H:%M:%S')
-                
-                resultados.append(resultado)
-                
-            return resultados
-            
-        except Exception as e:
-            logger.error(f"Erro ao buscar logs de auditoria: {e}")
-            return []
-    
-    def contar_logs_auditoria(self, filtro_usuario=None, filtro_acao=None, filtro_tabela=None, 
-                             data_inicio=None, data_fim=None):
-        """
-        Conta o número total de registros de auditoria que correspondem aos filtros
-        
-        Args:
-            filtro_usuario (int, optional): ID do usuário para filtrar
-            filtro_acao (str, optional): Ação para filtrar
-            filtro_tabela (str, optional): Tabela para filtrar
-            data_inicio (str, optional): Data de início no formato 'YYYY-MM-DD'
-            data_fim (str, optional): Data de fim no formato 'YYYY-MM-DD'
-            
-        Returns:
-            int: Número total de registros que correspondem aos filtros
-        """
-        try:
-            query = 'SELECT COUNT(*) FROM auditoria a WHERE 1=1'
-            params = []
-            
-            # Aplicar filtros (mesmos filtros da busca)
-            if filtro_usuario is not None:
-                query += ' AND a.usuario_id = ?'
-                params.append(filtro_usuario)
-                
-            if filtro_acao:
-                query += ' AND a.acao = ?'
-                params.append(filtro_acao)
-                
-            if filtro_tabela:
-                query += ' AND a.tabela_afetada = ?'
-                params.append(filtro_tabela)
-                
-            if data_inicio:
-                query += ' AND DATE(a.data_hora) >= ?'
-                params.append(data_inicio)
-                
-            if data_fim:
-                query += ' AND DATE(a.data_hora) <= ?'
-                params.append(data_fim)
-            
-            self.cursor.execute(query, params)
-            return self.cursor.fetchone()[0]
-            
-        except Exception as e:
-            logger.error(f"Erro ao contar logs de auditoria: {e}")
-            return 0
+    @property
+    def _gavetas(self):
+        if self._gaveta_repo is None:
+            from .gaveta_repository import GavetaRepository
+            self._gaveta_repo = GavetaRepository()
+        return self._gaveta_repo
 
     # =========================================================================
-    # Aliases em inglês para padronização de nomenclatura
-    # Mantidos para compatibilidade com código existente em português
+    # User methods - delegate to UserRepository
+    # =========================================================================
+    
+    def criar_usuario(self, username, senha, nome_completo, tipo):
+        """DEPRECATED: Use UserRepository.create_user()"""
+        _warn('criar_usuario', 'UserRepository.create_user()')
+        return bool(self._users.create_user(username, senha, nome_completo, tipo))
+    
+    def autenticar_usuario(self, username, senha):
+        """DEPRECATED: Use UserRepository.authenticate_user()"""
+        _warn('autenticar_usuario', 'UserRepository.authenticate_user()')
+        return self._users.authenticate_user(username, senha)
+    
+    def get_usuarios(self):
+        """DEPRECATED: Use UserRepository.get_users()"""
+        _warn('get_usuarios', 'UserRepository.get_users()')
+        return self._users.get_users()
+    
+    def excluir_usuario(self, usuario_id):
+        """DEPRECATED: Use UserRepository.delete_user()"""
+        _warn('excluir_usuario', 'UserRepository.delete_user()')
+        return self._users.delete_user(usuario_id)
+    
+    def eh_unico_administrador(self, usuario_id):
+        """DEPRECATED: Use UserRepository.is_unique_admin()"""
+        _warn('eh_unico_administrador', 'UserRepository.is_unique_admin()')
+        return self._users.is_unique_admin(usuario_id)
+    
+    def atualizar_senha(self, usuario_id, nova_senha):
+        """DEPRECATED: Use UserRepository.update_password()"""
+        _warn('atualizar_senha', 'UserRepository.update_password()')
+        return self._users.update_password(usuario_id, nova_senha)
+
+    # =========================================================================
+    # Drawer methods - delegate to GavetaRepository
+    # =========================================================================
+    
+    def get_estado_gaveta(self, numero_gaveta):
+        """DEPRECATED: Use GavetaRepository.get_state()"""
+        _warn('get_estado_gaveta', 'GavetaRepository.get_state()')
+        return self._gavetas.get_state(numero_gaveta)
+    
+    def set_estado_gaveta(self, numero_gaveta, estado, usuario_tipo, usuario_id=None):
+        """DEPRECATED: Use GavetaRepository.set_state()"""
+        _warn('set_estado_gaveta', 'GavetaRepository.set_state()')
+        return self._gavetas.set_state(numero_gaveta, estado, usuario_tipo, usuario_id)
+    
+    def get_historico_gaveta(self, numero_gaveta, limite=10):
+        """DEPRECATED: Use GavetaRepository.get_history()"""
+        _warn('get_historico_gaveta', 'GavetaRepository.get_history()')
+        return self._gavetas.get_history(numero_gaveta, limite)
+    
+    def get_historico_paginado(self, numero_gaveta, offset=0, limit=20):
+        """DEPRECATED: Use GavetaRepository.get_history_paginated()"""
+        _warn('get_historico_paginado', 'GavetaRepository.get_history_paginated()')
+        return self._gavetas.get_history_paginated(numero_gaveta, offset, limit)
+    
+    def get_total_historico(self, numero_gaveta):
+        """DEPRECATED: Use GavetaRepository.count_history()"""
+        _warn('get_total_historico', 'GavetaRepository.count_history()')
+        return self._gavetas.count_history(numero_gaveta)
+    
+    def get_todo_historico(self):
+        """DEPRECATED: Use GavetaRepository.get_all_history()"""
+        _warn('get_todo_historico', 'GavetaRepository.get_all_history()')
+        return self._gavetas.get_all_history()
+    
+    def get_todo_historico_paginado(self, offset=0, limit=20):
+        """DEPRECATED: Use GavetaRepository.get_all_history_paginated()"""
+        _warn('get_todo_historico_paginado', 'GavetaRepository.get_all_history_paginated()')
+        return self._gavetas.get_all_history_paginated(offset, limit)
+    
+    def get_total_todo_historico(self):
+        """DEPRECATED: Use GavetaRepository.count_all_history()"""
+        _warn('get_total_todo_historico', 'GavetaRepository.count_all_history()')
+        return self._gavetas.count_all_history()
+
+    # =========================================================================
+    # Audit methods - delegate to AuditRepository
+    # =========================================================================
+    
+    def registrar_auditoria(self, usuario_id, acao, tabela_afetada, id_afetado=None,
+                           dados_anteriores=None, dados_novos=None, endereco_ip=None):
+        """DEPRECATED: Use AuditRepository.create_log()"""
+        _warn('registrar_auditoria', 'AuditRepository.create_log()')
+        return self._audit.create_log(
+            usuario_id=usuario_id,
+            acao=acao,
+            tabela_afetada=tabela_afetada,
+            id_afetado=id_afetado,
+            dados_anteriores=dados_anteriores,
+            dados_novos=dados_novos,
+            endereco_ip=endereco_ip
+        )
+    
+    def buscar_logs_auditoria(self, offset=0, limit=50, filtro_usuario=None,
+                              filtro_acao=None, filtro_tabela=None,
+                              data_inicio=None, data_fim=None):
+        """DEPRECATED: Use AuditRepository.get_logs()"""
+        _warn('buscar_logs_auditoria', 'AuditRepository.get_logs()')
+        return self._audit.get_logs(
+            offset=offset,
+            limit=limit,
+            filtro_usuario=filtro_usuario,
+            filtro_acao=filtro_acao,
+            filtro_tabela=filtro_tabela,
+            data_inicio=data_inicio,
+            data_fim=data_fim
+        )
+    
+    def contar_logs_auditoria(self, filtro_usuario=None, filtro_acao=None,
+                              filtro_tabela=None, data_inicio=None, data_fim=None):
+        """DEPRECATED: Use AuditRepository.count_logs()"""
+        _warn('contar_logs_auditoria', 'AuditRepository.count_logs()')
+        return self._audit.count_logs(
+            filtro_usuario=filtro_usuario,
+            filtro_acao=filtro_acao,
+            filtro_tabela=filtro_tabela,
+            data_inicio=data_inicio,
+            data_fim=data_fim
+        )
+
+    # =========================================================================
+    # Utility methods
+    # =========================================================================
+    
+    def close(self):
+        """Close database connection"""
+        if hasattr(self, '_db') and self._db:
+            self._db.close()
+
+    # =========================================================================
+    # English aliases for standardization
     # =========================================================================
     
     # User methods
@@ -616,7 +214,7 @@ class DatabaseManager:
     get_users = get_usuarios
     is_unique_admin = eh_unico_administrador
     
-    # Drawer (gaveta) methods
+    # Drawer methods
     get_drawer_state = get_estado_gaveta
     set_drawer_state = set_estado_gaveta
     get_drawer_history = get_historico_gaveta

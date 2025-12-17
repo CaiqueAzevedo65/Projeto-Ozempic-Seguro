@@ -16,32 +16,41 @@ from ozempic_seguro.session import SessionManager
 
 @pytest.fixture
 def temp_db():
-    """Cria um banco de dados temporário para testes"""
+    """Cria um banco de dados temporário isolado para testes"""
+    from ozempic_seguro.repositories.connection import DatabaseConnection
+    
     temp_dir = tempfile.mkdtemp()
     db_path = os.path.join(temp_dir, 'test_ozempic.db')
     
-    # Reset singleton antes de criar novo
+    # Reset singletons antes de criar novo
     DatabaseManager._instance = None
+    DatabaseConnection._instance = None
     
-    # Configurar DatabaseManager para usar DB temporário
-    with patch('ozempic_seguro.repositories.database.DatabaseManager._get_db_path') as mock_path:
-        mock_path.return_value = db_path
+    # Configurar DatabaseConnection para usar DB temporário
+    with patch.object(DatabaseConnection, '_get_db_path', return_value=db_path):
         db_manager = DatabaseManager()
-        # Tabelas são criadas automaticamente via migrations no __init__
         
         yield db_manager
         
         # Fechar conexão antes de limpar
         if hasattr(db_manager, 'conn'):
             db_manager.conn.close()
+        
+        # Reset singletons após teste
         DatabaseManager._instance = None
+        DatabaseConnection._instance = None
         
     # Cleanup
     try:
         if os.path.exists(db_path):
             os.remove(db_path)
+        # Remove arquivos WAL se existirem
+        for ext in ['-wal', '-shm']:
+            wal_path = db_path + ext
+            if os.path.exists(wal_path):
+                os.remove(wal_path)
         os.rmdir(temp_dir)
-    except:
+    except OSError:
         pass  # Ignora erros de cleanup
 
 
@@ -131,14 +140,31 @@ def mock_datetime():
 
 
 @pytest.fixture(autouse=True)
-def reset_service_factory():
-    """Reset do ServiceFactory antes de cada teste"""
-    from ozempic_seguro.services.service_factory import ServiceFactory
-    # Reset do registry
-    ServiceFactory._registry = None
+def reset_singletons():
+    """Reset de todos os singletons antes de cada teste para isolamento"""
+    from ozempic_seguro.services.service_factory import _registry
+    from ozempic_seguro.repositories.connection import DatabaseConnection
+    
+    # Reset registry
+    _registry.reset_services()
+    
     yield
+    
     # Cleanup após teste
-    ServiceFactory._registry = None
+    _registry.reset_services()
+    
+    # Reset singletons de conexão usando método seguro
+    if hasattr(DatabaseConnection, 'reset_instance'):
+        DatabaseConnection.reset_instance()
+    else:
+        DatabaseConnection._instance = None
+    
+    DatabaseManager._instance = None
+    
+    # Cleanup SessionManager
+    if SessionManager._instance is not None:
+        SessionManager._instance.cleanup()
+        SessionManager._instance = None
 
 
 @pytest.fixture

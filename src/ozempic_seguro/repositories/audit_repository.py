@@ -4,14 +4,16 @@ Repositório de auditoria: registros de ações do sistema.
 Implementa IAuditRepository com lógica de persistência para logs de auditoria.
 """
 import json
+import sqlite3
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 
 from .connection import DatabaseConnection
+from .interfaces import IAuditRepository
 from ..core.logger import logger
 
 
-class AuditRepository:
+class AuditRepository(IAuditRepository):
     """
     Repositório para operações de auditoria no banco de dados.
     
@@ -62,8 +64,8 @@ class AuditRepository:
             self._db.commit()
             return self._db.lastrowid()
             
-        except Exception as e:
-            logger.error(f"Error creating audit log: {e}")
+        except sqlite3.Error as e:
+            logger.error(f"Database error creating audit log: {e}")
             self._db.rollback()
             return None
 
@@ -148,8 +150,8 @@ class AuditRepository:
             
             return results
             
-        except Exception as e:
-            logger.error(f"Error fetching audit logs: {e}")
+        except sqlite3.Error as e:
+            logger.error(f"Database error fetching audit logs: {e}")
             return []
 
     def count_logs(
@@ -196,6 +198,66 @@ class AuditRepository:
             self._db.execute(query, tuple(params))
             return self._db.fetchone()[0]
             
-        except Exception as e:
-            logger.error(f"Error counting audit logs: {e}")
+        except sqlite3.Error as e:
+            logger.error(f"Database error counting audit logs: {e}")
             return 0
+
+    # Métodos da interface IRepository
+    def find_by_id(self, entity_id: int) -> Optional[Dict[str, Any]]:
+        """Implementação de IRepository.find_by_id"""
+        self._db.execute('SELECT * FROM auditoria WHERE id = ?', (entity_id,))
+        row = self._db.fetchone()
+        if row:
+            return {'id': row[0], 'usuario_id': row[1], 'acao': row[2], 'data_hora': row[3]}
+        return None
+    
+    def find_all(self) -> List[Dict[str, Any]]:
+        """Implementação de IRepository.find_all"""
+        return self.get_logs(limit=1000)
+    
+    def save(self, entity: Dict[str, Any]) -> bool:
+        """Implementação de IRepository.save"""
+        result = self.create_log(
+            usuario_id=entity.get('usuario_id'),
+            acao=entity.get('acao'),
+            tabela_afetada=entity.get('tabela_afetada'),
+            dados_anteriores=entity.get('dados_anteriores')
+        )
+        return result is not None
+    
+    def delete(self, entity_id: int) -> bool:
+        """Implementação de IRepository.delete - Logs não devem ser deletados"""
+        return False
+    
+    def exists(self, entity_id: int) -> bool:
+        """Implementação de IRepository.exists"""
+        return self.find_by_id(entity_id) is not None
+
+    # Métodos da interface IAuditRepository
+    def log_action(
+        self, 
+        user_id: Optional[int],
+        action: str,
+        details: Optional[str] = None,
+        ip_address: Optional[str] = None
+    ) -> bool:
+        """Implementação de IAuditRepository.log_action"""
+        result = self.create_log(
+            usuario_id=user_id,
+            acao=action,
+            dados_anteriores={'details': details} if details else None,
+            endereco_ip=ip_address
+        )
+        return result is not None
+    
+    def find_by_user(self, user_id: int) -> List[Dict[str, Any]]:
+        """Implementação de IAuditRepository.find_by_user"""
+        return self.get_logs(filtro_usuario=user_id)
+    
+    def find_by_action(self, action: str) -> List[Dict[str, Any]]:
+        """Implementação de IAuditRepository.find_by_action"""
+        return self.get_logs(filtro_acao=action)
+    
+    def find_by_date_range(self, start_date: str, end_date: str) -> List[Dict[str, Any]]:
+        """Implementação de IAuditRepository.find_by_date_range"""
+        return self.get_logs(data_inicio=start_date, data_fim=end_date)

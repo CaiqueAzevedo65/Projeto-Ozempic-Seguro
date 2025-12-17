@@ -4,13 +4,24 @@ Permite desativar temporariamente o timer enquanto o técnico está logado.
 """
 import customtkinter
 from ..components import Header, VoltarButton, ModernConfirmDialog, ToastNotification
-from ...session import SessionManager
+from ...services.timer_control_service import get_timer_control_service
+from ...services.auth_service import get_auth_service
 
 class ControleTimerFrame(customtkinter.CTkFrame):
+    BG_COLOR = "#3B6A7D"
+    
     def __init__(self, master, voltar_callback=None, *args, **kwargs):
         self.voltar_callback = voltar_callback
-        self.session_manager = SessionManager.get_instance()
-        super().__init__(master, fg_color="#3B6A7D", *args, **kwargs)
+        self.timer_service = get_timer_control_service()
+        self.auth_service = get_auth_service()
+        super().__init__(master, fg_color=self.BG_COLOR, *args, **kwargs)
+        
+        # Criar overlay para esconder construção
+        self._overlay = customtkinter.CTkFrame(master, fg_color=self.BG_COLOR)
+        self._overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self._overlay.lift()
+        master.update_idletasks()
+        
         self.pack(fill="both", expand=True)
         
         # Criar header
@@ -25,6 +36,10 @@ class ControleTimerFrame(customtkinter.CTkFrame):
         
         # Criar botão voltar
         self.criar_botao_voltar()
+        
+        # Remover overlay após tudo estar pronto
+        self.update_idletasks()
+        self._overlay.destroy()
 
     def criar_controle_timer(self):
         """Cria o controle para ativar/desativar o timer"""
@@ -97,16 +112,16 @@ class ControleTimerFrame(customtkinter.CTkFrame):
         self.atualizar_estado()
     
     def alternar_timer(self):
-        """Alterna o estado do timer"""
+        """Alterna o estado do timer usando TimerControlService"""
         # Verifica se o usuário é técnico
-        usuario = self.session_manager.get_current_user()
+        usuario = self.auth_service.get_current_user()
         if not usuario or usuario.get('tipo') != 'tecnico':
             ToastNotification.show(self, "Acesso negado! Apenas técnicos podem alterar.", "error")
             return
         
-        timer_atual = self.session_manager.is_timer_enabled()
+        status = self.timer_service.get_status()
         
-        if timer_atual:
+        if status.enabled:
             # Vai desativar - pedir confirmação
             if ModernConfirmDialog.ask(
                 self,
@@ -116,18 +131,21 @@ class ControleTimerFrame(customtkinter.CTkFrame):
                 confirm_text="Desativar",
                 cancel_text="Cancelar"
             ):
-                self.session_manager.set_timer_enabled(False)
-                ToastNotification.show(self, "Timer DESATIVADO!", "warning")
+                success, msg = self.timer_service.disable_timer()
+                if success:
+                    ToastNotification.show(self, "Timer DESATIVADO!", "warning")
                 self.atualizar_estado()
         else:
             # Vai ativar - sem confirmação necessária
-            self.session_manager.set_timer_enabled(True)
-            ToastNotification.show(self, "Timer ATIVADO com sucesso!", "success")
+            success, msg = self.timer_service.enable_timer()
+            if success:
+                ToastNotification.show(self, "Timer ATIVADO com sucesso!", "success")
             self.atualizar_estado()
     
     def atualizar_estado(self):
         """Atualiza a interface de acordo com o estado do timer"""
-        timer_ativo = self.session_manager.is_timer_enabled()
+        status = self.timer_service.get_status()
+        timer_ativo = status.enabled
         
         if timer_ativo:
             # Timer ativado - fundo verde claro

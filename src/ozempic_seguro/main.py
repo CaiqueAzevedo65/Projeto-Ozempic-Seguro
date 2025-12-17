@@ -8,6 +8,20 @@ from .controllers.navigation_controller import NavigationController
 from .core.logger import logger
 
 
+def _preload_images() -> None:
+    """Pré-carrega imagens para acelerar a renderização das telas"""
+    from .views.components.common import ImageCache
+    from .views.components.gavetas import _GavetaImageCache
+    
+    # Pré-carregar imagens do header
+    ImageCache.get_logo()
+    ImageCache.get_digital()
+    
+    # Pré-carregar imagens das gavetas
+    _GavetaImageCache.get_gaveta_aberta()
+    _GavetaImageCache.get_gaveta_fechada()
+
+
 def _setup_audit_callback() -> None:
     """Configura callback de auditoria para SessionManager (evita import circular)"""
     from .session import SessionManager
@@ -31,7 +45,13 @@ class MainApp(customtkinter.CTk):
         super().__init__()
         from .config import UIConfig, AppConfig
         
-        # Configura callback de auditoria
+        # Esconder janela durante inicialização
+        self.withdraw()
+        
+        # Pré-carregar imagens para acelerar renderização
+        _preload_images()
+        
+        # Configura callback de auditoria primeiro
         _setup_audit_callback()
         
         self.title(AppConfig.APP_NAME)
@@ -44,10 +64,18 @@ class MainApp(customtkinter.CTk):
         self.container = customtkinter.CTkFrame(self)
         self.container.pack(fill="both", expand=True)
         
-        # Controlador de navegação
+        # Controlador de navegação - inicialização direta
         self.nav_controller = NavigationController(self)
         self.nav_controller.preload_frames()
         self.nav_controller.show_tela_toque()
+        
+        # Forçar renderização completa antes de mostrar
+        self.update_idletasks()
+        self.update()
+        
+        # Mostrar janela após tudo estar pronto
+        self.deiconify()
+        
         self.nav_controller.start_alternancia()
         
         # Configurar encerramento adequado da aplicação

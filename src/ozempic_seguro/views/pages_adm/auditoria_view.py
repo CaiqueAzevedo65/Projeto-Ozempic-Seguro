@@ -1,14 +1,23 @@
 import customtkinter
 from tkinter import ttk
 from datetime import datetime, timedelta
-from ...services.service_factory import get_audit_service
+from ...services.audit_view_service import get_audit_view_service, AuditFilter
 from ..components import Header
 
 class AuditoriaFrame(customtkinter.CTkFrame):
+    BG_COLOR = "#3B6A7D"
+    
     def __init__(self, master, voltar_callback=None, *args, **kwargs):
         self.voltar_callback = voltar_callback
-        super().__init__(master, fg_color="#3B6A7D", *args, **kwargs)
-        self.audit_service = get_audit_service()
+        super().__init__(master, fg_color=self.BG_COLOR, *args, **kwargs)
+        self.audit_view_service = get_audit_view_service()
+        
+        # Criar overlay para esconder construção
+        self._overlay = customtkinter.CTkFrame(master, fg_color=self.BG_COLOR)
+        self._overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self._overlay.lift()
+        master.update_idletasks()
+        
         self.pack(fill="both", expand=True)
         
         # Variáveis para filtros
@@ -27,6 +36,10 @@ class AuditoriaFrame(customtkinter.CTkFrame):
         self.criar_tabela()
         self.carregar_dados()
         self.criar_botao_voltar()
+        
+        # Remover overlay após tudo estar pronto
+        self.update_idletasks()
+        self._overlay.destroy()
     
     def criar_topo(self):
         """Cria o cabeçalho da página"""
@@ -69,10 +82,10 @@ class AuditoriaFrame(customtkinter.CTkFrame):
             font=("Arial", 12, "bold")
         ).grid(row=0, column=0, padx=10, pady=5, sticky="w")
         
-        # Apenas ações relacionadas a usuários
+        # Ações disponíveis do serviço
         self.cmb_acao = customtkinter.CTkComboBox(
             self.filtros_frame,
-            values=["Todas", "LOGIN", "LOGOUT", "CRIAR", "ATUALIZAR", "EXCLUIR"],
+            values=self.audit_view_service.get_available_actions(),
             variable=self.filtro_acao,
             width=150,
             state="readonly"
@@ -181,55 +194,57 @@ class AuditoriaFrame(customtkinter.CTkFrame):
         self.tree.bind("<Double-1>", self.mostrar_detalhes)
     
     def carregar_dados(self, aplicar_filtros=False):
-        """Carrega os dados da tabela de auditoria"""
+        """Carrega os dados da tabela de auditoria usando AuditViewService"""
         # Limpar a árvore
         for item in self.tree.get_children():
             self.tree.delete(item)
         
-        # Obter os filtros
-        filtro_acao = None if self.filtro_acao.get() == "Todas" else self.filtro_acao.get()
-        data_inicio = self.filtro_data_inicio.get()
-        data_fim = self.filtro_data_fim.get()
+        # Criar filtro usando o serviço
+        filtro = AuditFilter(
+            acao=self.filtro_acao.get(),
+            data_inicio=self.filtro_data_inicio.get(),
+            data_fim=self.filtro_data_fim.get()
+        )
         
         try:
-            # Obter os registros de auditoria filtrados
-            registros = self.audit_service.get_logs(
-                filtro_acao=filtro_acao,
-                filtro_tabela="USUARIOS",
-                data_inicio=data_inicio,
-                data_fim=data_fim
-            )
+            # Obter os registros de auditoria usando o serviço
+            result = self.audit_view_service.get_logs(filter=filtro)
             
             # Preencher a tabela com os registros
-            for registro in registros:
-                # Extrair dados do registro
-                data = registro.get('data_formatada', '')
-                usuario = registro.get('usuario', 'Sistema')
-                acao = registro.get('acao', '')
-                tabela = registro.get('tabela_afetada', '')
-                id_afetado = registro.get('id_afetado', '')
-                
+            for log_item in result.items:
                 # Formatar detalhes
                 detalhes = ""
-                dados_novos = registro.get('dados_novos', {})
-                if isinstance(dados_novos, dict):
-                    detalhes = ", ".join([f"{k}: {v}" for k, v in dados_novos.items()])
+                if log_item.dados_novos:
+                    try:
+                        import json
+                        dados = json.loads(log_item.dados_novos) if isinstance(log_item.dados_novos, str) else log_item.dados_novos
+                        if isinstance(dados, dict):
+                            detalhes = ", ".join([f"{k}: {v}" for k, v in dados.items()])
+                    except Exception:
+                        detalhes = str(log_item.dados_novos)[:50]
                 
                 # Inserir na árvore
                 self.tree.insert(
                     "", "end",
-                    values=(data, usuario, acao, tabela, id_afetado, detalhes),
+                    values=(
+                        log_item.data_hora_display,
+                        log_item.usuario,
+                        log_item.acao_display,
+                        log_item.tabela,
+                        log_item.id_afetado or "",
+                        detalhes
+                    ),
                     tags=('linha',)
                 )
-                
-                # Configurar tags para cores alternadas
-                self.tree.tag_configure('linha', background='white')
-                self.tree.tag_configure('linha_alternada', background='#f0f0f0')
-                
-                # Alternar cores das linhas
-                for i, item in enumerate(self.tree.get_children()):
-                    tag = 'linha_alternada' if i % 2 == 0 else 'linha'
-                    self.tree.item(item, tags=(tag,))
+            
+            # Configurar tags para cores alternadas
+            self.tree.tag_configure('linha', background='white')
+            self.tree.tag_configure('linha_alternada', background='#f0f0f0')
+            
+            # Alternar cores das linhas
+            for i, item in enumerate(self.tree.get_children()):
+                tag = 'linha_alternada' if i % 2 == 0 else 'linha'
+                self.tree.item(item, tags=(tag,))
                     
         except Exception as e:
             print(f"Erro ao carregar dados de auditoria: {e}")

@@ -8,6 +8,7 @@ Este pacote organiza os componentes em módulos separados por funcionalidade:
 - gavetas: Componentes específicos de gavetas
 - keyboard: Teclado virtual
 - common: Componentes comuns (Header, ImageCache)
+- loading: Overlays de carregamento e splash screen
 """
 
 # Importações para manter compatibilidade com código existente
@@ -17,6 +18,7 @@ from .dialogs import ModernConfirmDialog, ToastNotification
 from .layouts import ResponsiveFrame, ResponsiveButtonGrid
 from .gavetas import GavetaButton, GavetaButtonGrid
 from .keyboard import TecladoVirtual
+from .loading import LoadingOverlay, SplashScreen, TransitionOverlay
 
 __all__ = [
     # Common
@@ -38,4 +40,8 @@ __all__ = [
     'GavetaButtonGrid',
     # Keyboard
     'TecladoVirtual',
+    # Loading
+    'LoadingOverlay',
+    'SplashScreen',
+    'TransitionOverlay',
 ]

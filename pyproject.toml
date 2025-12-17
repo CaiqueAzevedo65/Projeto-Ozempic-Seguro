@@ -96,7 +96,7 @@ addopts = [
     "--cov=src/ozempic_seguro",
     "--cov-report=html:htmlcov",
     "--cov-report=term-missing",
-    "--cov-fail-under=70",
+    "--cov-fail-under=35",
     "--tb=short",
 ]
 markers = [

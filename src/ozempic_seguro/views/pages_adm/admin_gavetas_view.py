@@ -2,13 +2,26 @@ import customtkinter
 from ..components import Header, VoltarButton, GavetaButtonGrid, GavetaButton, ModernButton, ResponsiveFrame, ToastNotification
 
 class AdminGavetasFrame(customtkinter.CTkFrame):
+    BG_COLOR = "#3B6A7D"
+    
     def __init__(self, master, voltar_callback=None, *args, **kwargs):
-        super().__init__(master, fg_color="#3B6A7D", *args, **kwargs)
+        super().__init__(master, fg_color=self.BG_COLOR, *args, **kwargs)
         self.voltar_callback = voltar_callback
+        
+        # Criar overlay para esconder construção
+        self._overlay = customtkinter.CTkFrame(master, fg_color=self.BG_COLOR)
+        self._overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self._overlay.lift()
+        master.update_idletasks()
+        
         self.pack(fill="both", expand=True)
         self.criar_topo()
         self.criar_grade_botoes()
         self.criar_botao_voltar()
+        
+        # Remover overlay após tudo estar pronto
+        self.update_idletasks()
+        self._overlay.destroy()
 
     def criar_topo(self):
         """Cria o cabeçalho da tela"""

@@ -4,10 +4,19 @@ from ...session import SessionManager
 from tkinter import messagebox
 
 class ParametroSistemasFrame(customtkinter.CTkFrame):
+    BG_COLOR = "#3B6A7D"
+    
     def __init__(self, master, voltar_callback=None, *args, **kwargs):
         self.voltar_callback = voltar_callback
         self.session_manager = SessionManager.get_instance()
-        super().__init__(master, fg_color="#3B6A7D", *args, **kwargs)
+        super().__init__(master, fg_color=self.BG_COLOR, *args, **kwargs)
+        
+        # Criar overlay para esconder construção
+        self._overlay = customtkinter.CTkFrame(master, fg_color=self.BG_COLOR)
+        self._overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self._overlay.lift()
+        master.update_idletasks()
+        
         self.pack(fill="both", expand=True)
         
         # Criar header primeiro
@@ -21,6 +30,10 @@ class ParametroSistemasFrame(customtkinter.CTkFrame):
         self.criar_controle_timer()
         self.criar_tabela_parametros()
         self.criar_botao_voltar()
+        
+        # Remover overlay após tudo estar pronto
+        self.update_idletasks()
+        self._overlay.destroy()
 
     def criar_controle_timer(self):
         """Cria o controle para ativar/desativar a função de timer de abertura de gavetas"""

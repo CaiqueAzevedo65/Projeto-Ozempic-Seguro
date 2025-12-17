@@ -3,7 +3,7 @@ from .base_frame import BaseFrameView
 from .components import ModernButton, ToastNotification
 from .pages_adm.diagnostico_view import DiagnosticoFrame
 from .pages_adm.controle_timer_view import ControleTimerFrame
-from ..session import SessionManager
+from ..services.timer_control_service import get_timer_control_service
 
 
 class TecnicoFrame(BaseFrameView):
@@ -45,7 +45,7 @@ class TecnicoFrame(BaseFrameView):
         ).pack(pady=15)
 
     def finalizar_sessao(self):
-        """Sobrescreve para reativar timer ao sair"""
+        """Sobrescreve para reativar timer ao sair usando TimerControlService"""
         from .components import ModernConfirmDialog
         
         if ModernConfirmDialog.ask(
@@ -56,10 +56,10 @@ class TecnicoFrame(BaseFrameView):
             confirm_text="Sair",
             cancel_text="Cancelar"
         ):
-            # Reativar timer ao fazer logout do técnico
-            session = SessionManager.get_instance()
-            if not session.is_timer_enabled():
-                session.set_timer_enabled(True)
+            # Reativar timer ao fazer logout do técnico usando o serviço
+            timer_service = get_timer_control_service()
+            if not timer_service.is_timer_enabled():
+                timer_service.enable_timer()
                 ToastNotification.show(self, "Timer reativado automaticamente", "info")
             
             ToastNotification.show(self, "Sessão finalizada com sucesso", "success")

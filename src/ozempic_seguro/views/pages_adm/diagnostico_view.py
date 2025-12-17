@@ -6,9 +6,18 @@ import customtkinter
 from ..components import Header, VoltarButton
 
 class DiagnosticoFrame(customtkinter.CTkFrame):
+    BG_COLOR = "#3B6A7D"
+    
     def __init__(self, master, voltar_callback=None, *args, **kwargs):
         self.voltar_callback = voltar_callback
-        super().__init__(master, fg_color="#3B6A7D", *args, **kwargs)
+        super().__init__(master, fg_color=self.BG_COLOR, *args, **kwargs)
+        
+        # Criar overlay para esconder construção
+        self._overlay = customtkinter.CTkFrame(master, fg_color=self.BG_COLOR)
+        self._overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self._overlay.lift()
+        master.update_idletasks()
+        
         self.pack(fill="both", expand=True)
         
         # Criar header primeiro
@@ -33,6 +42,10 @@ class DiagnosticoFrame(customtkinter.CTkFrame):
         # Criar elementos restantes
         self.criar_conteudo()
         self.criar_botao_voltar()
+        
+        # Remover overlay após tudo estar pronto
+        self.update_idletasks()
+        self._overlay.destroy()
     
     def criar_conteudo(self):
         # Frame para o conteúdo

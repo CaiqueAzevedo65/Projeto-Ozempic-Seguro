@@ -70,13 +70,12 @@ class TestSessionSimple:
         session.increment_login_attempts(username)
         session.increment_login_attempts(username)
         
-        # Verifica que foi registrado
-        assert username in session._login_attempts
-        assert session._login_attempts[username]['count'] == 2
+        # Verifica que foi registrado via método público
+        assert session.get_remaining_attempts(username) == 1  # 3 - 2 = 1
         
         # Reset tentativas
         session.reset_login_attempts(username)
-        assert session._login_attempts[username]['count'] == 0
+        assert session.get_remaining_attempts(username) == 3
     
     def test_user_blocking(self):
         """Testa bloqueio de usuário"""

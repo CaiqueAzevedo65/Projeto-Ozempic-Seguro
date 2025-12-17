@@ -86,6 +86,16 @@ class UIConfig:
     SIDEBAR_WIDTH = 250
     CONTENT_PADDING = 20
     
+    # Layout da tela de login
+    LOGIN_FRAME_X = 40
+    LOGIN_FRAME_Y = 100
+    LOGIN_KEYBOARD_X = 500
+    LOGIN_KEYBOARD_Y = 100
+    LOGIN_FRAME_COLOR = "#346172"
+    LOGIN_ENTRY_WIDTH = 300
+    LOGIN_ENTRY_HEIGHT = 40
+    LOGIN_ENTRY_PADY = 10
+    
     # Cores principais
     PRIMARY_BG_COLOR = "#3B6A7D"
     SECONDARY_BG_COLOR = "#2C5364"
@@ -145,12 +155,21 @@ class LoggingConfig:
     ENABLE_CONSOLE_COLORS = True
 
 
+def _get_version() -> str:
+    """Obtém versão do pacote via importlib.metadata"""
+    try:
+        from importlib.metadata import version
+        return version("ozempic-seguro")
+    except Exception:
+        return "1.3.2"  # Fallback
+
+
 class AppConfig:
     """Configurações gerais da aplicação"""
     
     # Informações da aplicação
     APP_NAME = "Ozempic Seguro"
-    APP_VERSION = "1.3.2"
+    APP_VERSION = _get_version()
     APP_AUTHOR = "Caique Azevedo"
     
     # Configurações de sistema

@@ -7,7 +7,7 @@ class IniciarSessaoFrame(customtkinter.CTkFrame):
         super().__init__(master, fg_color="#346172", *args, **kwargs)
         self.show_login_callback = show_login_callback
         self.voltar_callback = voltar_callback
-        self.pack(fill="both", expand=True)
+        # Não fazer pack aqui - NavigationController gerencia
         self.criar_topo()
         self.criar_botao_login()
         self.criar_botao_voltar()

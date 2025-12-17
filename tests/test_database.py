@@ -79,6 +79,7 @@ class TestDatabaseManager:
         """Testa execução de query com sucesso"""
         from ozempic_seguro.repositories.database import DatabaseManager
         from ozempic_seguro.repositories.connection import DatabaseConnection
+        from ozempic_seguro.repositories.user_repository import UserRepository
         
         # Reset singletons
         DatabaseManager._instance = None
@@ -90,16 +91,18 @@ class TestDatabaseManager:
             with patch.object(DatabaseConnection, '_get_db_path', return_value=db_path):
                 try:
                     db = DatabaseManager()
+                    user_repo = UserRepository()
                     
-                    # Inserir usuário de teste usando método existente
-                    result = db.criar_usuario(
+                    # Inserir usuário de teste usando UserRepository
+                    result = user_repo.create_user(
                         username='test_user',
                         senha='senha123',
                         nome_completo='Test User',
                         tipo='vendedor'
                     )
                     
-                    assert result is True
+                    # create_user retorna o ID do usuário ou None
+                    assert result is not None
                     
                 finally:
                     if hasattr(db, 'conn'):
@@ -111,6 +114,7 @@ class TestDatabaseManager:
         """Testa busca de um registro"""
         from ozempic_seguro.repositories.database import DatabaseManager
         from ozempic_seguro.repositories.connection import DatabaseConnection
+        from ozempic_seguro.repositories.user_repository import UserRepository
         
         DatabaseManager._instance = None
         DatabaseConnection._instance = None
@@ -121,9 +125,10 @@ class TestDatabaseManager:
             with patch.object(DatabaseConnection, '_get_db_path', return_value=db_path):
                 try:
                     db = DatabaseManager()
+                    user_repo = UserRepository()
                     
-                    # Inserir usuário
-                    db.criar_usuario(
+                    # Inserir usuário usando UserRepository
+                    user_repo.create_user(
                         username='test_user',
                         senha='senha123',
                         nome_completo='Test User',
@@ -145,6 +150,7 @@ class TestDatabaseManager:
         """Testa busca de múltiplos registros"""
         from ozempic_seguro.repositories.database import DatabaseManager
         from ozempic_seguro.repositories.connection import DatabaseConnection
+        from ozempic_seguro.repositories.user_repository import UserRepository
         
         DatabaseManager._instance = None
         DatabaseConnection._instance = None
@@ -155,8 +161,9 @@ class TestDatabaseManager:
             with patch.object(DatabaseConnection, '_get_db_path', return_value=db_path):
                 try:
                     db = DatabaseManager()
+                    user_repo = UserRepository()
                     
-                    # Inserir múltiplos usuários
+                    # Inserir múltiplos usuários usando UserRepository
                     users_data = [
                         ('user1', 'senha1', 'User One', 'vendedor'),
                         ('user2', 'senha2', 'User Two', 'repositor'),
@@ -164,7 +171,7 @@ class TestDatabaseManager:
                     ]
                     
                     for username, senha, nome, tipo in users_data:
-                        db.criar_usuario(username, senha, nome, tipo)
+                        user_repo.create_user(username, senha, nome, tipo)
                     
                     # Buscar todos os usuários
                     db.cursor.execute("SELECT * FROM usuarios")
@@ -182,6 +189,7 @@ class TestDatabaseManager:
         """Testa rollback de transação em caso de erro"""
         from ozempic_seguro.repositories.database import DatabaseManager
         from ozempic_seguro.repositories.connection import DatabaseConnection
+        from ozempic_seguro.repositories.user_repository import UserRepository
         
         DatabaseManager._instance = None
         DatabaseConnection._instance = None
@@ -192,14 +200,16 @@ class TestDatabaseManager:
             with patch.object(DatabaseConnection, '_get_db_path', return_value=db_path):
                 try:
                     db = DatabaseManager()
+                    user_repo = UserRepository()
                     
-                    # Criar usuário único
-                    result1 = db.criar_usuario('unique_user', 'senha1', 'User', 'vendedor')
-                    assert result1 is True
+                    # Criar usuário único usando UserRepository
+                    result1 = user_repo.create_user('unique_user', 'senha1', 'User', 'vendedor')
+                    # create_user retorna o ID do usuário ou None
+                    assert result1 is not None
                     
-                    # Segunda inserção deve falhar (username único)
-                    result2 = db.criar_usuario('unique_user', 'senha2', 'User2', 'vendedor')
-                    assert result2 is False
+                    # Segunda inserção deve falhar (username único) - retorna None
+                    result2 = user_repo.create_user('unique_user', 'senha2', 'User2', 'vendedor')
+                    assert result2 is None
                     
                     # Verificar que só existe um usuário com esse username
                     db.cursor.execute("SELECT * FROM usuarios WHERE username = ?", ('unique_user',))
