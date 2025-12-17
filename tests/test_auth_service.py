@@ -161,6 +161,66 @@ class TestLoginResult:
         assert result.lockout_seconds == 300
 
 
+class TestAuthServiceEdgeCases:
+    """Testes para casos extremos do AuthService"""
+    
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Setup para cada teste"""
+        self.service = AuthService()
+        self.session = SessionManager.get_instance()
+        self.session.cleanup()
+        yield
+        self.session.cleanup()
+    
+    def test_login_with_empty_username(self):
+        """Testa login com username vazio"""
+        result = self.service.login('', 'password')
+        
+        assert isinstance(result, LoginResult)
+        assert result.success is False
+    
+    def test_login_with_whitespace_username(self):
+        """Testa login com username apenas espaços"""
+        result = self.service.login('   ', 'password')
+        
+        assert isinstance(result, LoginResult)
+        assert result.success is False
+    
+    def test_multiple_failed_logins(self):
+        """Testa múltiplas tentativas de login falhadas"""
+        username = 'test_multiple_fails'
+        
+        result1 = self.service.login(username, 'wrong1')
+        assert result1.success is False
+        
+        result2 = self.service.login(username, 'wrong2')
+        assert result2.success is False
+        
+        result3 = self.service.login(username, 'wrong3')
+        assert result3.success is False
+    
+    def test_logout_multiple_times(self):
+        """Testa logout múltiplo"""
+        # Simular login
+        self.session.set_current_user({'id': 1, 'username': 'test'})
+        
+        self.service.logout()
+        assert self.service.is_logged_in() is False
+        
+        # Segundo logout não deve causar erro
+        self.service.logout()
+        assert self.service.is_logged_in() is False
+    
+    def test_get_current_user_after_logout(self):
+        """Testa obter usuário após logout"""
+        self.session.set_current_user({'id': 1, 'username': 'test'})
+        assert self.service.get_current_user() is not None
+        
+        self.service.logout()
+        assert self.service.get_current_user() is None
+
+
 class TestGetAuthService:
     """Testes para função get_auth_service"""
     
@@ -169,3 +229,11 @@ class TestGetAuthService:
         service = get_auth_service()
         
         assert isinstance(service, AuthService)
+    
+    def test_singleton_pattern(self):
+        """Testa padrão singleton"""
+        service1 = get_auth_service()
+        service2 = get_auth_service()
+        
+        assert isinstance(service1, AuthService)
+        assert isinstance(service2, AuthService)

@@ -1,6 +1,7 @@
 import customtkinter
 from ..components import Header, VoltarButton
 from ...services.drawer_service import get_drawer_service
+from ...core.logger import logger
 
 class HistoricoView(customtkinter.CTkFrame):
     BG_COLOR = "#3B6A7D"
@@ -158,7 +159,7 @@ class HistoricoView(customtkinter.CTkFrame):
                     idx % 2 == 0  # Alternar cor de fundo
                 )
         except Exception as e:
-            print(f"Erro ao carregar histórico: {e}")
+            logger.error(f"Erro ao carregar histórico: {e}")
     
     def atualizar_controles_paginacao(self, total_itens):
         # Calcula o total de páginas

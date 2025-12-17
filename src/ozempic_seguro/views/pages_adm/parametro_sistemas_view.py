@@ -1,6 +1,6 @@
 import customtkinter
 from ..components import Header, VoltarButton
-from ...session import SessionManager
+from ...services.timer_control_service import get_timer_control_service
 from tkinter import messagebox
 
 class ParametroSistemasFrame(customtkinter.CTkFrame):
@@ -8,7 +8,7 @@ class ParametroSistemasFrame(customtkinter.CTkFrame):
     
     def __init__(self, master, voltar_callback=None, *args, **kwargs):
         self.voltar_callback = voltar_callback
-        self.session_manager = SessionManager.get_instance()
+        self.timer_service = get_timer_control_service()
         super().__init__(master, fg_color=self.BG_COLOR, *args, **kwargs)
         
         # Criar overlay para esconder construção
@@ -62,7 +62,7 @@ class ParametroSistemasFrame(customtkinter.CTkFrame):
         # Status atual
         self.lbl_status = customtkinter.CTkLabel(
             frame_status,
-            text="Status: " + ("Ativado" if self.session_manager.is_timer_enabled() else "Desativado"),
+            text="Status: " + ("Ativado" if self.timer_service.is_timer_enabled() else "Desativado"),
             font=("Arial", 12),
             text_color="#333333"
         )
@@ -74,7 +74,7 @@ class ParametroSistemasFrame(customtkinter.CTkFrame):
             text="",
             width=120,
             command=self.alternar_timer,
-            fg_color="#4CAF50" if self.session_manager.is_timer_enabled() else "#F44336"
+            fg_color="#4CAF50" if self.timer_service.is_timer_enabled() else "#F44336"
         )
         self.btn_controle_timer.pack()
         
@@ -82,28 +82,29 @@ class ParametroSistemasFrame(customtkinter.CTkFrame):
         self.atualizar_estado_botao()
     
     def alternar_timer(self):
-        """Alterna o estado da função de timer"""
-        novo_estado = not self.session_manager.is_timer_enabled()
-        if self.session_manager.set_timer_enabled(novo_estado):
-            estado = "ativado" if novo_estado else "desativado"
+        """Alterna o estado da função de timer usando TimerControlService"""
+        success, msg, new_state = self.timer_service.toggle_timer()
+        
+        if success:
+            estado = "ativado" if new_state else "desativado"
             messagebox.showinfo("Sucesso", f"Timer de abertura de gavetas {estado} com sucesso!")
             
             # Se estiver ativando e houver um bloqueio ativo, mostra o tempo restante
-            if novo_estado and self.session_manager.is_blocked():
-                segundos = self.session_manager.get_remaining_time()
+            if new_state and self.timer_service.is_blocked():
+                segundos = self.timer_service.get_remaining_time()
                 minutos = segundos // 60
-                segundos = segundos % 60
+                segundos_restantes = segundos % 60
                 messagebox.showinfo("Informação", 
-                    f"O sistema está bloqueado por mais {minutos} minutos e {segundos} segundos.")
+                    f"O sistema está bloqueado por mais {minutos} minutos e {segundos_restantes} segundos.")
         else:
-            messagebox.showerror("Erro", "Você não tem permissão para alterar esta configuração.")
+            messagebox.showerror("Erro", msg)
         
         # Atualiza o estado do botão
         self.atualizar_estado_botao()
     
     def atualizar_estado_botao(self):
         """Atualiza o texto e a cor do botão de acordo com o estado do timer"""
-        if self.session_manager.is_timer_enabled():
+        if self.timer_service.is_timer_enabled():
             self.btn_controle_timer.configure(
                 text="Desativar Timer",
                 fg_color="#4CAF50",

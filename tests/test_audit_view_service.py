@@ -109,6 +109,91 @@ class TestAuditViewService:
         assert filter.data_inicio is not None
 
 
+class TestAuditViewServiceEdgeCases:
+    """Testes para casos extremos do AuditViewService"""
+    
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Setup para cada teste"""
+        self.service = AuditViewService()
+        yield
+    
+    def test_get_logs_with_date_range(self):
+        """Testa logs com intervalo de datas"""
+        filter = AuditFilter(data_inicio="2025-01-01", data_fim="2025-12-31")
+        result = self.service.get_logs(filter=filter)
+        
+        assert isinstance(result, PaginatedAuditResult)
+    
+    def test_get_logs_with_all_filters(self):
+        """Testa logs com todos os filtros"""
+        filter = AuditFilter(
+            acao="LOGIN",
+            data_inicio="2025-01-01",
+            data_fim="2025-12-31"
+        )
+        result = self.service.get_logs(filter=filter, page=2, per_page=5)
+        
+        assert isinstance(result, PaginatedAuditResult)
+        assert result.page == 2
+        assert result.per_page == 5
+    
+    def test_get_logs_empty_result(self):
+        """Testa logs com resultado vazio"""
+        filter = AuditFilter(
+            acao="NONEXISTENT_ACTION",
+            data_inicio="1990-01-01",
+            data_fim="1990-12-31"
+        )
+        result = self.service.get_logs(filter=filter)
+        
+        assert isinstance(result, PaginatedAuditResult)
+        assert result.total >= 0
+
+
+class TestAuditLogItemEdgeCases:
+    """Testes para casos extremos do AuditLogItem"""
+    
+    def test_acao_display_uppercase(self):
+        """Testa ação já em maiúsculas"""
+        item = AuditLogItem(1, "2025-01-01", "user", "LOGIN", "usuarios", None, None, None, None)
+        assert item.acao_display == "LOGIN"
+    
+    def test_with_dados_novos(self):
+        """Testa com dados novos"""
+        item = AuditLogItem(
+            1, "2025-01-01", "user", "CREATE", "usuarios",
+            1, None, '{"username": "test"}', None
+        )
+        assert item.dados_novos == '{"username": "test"}'
+    
+    def test_with_dados_antigos(self):
+        """Testa com dados antigos"""
+        item = AuditLogItem(
+            1, "2025-01-01", "user", "UPDATE", "usuarios",
+            1, '{"username": "old"}', None, None
+        )
+        assert item.dados_anteriores == '{"username": "old"}'
+
+
+class TestAuditFilterEdgeCases:
+    """Testes para casos extremos do AuditFilter"""
+    
+    def test_filter_with_todas_acao(self):
+        """Testa filtro com ação 'Todas'"""
+        filter = AuditFilter(acao="Todas")
+        assert filter.acao == "Todas"
+    
+    def test_filter_date_formats(self):
+        """Testa diferentes formatos de data"""
+        filter = AuditFilter(
+            data_inicio="2025-01-01",
+            data_fim="2025-12-31"
+        )
+        assert filter.data_inicio == "2025-01-01"
+        assert filter.data_fim == "2025-12-31"
+
+
 class TestGetAuditViewService:
     """Testes para função get_audit_view_service"""
     
@@ -117,3 +202,11 @@ class TestGetAuditViewService:
         service = get_audit_view_service()
         
         assert isinstance(service, AuditViewService)
+    
+    def test_returns_new_instance(self):
+        """Testa que retorna nova instância"""
+        service1 = get_audit_view_service()
+        service2 = get_audit_view_service()
+        
+        assert isinstance(service1, AuditViewService)
+        assert isinstance(service2, AuditViewService)

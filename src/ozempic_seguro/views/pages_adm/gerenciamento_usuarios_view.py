@@ -1,7 +1,8 @@
 import tkinter
 import customtkinter
-from ..components import Header, VoltarButton, ModernButton, ModernConfirmDialog, ToastNotification, ResponsiveFrame
+from ..components import Header, VoltarButton, ModernButton, ModernConfirmDialog, ToastNotification
 from ...services.user_management_service import get_user_management_service
+from ...core.logger import logger
 
 class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
     BG_COLOR = "#3B6A7D"
@@ -205,7 +206,7 @@ class GerenciamentoUsuariosFrame(customtkinter.CTkFrame):
                         continue
                 
         except Exception as e:
-            print(f"Erro ao carregar usuários: {e}")
+            logger.error(f"Erro ao carregar usuários: {e}")
     
     def criar_painel_direito(self):
         # Frame para o painel direito

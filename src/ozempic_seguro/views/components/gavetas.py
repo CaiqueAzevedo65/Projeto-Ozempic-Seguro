@@ -6,8 +6,9 @@ from tkinter import messagebox
 from PIL import Image
 import os
 
-from ..gaveta_state_manager import GavetaStateManager
-from ...session import SessionManager
+from ...services.drawer_service import get_drawer_service
+from ...services.timer_control_service import get_timer_control_service
+from ...services.auth_service import get_auth_service
 
 
 # Cache global de imagens de gavetas
@@ -50,7 +51,9 @@ class GavetaButton:
         self.frame = customtkinter.CTkFrame(master, fg_color="transparent")
         self.frame.pack(expand=True, fill="both")
         
-        self.state_manager = GavetaStateManager.get_instance()
+        self.drawer_service = get_drawer_service()
+        self.timer_service = get_timer_control_service()
+        self.auth_service = get_auth_service()
         self.tipo_usuario = tipo_usuario
         
         # Usar cache de imagens (muito mais rápido)
@@ -83,25 +86,26 @@ class GavetaButton:
 
     def atualizar_imagem(self):
         """Atualiza a imagem do botão baseado no estado atual"""
-        estado = self.state_manager.get_estado(self.gaveta_id)
+        state = self.drawer_service.get_drawer_state(int(self.gaveta_id))
+        esta_aberta = state.esta_aberta if state else False
         self.btn_gaveta.configure(
-            image=self.gaveta_aberta if estado else self.gaveta_fechada
+            image=self.gaveta_aberta if esta_aberta else self.gaveta_fechada
         )
 
     def manipular_estado(self):
         """Manipula o estado da gaveta baseado no tipo de usuário"""
-        estado_atual = self.state_manager.get_estado(self.gaveta_id)
+        state = self.drawer_service.get_drawer_state(int(self.gaveta_id))
+        estado_atual = state.esta_aberta if state else False
         
-        session_manager = SessionManager.get_instance()
-        current_user = session_manager.get_current_user()
+        current_user = self.auth_service.get_current_user()
         user_id = current_user.get('id') if current_user else None
         
         if self.tipo_usuario == 'administrador':
             if not estado_atual:
                 self._abrir_gaveta_com_confirmacao()
             else:
-                sucesso, mensagem = self.state_manager.fechar_gaveta(
-                    self.gaveta_id, self.tipo_usuario, user_id
+                sucesso, mensagem = self.drawer_service.set_drawer_state(
+                    int(self.gaveta_id), False, self.tipo_usuario, user_id
                 )
                 messagebox.showinfo("Sucesso" if sucesso else "Aviso", mensagem)
                 if sucesso:
@@ -115,8 +119,8 @@ class GavetaButton:
         
         elif self.tipo_usuario == 'repositor':
             if estado_atual:
-                sucesso, mensagem = self.state_manager.fechar_gaveta(
-                    self.gaveta_id, self.tipo_usuario, user_id
+                sucesso, mensagem = self.drawer_service.set_drawer_state(
+                    int(self.gaveta_id), False, self.tipo_usuario, user_id
                 )
                 messagebox.showinfo("Sucesso" if sucesso else "Aviso", mensagem)
                 if sucesso:
@@ -128,13 +132,11 @@ class GavetaButton:
     
     def _abrir_gaveta_com_confirmacao(self):
         """Mostra janela de confirmação antes de abrir a gaveta"""
-        session_manager = SessionManager.get_instance()
-        
-        if not session_manager.is_timer_enabled():
-            current_user = session_manager.get_current_user()
+        if not self.timer_service.is_timer_enabled():
+            current_user = self.auth_service.get_current_user()
             user_id = current_user.get('id') if current_user else None
-            sucesso, mensagem = self.state_manager.abrir_gaveta(
-                self.gaveta_id, self.tipo_usuario, user_id
+            sucesso, mensagem = self.drawer_service.set_drawer_state(
+                int(self.gaveta_id), True, self.tipo_usuario, user_id
             )
             messagebox.showinfo("Sucesso" if sucesso else "Aviso", mensagem)
             if sucesso:
@@ -206,12 +208,11 @@ class GavetaButton:
     def _on_confirmar_abertura(self, dialog):
         """Confirma a abertura da gaveta"""
         dialog.destroy()
-        session_manager = SessionManager.get_instance()
-        current_user = session_manager.get_current_user()
+        current_user = self.auth_service.get_current_user()
         user_id = current_user.get('id') if current_user else None
         
-        sucesso, mensagem = self.state_manager.abrir_gaveta(
-            self.gaveta_id, self.tipo_usuario, user_id
+        sucesso, mensagem = self.drawer_service.set_drawer_state(
+            int(self.gaveta_id), True, self.tipo_usuario, user_id
         )
         messagebox.showinfo("Sucesso" if sucesso else "Aviso", mensagem)
         if sucesso:
@@ -267,23 +268,21 @@ class GavetaButton:
         self._carregar_historico()
     
     def _carregar_historico(self):
-        """Carrega os itens do histórico para a página atual"""
+        """Carrega os itens do histórico para a página atual usando DrawerService"""
         for widget in self.frame_historico.winfo_children():
             widget.destroy()
         
-        offset = (self.pagina_atual - 1) * self.itens_por_pagina
-        historico = self.state_manager.get_historico_paginado(
-            self.gaveta_id, offset=offset, limit=self.itens_por_pagina
+        result = self.drawer_service.get_drawer_history(
+            int(self.gaveta_id), page=self.pagina_atual, per_page=self.itens_por_pagina
         )
         
-        total_itens = self.state_manager.get_total_historico(self.gaveta_id)
-        total_paginas = max(1, (total_itens + self.itens_por_pagina - 1) // self.itens_por_pagina)
+        total_paginas = max(1, result.total_pages)
         
         self.lbl_pagina.configure(text=f"Página {self.pagina_atual} de {total_paginas}")
         self.btn_anterior.configure(state="disabled" if self.pagina_atual == 1 else "normal")
         self.btn_proximo.configure(state="disabled" if self.pagina_atual >= total_paginas else "normal")
         
-        if not historico:
+        if not result.items:
             customtkinter.CTkLabel(
                 self.frame_historico,
                 text="Nenhum registro de histórico para esta gaveta.",
@@ -291,8 +290,8 @@ class GavetaButton:
             ).pack(pady=10)
             return
         
-        for acao, usuario, data in historico:
-            acao_texto = "Aberta" if acao == "aberta" else "Fechada"
+        for item in result.items:
+            acao_texto = item.acao_display
             
             frame_item = customtkinter.CTkFrame(
                 self.frame_historico, fg_color="#f0f0f0", corner_radius=5
@@ -301,7 +300,7 @@ class GavetaButton:
             
             customtkinter.CTkLabel(
                 frame_item,
-                text=f"{data} - {acao_texto} por {usuario}",
+                text=f"{item.data_hora} - {acao_texto} por {item.usuario}",
                 anchor="w", justify="left"
             ).pack(fill="x", padx=5, pady=5)
     

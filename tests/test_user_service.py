@@ -133,3 +133,39 @@ class TestUserService:
         
         with pytest.raises(LastAdminError):
             user_service_with_mocks.delete_user(1)
+    
+    def test_delete_user_not_found(self, user_service_with_mocks, mock_user_repo):
+        """Testa exclusão de usuário inexistente"""
+        mock_user_repo.get_user_by_id.return_value = None
+        
+        with pytest.raises(UserNotFoundError):
+            user_service_with_mocks.delete_user(99999)
+    
+    def test_update_password_user_not_found(self, user_service_with_mocks, mock_user_repo):
+        """Testa atualização de senha para usuário inexistente"""
+        mock_user_repo.get_user_by_id.return_value = None
+        
+        with pytest.raises(UserNotFoundError):
+            user_service_with_mocks.update_password(99999, 'NewPass123')
+    
+    def test_get_all_users_empty(self, user_service_with_mocks, mock_user_repo):
+        """Testa listagem de usuários vazia"""
+        mock_user_repo.get_users.return_value = []
+        
+        result = user_service_with_mocks.get_all_users()
+        
+        assert len(result) == 0
+        assert isinstance(result, list)
+    
+    def test_create_user_with_valid_types(self, user_service_with_mocks, mock_user_repo):
+        """Testa criação com diferentes tipos de usuário"""
+        mock_user_repo.create_user.return_value = True
+        
+        for tipo in ['vendedor', 'repositor', 'administrador']:
+            result, msg = user_service_with_mocks.create_user(
+                nome='Test User',
+                username=f'testuser_{tipo}',
+                senha='Password1',
+                tipo=tipo
+            )
+            assert result is True

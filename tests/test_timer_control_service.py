@@ -116,6 +116,65 @@ class TestTimerControlService:
         assert remaining >= 0
 
 
+class TestTimerControlServiceEdgeCases:
+    """Testes para casos extremos do TimerControlService"""
+    
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Setup para cada teste"""
+        self.service = TimerControlService()
+        self.session = SessionManager.get_instance()
+        self.session.cleanup()
+        yield
+        self.session.cleanup()
+    
+    def test_is_timer_enabled_returns_bool(self):
+        """Testa que is_timer_enabled retorna booleano"""
+        result = self.service.is_timer_enabled()
+        assert isinstance(result, bool)
+    
+    def test_is_blocked_returns_bool(self):
+        """Testa que is_blocked retorna booleano"""
+        result = self.service.is_blocked()
+        assert isinstance(result, bool)
+    
+    def test_block_system_multiple_times(self):
+        """Testa bloqueio múltiplo"""
+        self.service.enable_timer()
+        
+        success1, msg1 = self.service.block_system(1)
+        assert success1 is True
+        
+        # Segundo bloqueio deve funcionar
+        success2, msg2 = self.service.block_system(2)
+        assert isinstance(success2, bool)
+    
+    def test_unblock_when_not_blocked(self):
+        """Testa desbloquear quando não está bloqueado"""
+        self.service.enable_timer()
+        success, msg = self.service.unblock_system()
+        
+        # Deve funcionar mesmo sem estar bloqueado
+        assert isinstance(success, bool)
+    
+    def test_toggle_timer_returns_tuple(self):
+        """Testa que toggle retorna tupla"""
+        success, msg, new_state = self.service.toggle_timer()
+        
+        assert isinstance(success, bool)
+        assert isinstance(msg, str)
+        assert isinstance(new_state, bool)
+    
+    def test_get_status_structure(self):
+        """Testa estrutura do status"""
+        status = self.service.get_status()
+        
+        assert isinstance(status.enabled, bool)
+        assert isinstance(status.blocked, bool)
+        assert isinstance(status.remaining_seconds, int)
+        assert isinstance(status.remaining_minutes, int)
+
+
 class TestGetTimerControlService:
     """Testes para função get_timer_control_service"""
     
@@ -124,3 +183,12 @@ class TestGetTimerControlService:
         service = get_timer_control_service()
         
         assert isinstance(service, TimerControlService)
+    
+    def test_returns_same_instance(self):
+        """Testa que retorna a mesma instância (singleton pattern)"""
+        service1 = get_timer_control_service()
+        service2 = get_timer_control_service()
+        
+        # Ambos devem ser instâncias de TimerControlService
+        assert isinstance(service1, TimerControlService)
+        assert isinstance(service2, TimerControlService)

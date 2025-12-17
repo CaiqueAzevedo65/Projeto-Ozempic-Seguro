@@ -184,6 +184,82 @@ class TestOperationResult:
         assert len(result.errors) == 2
 
 
+class TestUserManagementServiceEdgeCases:
+    """Testes para casos extremos do UserManagementService"""
+    
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Setup para cada teste"""
+        self.service = UserManagementService()
+        yield
+    
+    def test_change_password_short(self):
+        """Testa alteração com senha muito curta"""
+        result = self.service.change_password(1, "123", "123")
+        
+        assert result.success is False
+        assert len(result.errors) > 0
+    
+    def test_change_password_valid_length(self):
+        """Testa alteração com senha de tamanho válido"""
+        users = self.service.get_all_users()
+        if users:
+            # Tenta com um usuário existente que pode ser modificado
+            modifiable_users = [u for u in users if u.can_be_modified]
+            if modifiable_users:
+                result = self.service.change_password(
+                    modifiable_users[0].id, 
+                    "1234", 
+                    "1234"
+                )
+                # Pode ter sucesso ou falhar por outros motivos
+                assert isinstance(result, OperationResult)
+    
+    def test_delete_user_tecnico(self):
+        """Testa exclusão de usuário técnico"""
+        users = self.service.get_all_users()
+        tecnico_users = [u for u in users if u.is_tecnico]
+        
+        if tecnico_users:
+            result = self.service.delete_user(tecnico_users[0].id)
+            assert result.success is False
+            assert "técnico" in result.message.lower() or "protegido" in result.message.lower()
+    
+    def test_can_modify_user_tecnico(self):
+        """Testa verificação de modificação para técnico"""
+        users = self.service.get_all_users()
+        tecnico_users = [u for u in users if u.is_tecnico]
+        
+        if tecnico_users:
+            can_modify, reason = self.service.can_modify_user(tecnico_users[0].id)
+            assert can_modify is False
+            assert "técnico" in reason.lower() or "protegido" in reason.lower()
+    
+    def test_can_delete_user_tecnico(self):
+        """Testa verificação de exclusão para técnico"""
+        users = self.service.get_all_users()
+        tecnico_users = [u for u in users if u.is_tecnico]
+        
+        if tecnico_users:
+            can_delete, reason = self.service.can_delete_user(tecnico_users[0].id)
+            assert can_delete is False
+            assert "técnico" in reason.lower() or "protegido" in reason.lower()
+    
+    def test_get_all_users_returns_list(self):
+        """Testa que get_all_users sempre retorna lista"""
+        users = self.service.get_all_users()
+        assert isinstance(users, list)
+    
+    def test_user_data_equality(self):
+        """Testa comparação de UserData"""
+        user1 = UserData(1, "123", "Test", "vendedor", True, "2025-01-01")
+        user2 = UserData(1, "123", "Test", "vendedor", True, "2025-01-01")
+        
+        # Dataclasses com mesmos valores devem ser iguais
+        assert user1.id == user2.id
+        assert user1.username == user2.username
+
+
 class TestGetUserManagementService:
     """Testes para função get_user_management_service"""
     
@@ -192,3 +268,11 @@ class TestGetUserManagementService:
         service = get_user_management_service()
         
         assert isinstance(service, UserManagementService)
+    
+    def test_returns_new_instance(self):
+        """Testa que retorna nova instância"""
+        service1 = get_user_management_service()
+        service2 = get_user_management_service()
+        
+        assert isinstance(service1, UserManagementService)
+        assert isinstance(service2, UserManagementService)

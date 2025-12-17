@@ -1,7 +1,8 @@
 import customtkinter
 from ..components import Header, VoltarButton
-from ...services.service_factory import get_user_service
+from ...services.user_management_service import get_user_management_service
 from ...core.base_views import AdminView
+from ...core.logger import logger
 
 class UsuariosView(AdminView):
     def _setup_view(self):
@@ -77,23 +78,24 @@ class UsuariosView(AdminView):
         scrollable_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
         
         try:
-            # Obter usuários do banco de dados usando propriedade da classe base
-            usuarios = self.user_service.get_all_users()
+            # Obter usuários usando UserManagementService
+            management_service = get_user_management_service()
+            usuarios = management_service.get_all_users()
             
             # Adicionar itens
             for idx, user in enumerate(usuarios):
                 self.adicionar_linha(
                     scrollable_frame,
-                    user['id'],
-                    user['username'],
-                    user['nome_completo'],
-                    user['tipo'],
-                    user['ativo'],
-                    user['data_criacao'],
+                    user.id,
+                    user.username,
+                    user.nome_completo,
+                    user.tipo,
+                    user.ativo,
+                    user.data_criacao,
                     idx % 2 == 0  # Alternar cor de fundo
                 )
         except Exception as e:
-            print(f"Erro ao carregar usuários: {e}")
+            logger.error(f"Erro ao carregar usuários: {e}")
     
     def adicionar_linha(self, parent, user_id, username, nome_completo, tipo, ativo, data_criacao, par):
         # Formatar dados

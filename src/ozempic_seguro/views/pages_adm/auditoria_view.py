@@ -3,6 +3,7 @@ from tkinter import ttk
 from datetime import datetime, timedelta
 from ...services.audit_view_service import get_audit_view_service, AuditFilter
 from ..components import Header
+from ...core.logger import logger
 
 class AuditoriaFrame(customtkinter.CTkFrame):
     BG_COLOR = "#3B6A7D"
@@ -247,7 +248,7 @@ class AuditoriaFrame(customtkinter.CTkFrame):
                 self.tree.item(item, tags=(tag,))
                     
         except Exception as e:
-            print(f"Erro ao carregar dados de auditoria: {e}")
+            logger.error(f"Erro ao carregar dados de auditoria: {e}")
     
     def formatar_detalhes_resumido(self, registro):
         """Formata os detalhes do registro para exibição resumida"""
