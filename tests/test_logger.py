@@ -116,3 +116,58 @@ class TestLogMethodCallDecorator:
         obj = TestClass()
         result = obj.method_with_args(3, 4)
         assert result == 12
+
+
+class TestLoggerAdditional:
+    """Testes adicionais para logger"""
+    
+    def test_logger_critical(self):
+        """Testa log critical"""
+        logger.critical("Test critical message")
+    
+    def test_log_method_call_simple(self):
+        """Testa log_method_call simples"""
+        class TestClass:
+            @log_method_call()
+            def get_value(self):
+                return 42
+        
+        obj = TestClass()
+        result = obj.get_value()
+        assert result == 42
+    
+    def test_log_exceptions_preserves_docstring(self):
+        """Testa que docstring é preservada"""
+        @log_exceptions("Test")
+        def documented_function():
+            """Esta é a documentação."""
+            return True
+        
+        # functools.wraps preserva docstring
+        assert documented_function() is True
+    
+    def test_log_method_call_exception(self):
+        """Testa log_method_call com exceção"""
+        class TestClass:
+            @log_method_call()
+            def failing_method(self):
+                raise RuntimeError("Test error")
+        
+        obj = TestClass()
+        with pytest.raises(RuntimeError):
+            obj.failing_method()
+    
+    def test_multiple_log_calls(self):
+        """Testa múltiplas chamadas de log"""
+        for i in range(10):
+            logger.debug(f"Debug message {i}")
+            logger.info(f"Info message {i}")
+    
+    def test_logger_with_dict_extra(self):
+        """Testa logger com dicionário extra complexo"""
+        extra_data = {
+            'user_id': 123,
+            'action': 'login',
+            'details': {'ip': '127.0.0.1'}
+        }
+        logger.info("Complex log", extra=extra_data)

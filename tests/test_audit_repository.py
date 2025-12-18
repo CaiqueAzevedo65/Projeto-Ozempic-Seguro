@@ -157,3 +157,120 @@ class TestAuditRepositoryFilters:
         # Páginas devem ser diferentes
         if len(page1) > 0 and len(page2) > 0:
             assert page1[0]['id'] != page2[0]['id']
+
+
+class TestAuditRepositoryAdditional:
+    """Testes adicionais para AuditRepository"""
+    
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Setup para cada teste"""
+        self.repo = AuditRepository()
+        yield
+    
+    def test_get_logs_empty_filter(self):
+        """Testa logs com filtro que não retorna nada"""
+        logs = self.repo.get_logs(filtro_acao="NONEXISTENT_ACTION_12345")
+        assert isinstance(logs, list)
+    
+    def test_count_logs_empty_filter(self):
+        """Testa contagem com filtro que não retorna nada"""
+        count = self.repo.count_logs(filtro_acao="NONEXISTENT_ACTION_12345")
+        assert count == 0
+    
+    def test_create_log_with_all_fields(self):
+        """Testa criação de log com todos os campos"""
+        log_id = self.repo.create_log(
+            usuario_id=1,
+            acao="COMPLETE_LOG",
+            tabela_afetada="USERS",
+            id_afetado=100,
+            dados_anteriores={"status": "active"},
+            dados_novos={"status": "inactive"},
+            endereco_ip="192.168.1.1"
+        )
+        assert log_id is not None
+    
+    def test_get_logs_default_limit(self):
+        """Testa logs com limite padrão"""
+        logs = self.repo.get_logs()
+        assert isinstance(logs, list)
+    
+    def test_create_log_with_none_ip(self):
+        """Testa criação de log sem IP"""
+        log_id = self.repo.create_log(
+            usuario_id=1,
+            acao="NO_IP_LOG",
+            tabela_afetada="TEST",
+            endereco_ip=None
+        )
+        assert log_id is not None
+    
+    def test_filter_by_date_range(self):
+        """Testa filtro por intervalo de datas"""
+        logs = self.repo.get_logs(
+            data_inicio="2020-01-01",
+            data_fim="2030-12-31"
+        )
+        assert isinstance(logs, list)
+    
+    def test_count_logs_with_date_filter(self):
+        """Testa contagem com filtro de data"""
+        count = self.repo.count_logs(
+            data_inicio="2020-01-01",
+            data_fim="2030-12-31"
+        )
+        assert isinstance(count, int)
+
+
+class TestAuditRepositoryFilters:
+    """Testes para filtros do AuditRepository"""
+    
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Setup para cada teste"""
+        self.repo = AuditRepository()
+        yield
+    
+    def test_filter_by_user(self):
+        """Testa filtro por usuário"""
+        logs = self.repo.get_logs(filtro_usuario=1)
+        assert isinstance(logs, list)
+    
+    def test_filter_by_table(self):
+        """Testa filtro por tabela"""
+        logs = self.repo.get_logs(filtro_tabela="usuarios")
+        assert isinstance(logs, list)
+    
+    def test_combined_filters(self):
+        """Testa filtros combinados"""
+        logs = self.repo.get_logs(
+            filtro_acao="LOGIN",
+            filtro_tabela="usuarios"
+        )
+        assert isinstance(logs, list)
+    
+    def test_pagination_offset(self):
+        """Testa paginação com offset"""
+        logs = self.repo.get_logs(offset=10, limit=5)
+        assert isinstance(logs, list)
+    
+    def test_large_limit(self):
+        """Testa com limite grande"""
+        logs = self.repo.get_logs(limit=1000)
+        assert isinstance(logs, list)
+    
+    def test_count_with_user_filter(self):
+        """Testa contagem com filtro de usuário"""
+        count = self.repo.count_logs(filtro_usuario=1)
+        assert isinstance(count, int)
+    
+    def test_count_with_table_filter(self):
+        """Testa contagem com filtro de tabela"""
+        count = self.repo.count_logs(filtro_tabela="usuarios")
+        assert isinstance(count, int)
+    
+    def test_count_with_action_filter(self):
+        """Testa contagem com filtro de ação"""
+        count = self.repo.count_logs(filtro_acao="LOGIN")
+        assert isinstance(count, int)

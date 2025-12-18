@@ -192,3 +192,49 @@ class TestGetTimerControlService:
         # Ambos devem ser instâncias de TimerControlService
         assert isinstance(service1, TimerControlService)
         assert isinstance(service2, TimerControlService)
+
+
+class TestTimerControlServicePermissions:
+    """Testes de permissões do TimerControlService"""
+    
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Setup para cada teste"""
+        self.service = TimerControlService()
+        self.session = SessionManager.get_instance()
+        self.session.cleanup()
+        yield
+        self.session.cleanup()
+    
+    def test_admin_can_enable_timer(self):
+        """Testa que admin pode habilitar timer"""
+        self.session.set_current_user({'id': 1, 'username': 'admin', 'tipo': 'administrador'})
+        success, msg = self.service.enable_timer()
+        assert success is True
+    
+    def test_tecnico_can_enable_timer(self):
+        """Testa que técnico pode habilitar timer"""
+        self.session.set_current_user({'id': 2, 'username': 'tec', 'tipo': 'tecnico'})
+        success, msg = self.service.enable_timer()
+        assert success is True
+    
+    def test_admin_can_block_system(self):
+        """Testa que admin pode bloquear sistema"""
+        self.session.set_current_user({'id': 1, 'username': 'admin', 'tipo': 'administrador'})
+        self.service.enable_timer()
+        success, msg = self.service.block_system(5)
+        assert success is True
+    
+    def test_admin_can_unblock_system(self):
+        """Testa que admin pode desbloquear sistema"""
+        self.session.set_current_user({'id': 1, 'username': 'admin', 'tipo': 'administrador'})
+        success, msg = self.service.unblock_system()
+        assert success is True
+    
+    def test_status_remaining_display_formats_correctly(self):
+        """Testa formatação do tempo restante"""
+        status = TimerStatus(enabled=True, blocked=True, remaining_seconds=65, remaining_minutes=1)
+        assert "1:05" in status.remaining_display
+        
+        status2 = TimerStatus(enabled=True, blocked=True, remaining_seconds=300, remaining_minutes=5)
+        assert "5:00" in status2.remaining_display

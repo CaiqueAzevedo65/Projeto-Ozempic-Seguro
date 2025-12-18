@@ -169,3 +169,25 @@ class TestUserService:
                 tipo=tipo
             )
             assert result is True
+
+
+class TestUserServiceAdditional:
+    """Testes adicionais para UserService"""
+    
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Setup para cada teste"""
+        self.service = UserService()
+        yield
+    
+    def test_get_all_users_returns_list(self):
+        """Testa que get_all_users retorna lista"""
+        result = self.service.get_all_users()
+        assert isinstance(result, list)
+    
+    def test_authenticate_with_invalid_credentials(self):
+        """Testa autenticação com credenciais inválidas"""
+        with pytest.raises(InvalidCredentialsError):
+            self.service.authenticate("nonexistent_user_xyz", "wrongpass")
+
+

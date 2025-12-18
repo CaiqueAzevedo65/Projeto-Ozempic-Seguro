@@ -99,6 +99,213 @@ class TestSessionManagerUserTypes:
         assert self.session.is_admin() is True
     
     def test_is_admin_false(self):
+        """Testa verificação de admin quando não é admin"""
+        self.session.set_current_user({'id': 1, 'username': 'user', 'tipo': 'vendedor'})
+        assert self.session.is_admin() is False
+    
+    def test_is_tecnico_true(self):
+        """Testa verificação de técnico"""
+        self.session.set_current_user({'id': 1, 'username': 'tec', 'tipo': 'tecnico'})
+        assert self.session.is_tecnico() is True
+    
+    def test_is_tecnico_false(self):
+        """Testa verificação de técnico quando não é técnico"""
+        self.session.set_current_user({'id': 1, 'username': 'user', 'tipo': 'vendedor'})
+        assert self.session.is_tecnico() is False
+    
+    def test_is_tecnico_no_user(self):
+        """Testa verificação de técnico sem usuário"""
+        self.session.logout()
+        assert self.session.is_tecnico() is False
+    
+    def test_get_user_id(self):
+        """Testa obtenção do ID do usuário"""
+        self.session.set_current_user({'id': 42, 'username': 'test', 'tipo': 'vendedor'})
+        assert self.session.get_user_id() == 42
+    
+    def test_get_user_id_no_user(self):
+        """Testa obtenção do ID sem usuário"""
+        self.session.logout()
+        assert self.session.get_user_id() is None
+
+
+class TestSessionManagerTimer:
+    """Testes de timer do sistema"""
+    
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Setup para cada teste"""
+        self.session = SessionManager.get_instance()
+        self.session.cleanup()
+        yield
+        self.session.cleanup()
+    
+    def test_is_blocked_initial(self):
+        """Testa que sistema não está bloqueado inicialmente"""
+        assert isinstance(self.session.is_blocked(), bool)
+    
+    def test_get_remaining_time(self):
+        """Testa obtenção de tempo restante"""
+        result = self.session.get_remaining_time()
+        assert isinstance(result, int)
+        assert result >= 0
+    
+    def test_is_timer_enabled(self):
+        """Testa verificação de timer habilitado"""
+        result = self.session.is_timer_enabled()
+        assert isinstance(result, bool)
+    
+    def test_set_timer_enabled_as_admin(self):
+        """Testa ativação de timer como admin"""
+        self.session.set_current_user({'id': 1, 'username': 'admin', 'tipo': 'administrador'})
+        result = self.session.set_timer_enabled(True)
+        assert result is True
+    
+    def test_set_timer_enabled_as_tecnico(self):
+        """Testa ativação de timer como técnico"""
+        self.session.set_current_user({'id': 1, 'username': 'tec', 'tipo': 'tecnico'})
+        result = self.session.set_timer_enabled(False)
+        assert result is True
+    
+    def test_set_timer_enabled_as_vendedor(self):
+        """Testa que vendedor não pode alterar timer"""
+        self.session.set_current_user({'id': 1, 'username': 'vend', 'tipo': 'vendedor'})
+        result = self.session.set_timer_enabled(True)
+        assert result is False
+    
+    def test_block_for_minutes_as_admin(self):
+        """Testa bloqueio como admin"""
+        self.session.set_current_user({'id': 1, 'username': 'admin', 'tipo': 'administrador'})
+        self.session.set_timer_enabled(True)
+        result = self.session.block_for_minutes(5)
+        assert isinstance(result, bool)
+    
+    def test_block_for_minutes_as_vendedor(self):
+        """Testa bloqueio como vendedor"""
+        self.session.set_current_user({'id': 1, 'username': 'vend', 'tipo': 'vendedor'})
+        self.session.set_timer_enabled(True)
+        result = self.session.block_for_minutes(5)
+        assert isinstance(result, bool)
+    
+    def test_clear_block_as_admin(self):
+        """Testa limpeza de bloqueio como admin"""
+        self.session.set_current_user({'id': 1, 'username': 'admin', 'tipo': 'administrador'})
+        result = self.session.clear_block()
+        assert result is True
+    
+    def test_clear_block_as_vendedor(self):
+        """Testa que vendedor não pode limpar bloqueio"""
+        self.session.set_current_user({'id': 1, 'username': 'vend', 'tipo': 'vendedor'})
+        result = self.session.clear_block()
+        assert result is False
+
+
+class TestSessionManagerLogin:
+    """Testes de tentativas de login"""
+    
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Setup para cada teste"""
+        self.session = SessionManager.get_instance()
+        self.session.cleanup()
+        yield
+        self.session.cleanup()
+    
+    def test_record_login_attempt_success(self):
+        """Testa registro de tentativa de login bem sucedida"""
+        self.session.record_login_attempt('test_user', success=True)
+        # Não deve lançar exceção
+    
+    def test_record_login_attempt_failure(self):
+        """Testa registro de tentativa de login falha"""
+        self.session.record_login_attempt('test_user', success=False)
+        # Não deve lançar exceção
+    
+    def test_is_user_locked(self):
+        """Testa verificação de usuário bloqueado"""
+        result = self.session.is_user_locked('test_user')
+        assert isinstance(result, bool)
+    
+    def test_get_lockout_remaining_time(self):
+        """Testa obtenção de tempo restante de bloqueio"""
+        result = self.session.get_lockout_remaining_time('test_user')
+        assert isinstance(result, int)
+    
+    def test_get_lockout_remaining_seconds(self):
+        """Testa obtenção de segundos restantes de bloqueio"""
+        result = self.session.get_lockout_remaining_seconds('test_user')
+        assert isinstance(result, int)
+    
+    def test_get_remaining_attempts(self):
+        """Testa obtenção de tentativas restantes"""
+        result = self.session.get_remaining_attempts('new_user')
+        assert isinstance(result, int)
+        assert result >= 0
+    
+    def test_get_login_status_message(self):
+        """Testa obtenção de mensagem de status"""
+        result = self.session.get_login_status_message('test_user')
+        assert isinstance(result, dict)
+    
+    def test_reset_login_attempts(self):
+        """Testa reset de tentativas"""
+        self.session.reset_login_attempts('test_user')
+        # Não deve lançar exceção
+    
+    def test_increment_login_attempts_alias(self):
+        """Testa alias increment_login_attempts"""
+        self.session.increment_login_attempts('test_user')
+        # Não deve lançar exceção
+    
+    def test_is_user_blocked_alias(self):
+        """Testa alias is_user_blocked"""
+        result = self.session.is_user_blocked('test_user')
+        assert isinstance(result, bool)
+
+
+class TestSessionManagerTimeout:
+    """Testes de timeout de sessão"""
+    
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Setup para cada teste"""
+        self.session = SessionManager.get_instance()
+        self.session.cleanup()
+        yield
+        self.session.cleanup()
+    
+    def test_get_session_remaining_time(self):
+        """Testa obtenção de tempo restante de sessão"""
+        self.session.set_current_user({'id': 1, 'username': 'test', 'tipo': 'vendedor'})
+        result = self.session.get_session_remaining_time()
+        assert isinstance(result, int)
+        assert result >= 0
+    
+    def test_get_session_remaining_time_no_user(self):
+        """Testa tempo restante sem usuário"""
+        self.session.logout()
+        result = self.session.get_session_remaining_time()
+        assert result == 0
+    
+    def test_set_session_timeout_as_admin(self):
+        """Testa definição de timeout como admin"""
+        self.session.set_current_user({'id': 1, 'username': 'admin', 'tipo': 'administrador'})
+        result = self.session.set_session_timeout(30)
+        assert result is True
+    
+    def test_set_session_timeout_as_vendedor(self):
+        """Testa que vendedor não pode alterar timeout"""
+        self.session.set_current_user({'id': 1, 'username': 'vend', 'tipo': 'vendedor'})
+        result = self.session.set_session_timeout(30)
+        assert result is False
+    
+    def test_update_last_activity_alias(self):
+        """Testa alias update_last_activity"""
+        self.session.set_current_user({'id': 1, 'username': 'test', 'tipo': 'vendedor'})
+        self.session.update_last_activity()
+        # Não deve lançar exceção
+    
+    def test_is_admin_false(self):
         """Testa verificação de não-admin"""
         self.session.set_current_user({'id': 2, 'username': 'vendedor', 'tipo': 'vendedor'})
         

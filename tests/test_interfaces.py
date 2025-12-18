@@ -108,3 +108,43 @@ class TestIService:
     def test_is_abstract(self):
         """Testa que IService é abstrata"""
         assert issubclass(IService, ABC)
+    
+    def test_has_validate_input(self):
+        """Testa que tem método validate_input"""
+        assert hasattr(IService, 'validate_input')
+
+
+class TestInterfaceMethodSignatures:
+    """Testes para assinaturas de métodos das interfaces"""
+    
+    def test_iuser_repository_has_find_active_users(self):
+        """Testa que IUserRepository tem find_active_users"""
+        assert hasattr(IUserRepository, 'find_active_users')
+    
+    def test_iuser_repository_has_update_password(self):
+        """Testa que IUserRepository tem update_password"""
+        assert hasattr(IUserRepository, 'update_password')
+    
+    def test_iuser_repository_has_update_status(self):
+        """Testa que IUserRepository tem update_status"""
+        assert hasattr(IUserRepository, 'update_status')
+    
+    def test_igaveta_repository_has_find_by_user(self):
+        """Testa que IGavetaRepository tem find_by_user"""
+        assert hasattr(IGavetaRepository, 'find_by_user')
+    
+    def test_igaveta_repository_has_update_status(self):
+        """Testa que IGavetaRepository tem update_status"""
+        assert hasattr(IGavetaRepository, 'update_status')
+    
+    def test_igaveta_repository_has_assign_to_user(self):
+        """Testa que IGavetaRepository tem assign_to_user"""
+        assert hasattr(IGavetaRepository, 'assign_to_user')
+    
+    def test_iaudit_repository_has_log_action(self):
+        """Testa que IAuditRepository tem log_action"""
+        assert hasattr(IAuditRepository, 'log_action')
+    
+    def test_iaudit_repository_has_find_by_date_range(self):
+        """Testa que IAuditRepository tem find_by_date_range"""
+        assert hasattr(IAuditRepository, 'find_by_date_range')

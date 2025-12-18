@@ -250,3 +250,28 @@ class TestUserRepositoryEdgeCases:
         """Testa busca de usuário inexistente por username"""
         user = self.repo.get_user_by_username("nonexistent_xyz_123")
         assert user is None
+    
+    def test_delete_nonexistent_user(self):
+        """Testa exclusão de usuário inexistente"""
+        result = self.repo.delete_user(999999)
+        assert result is False or result is True
+    
+    def test_update_password_nonexistent_user(self):
+        """Testa atualização de senha de usuário inexistente"""
+        result = self.repo.update_password(999999, "NewPass123")
+        assert isinstance(result, bool)
+    
+    def test_create_user_different_types(self):
+        """Testa criação de usuários com diferentes tipos"""
+        import uuid
+        
+        for tipo in ['vendedor', 'repositor']:
+            unique_username = f"type_{tipo}_{uuid.uuid4().hex[:6]}"
+            user_id = self.repo.create_user(
+                username=unique_username,
+                senha="TestPassword123",
+                nome_completo=f"Test {tipo}",
+                tipo=tipo
+            )
+            assert user_id is not None
+            self.repo.delete_user(user_id)

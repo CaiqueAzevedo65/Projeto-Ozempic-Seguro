@@ -237,3 +237,199 @@ class TestValidators:
         # Um inválido
         results['field3'] = ValidationResult(is_valid=False, errors=["Erro"])
         assert Validators.all_valid(results) is False
+
+
+class TestValidatorsAdditional:
+    """Testes adicionais para Validators"""
+    
+    def test_validate_username_empty(self):
+        """Testa username vazio"""
+        result = Validators.validate_username("")
+        assert result.is_valid is False
+        assert "obrigatório" in result.errors[0].lower()
+    
+    def test_validate_username_none(self):
+        """Testa username None"""
+        result = Validators.validate_username(None)
+        assert result.is_valid is False
+    
+    def test_validate_password_empty(self):
+        """Testa senha vazia"""
+        result = Validators.validate_password("")
+        assert result.is_valid is False
+        assert "obrigatória" in result.errors[0].lower()
+    
+    def test_validate_password_control_chars(self):
+        """Testa senha com caracteres de controle"""
+        result = Validators.validate_password("pass\x00word")
+        assert result.is_valid is False
+    
+    def test_validate_password_too_long(self):
+        """Testa senha muito longa"""
+        result = Validators.validate_password("a" * 150)
+        assert result.is_valid is False
+    
+    def test_validate_name_empty(self):
+        """Testa nome vazio"""
+        result = Validators.validate_name("")
+        assert result.is_valid is False
+    
+    def test_validate_name_too_long(self):
+        """Testa nome muito longo"""
+        result = Validators.validate_name("A" * 101)
+        assert result.is_valid is False
+    
+    def test_validate_user_type_empty(self):
+        """Testa tipo de usuário vazio"""
+        result = Validators.validate_user_type("")
+        assert result.is_valid is False
+    
+    def test_validate_user_type_case_insensitive(self):
+        """Testa tipo de usuário com maiúsculas"""
+        result = Validators.validate_user_type("ADMINISTRADOR")
+        assert result.is_valid is True
+        assert result.sanitized_value == "administrador"
+    
+    def test_validate_email_empty(self):
+        """Testa email vazio"""
+        result = Validators.validate_email("")
+        assert result.is_valid is False
+    
+    def test_validate_phone_empty(self):
+        """Testa telefone vazio"""
+        result = Validators.validate_phone("")
+        assert result.is_valid is False
+    
+    def test_validate_phone_too_short(self):
+        """Testa telefone muito curto"""
+        result = Validators.validate_phone("123")
+        assert result.is_valid is False
+    
+    def test_validate_date_empty(self):
+        """Testa data vazia"""
+        result = Validators.validate_date("")
+        assert result.is_valid is False
+    
+    def test_validate_date_year_out_of_range(self):
+        """Testa data com ano fora do intervalo"""
+        result = Validators.validate_date("1800-01-01")
+        assert result.is_valid is False
+    
+    def test_sanitize_string_empty(self):
+        """Testa sanitização de string vazia"""
+        result = Validators.sanitize_string("")
+        assert result == ""
+    
+    def test_sanitize_string_max_length(self):
+        """Testa truncamento de string longa"""
+        long_string = "a" * 300
+        result = Validators.sanitize_string(long_string, max_length=100)
+        assert len(result) <= 100
+    
+    def test_sanitize_string_control_chars(self):
+        """Testa remoção de caracteres de controle"""
+        result = Validators.sanitize_string("hello\x00world")
+        assert "\x00" not in result
+    
+    def test_validate_and_sanitize_user_input(self):
+        """Testa validação e sanitização completa"""
+        result = Validators.validate_and_sanitize_user_input(
+            username="test_user",
+            password="pass1234",
+            name="Test User Name",
+            user_type="vendedor"
+        )
+        
+        assert isinstance(result, dict)
+        assert 'valid' in result
+        assert 'errors' in result
+        assert 'sanitized_data' in result
+    
+    def test_validate_and_sanitize_user_input_invalid(self):
+        """Testa validação com dados inválidos"""
+        result = Validators.validate_and_sanitize_user_input(
+            username="",
+            password="123",
+            name="A",
+            user_type="invalid"
+        )
+        
+        assert result['valid'] is False
+        assert len(result['errors']) > 0
+    
+    def test_validation_result_add_error(self):
+        """Testa método add_error do ValidationResult"""
+        result = ValidationResult(is_valid=True, errors=[])
+        result.add_error("Novo erro")
+        
+        assert result.is_valid is False
+        assert "Novo erro" in result.errors
+    
+    def test_user_type_enum(self):
+        """Testa enum UserType"""
+        assert UserType.ADMINISTRADOR.value == "administrador"
+        assert UserType.VENDEDOR.value == "vendedor"
+        assert UserType.REPOSITOR.value == "repositor"
+        assert UserType.TECNICO.value == "tecnico"
+
+
+class TestValidationRule:
+    """Testes para ValidationRule"""
+    
+    def test_validation_rule_success(self):
+        """Testa ValidationRule com validação bem-sucedida"""
+        from ozempic_seguro.core.validators import ValidationRule
+        
+        rule = ValidationRule(
+            name="is_positive",
+            validator=lambda x: x > 0,
+            error_message="Valor deve ser positivo"
+        )
+        
+        valid, error = rule.validate(10)
+        assert valid is True
+        assert error is None
+    
+    def test_validation_rule_failure(self):
+        """Testa ValidationRule com validação falhando"""
+        from ozempic_seguro.core.validators import ValidationRule
+        
+        rule = ValidationRule(
+            name="is_positive",
+            validator=lambda x: x > 0,
+            error_message="Valor deve ser positivo"
+        )
+        
+        valid, error = rule.validate(-5)
+        assert valid is False
+        assert error == "Valor deve ser positivo"
+    
+    def test_validation_rule_exception(self):
+        """Testa ValidationRule com exceção no validador"""
+        from ozempic_seguro.core.validators import ValidationRule
+        
+        def bad_validator(x):
+            raise ValueError("Erro interno")
+        
+        rule = ValidationRule(
+            name="bad_rule",
+            validator=bad_validator,
+            error_message="Validação falhou"
+        )
+        
+        valid, error = rule.validate("test")
+        assert valid is False
+        assert "Erro na validação" in error
+    
+    def test_validation_rule_attributes(self):
+        """Testa atributos de ValidationRule"""
+        from ozempic_seguro.core.validators import ValidationRule
+        
+        rule = ValidationRule(
+            name="test_rule",
+            validator=lambda x: True,
+            error_message="Error"
+        )
+        
+        assert rule.name == "test_rule"
+        assert rule.error_message == "Error"

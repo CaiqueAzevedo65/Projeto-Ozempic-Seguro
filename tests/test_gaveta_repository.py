@@ -209,3 +209,54 @@ class TestGavetaRepository:
         result = self.repo.update_status(99999, 'aberta')
         
         assert result is False
+
+
+class TestGavetaRepositoryAdditional:
+    """Testes adicionais para GavetaRepository"""
+    
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Setup para cada teste"""
+        self.repo = GavetaRepository()
+        yield
+    
+    def test_get_history_empty(self):
+        """Testa histórico de gaveta sem registros"""
+        history = self.repo.get_history(88888, limit=10)
+        assert isinstance(history, list)
+    
+    def test_count_history_nonexistent(self):
+        """Testa contagem de histórico de gaveta inexistente"""
+        count = self.repo.count_history(88888)
+        assert count == 0
+    
+    def test_set_state_with_different_user_types(self):
+        """Testa set_state com diferentes tipos de usuário"""
+        for i, user_type in enumerate(['vendedor', 'repositor', 'administrador']):
+            drawer_num = 200 + i
+            success, msg = self.repo.set_state(drawer_num, True, user_type, 1)
+            assert success is True
+    
+    def test_get_all_history_paginated_offset(self):
+        """Testa paginação com offset"""
+        history = self.repo.get_all_history_paginated(offset=5, limit=10)
+        assert isinstance(history, list)
+    
+    def test_find_all_returns_list(self):
+        """Testa que find_all sempre retorna lista"""
+        result = self.repo.find_all()
+        assert isinstance(result, list)
+    
+    def test_toggle_drawer_state(self):
+        """Testa alternar estado da gaveta"""
+        drawer_num = 300
+        
+        # Abrir
+        self.repo.set_state(drawer_num, True, 'admin', 1)
+        state1 = self.repo.get_state(drawer_num)
+        
+        # Fechar
+        self.repo.set_state(drawer_num, False, 'admin', 1)
+        state2 = self.repo.get_state(drawer_num)
+        
+        assert state1 != state2

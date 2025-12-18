@@ -210,3 +210,58 @@ class TestGetAuditViewService:
         
         assert isinstance(service1, AuditViewService)
         assert isinstance(service2, AuditViewService)
+
+
+class TestPaginatedAuditResultAdditional:
+    """Testes adicionais para PaginatedAuditResult"""
+    
+    def test_total_pages_zero(self):
+        """Testa total_pages com total zero"""
+        result = PaginatedAuditResult(items=[], total=0, page=1, per_page=20)
+        assert result.total_pages == 0
+    
+    def test_has_next_last_page(self):
+        """Testa has_next na última página"""
+        result = PaginatedAuditResult(items=[], total=20, page=1, per_page=20)
+        assert result.has_next is False
+    
+    def test_has_previous_first_page(self):
+        """Testa has_previous na primeira página"""
+        result = PaginatedAuditResult(items=[], total=100, page=1, per_page=20)
+        assert result.has_previous is False
+    
+    def test_with_items(self):
+        """Testa com itens"""
+        item = AuditLogItem(1, "2025-01-01", "user", "LOGIN", "usuarios", None, None, None, None)
+        result = PaginatedAuditResult(items=[item], total=1, page=1, per_page=20)
+        assert len(result.items) == 1
+    
+    def test_total_pages_remainder(self):
+        """Testa total_pages com resto"""
+        result = PaginatedAuditResult(items=[], total=25, page=1, per_page=10)
+        assert result.total_pages == 3
+
+
+class TestAuditViewServicePagination:
+    """Testes de paginação do AuditViewService"""
+    
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Setup para cada teste"""
+        self.service = AuditViewService()
+        yield
+    
+    def test_get_logs_page_2(self):
+        """Testa segunda página de logs"""
+        result = self.service.get_logs(page=2, per_page=5)
+        assert result.page == 2
+    
+    def test_get_logs_large_page(self):
+        """Testa página grande"""
+        result = self.service.get_logs(page=100, per_page=10)
+        assert isinstance(result, PaginatedAuditResult)
+    
+    def test_get_logs_small_per_page(self):
+        """Testa poucos itens por página"""
+        result = self.service.get_logs(page=1, per_page=1)
+        assert result.per_page == 1

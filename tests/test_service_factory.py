@@ -174,3 +174,98 @@ class TestConvenienceFunctions:
         service = get_audit_service()
         
         assert service is not None
+
+
+class TestServiceFactoryAdditional:
+    """Testes adicionais para ServiceFactory"""
+    
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Setup para cada teste"""
+        ServiceFactory.reset_all_services()
+        yield
+        ServiceFactory.reset_all_services()
+    
+    def test_multiple_get_calls_return_same_instance(self):
+        """Testa que múltiplas chamadas retornam mesma instância"""
+        service1 = ServiceFactory.get_audit_service()
+        service2 = ServiceFactory.get_audit_service()
+        assert service1 is service2
+    
+    def test_reset_clears_all(self):
+        """Testa que reset limpa tudo"""
+        ServiceFactory.get_user_service()
+        ServiceFactory.set_mock_audit_service({"mock": True})
+        
+        ServiceFactory.reset_all_services()
+        
+        # Após reset, status deve estar vazio ou False
+        status = ServiceFactory.get_service_status()
+        # Verificar que foi resetado
+        assert isinstance(status, dict)
+    
+    def test_database_manager_singleton(self):
+        """Testa que DatabaseManager é singleton"""
+        manager1 = ServiceFactory.get_database_manager()
+        manager2 = ServiceFactory.get_database_manager()
+        assert manager1 is manager2
+    
+    def test_session_manager_singleton(self):
+        """Testa que SessionManager é singleton"""
+        manager1 = ServiceFactory.get_session_manager()
+        manager2 = ServiceFactory.get_session_manager()
+        assert manager1 is manager2
+    
+    def test_security_logger_singleton(self):
+        """Testa que SecurityLogger é singleton"""
+        logger1 = ServiceFactory.get_security_logger()
+        logger2 = ServiceFactory.get_security_logger()
+        assert logger1 is logger2
+
+
+class TestServiceRegistryAdditional:
+    """Testes adicionais para ServiceRegistry"""
+    
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Setup para cada teste"""
+        self.registry = ServiceRegistry()
+        yield
+    
+    def test_register_overwrite(self):
+        """Testa que registro sobrescreve serviço existente"""
+        self.registry.register_service("test", {"v": 1})
+        self.registry.register_service("test", {"v": 2})
+        
+        result = self.registry.get_service("test", lambda: None)
+        assert result == {"v": 2}
+    
+    def test_mock_has_priority(self):
+        """Testa que mock tem prioridade sobre registro"""
+        self.registry.register_service("svc", {"real": True})
+        self.registry.set_mock("svc", {"mock": True})
+        
+        result = self.registry.get_service("svc", lambda: None)
+        assert result == {"mock": True}
+    
+    def test_multiple_mocks(self):
+        """Testa múltiplos mocks"""
+        self.registry.set_mock("svc1", {"m1": True})
+        self.registry.set_mock("svc2", {"m2": True})
+        
+        r1 = self.registry.get_service("svc1", lambda: None)
+        r2 = self.registry.get_service("svc2", lambda: None)
+        
+        assert r1 == {"m1": True}
+        assert r2 == {"m2": True}
+    
+    def test_clear_mocks_preserves_services(self):
+        """Testa que clear_mocks preserva serviços registrados"""
+        self.registry.register_service("real_svc", {"real": True})
+        self.registry.set_mock("mock_svc", {"mock": True})
+        
+        self.registry.clear_mocks()
+        
+        # Serviço real deve continuar
+        result = self.registry.get_service("real_svc", lambda: {"new": True})
+        assert result == {"real": True}

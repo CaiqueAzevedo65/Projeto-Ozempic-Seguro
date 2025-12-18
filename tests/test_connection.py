@@ -132,3 +132,85 @@ class TestDatabaseConnectionPragmas:
         row = db.fetchone()
         
         assert row[0].lower() == 'wal'
+
+
+class TestDatabaseConnectionAdditional:
+    """Testes adicionais para DatabaseConnection"""
+    
+    def test_context_manager(self):
+        """Testa uso como context manager"""
+        with DatabaseConnection.get_instance() as db:
+            db.execute("SELECT 1 as test")
+            row = db.fetchone()
+            assert row['test'] == 1
+    
+    def test_executemany(self):
+        """Testa executemany"""
+        db = DatabaseConnection.get_instance()
+        
+        db.execute("CREATE TABLE IF NOT EXISTS test_many (id INTEGER PRIMARY KEY, val TEXT)")
+        db.commit()
+        
+        data = [("a",), ("b",), ("c",)]
+        db.executemany("INSERT INTO test_many (val) VALUES (?)", data)
+        db.commit()
+        
+        db.execute("SELECT COUNT(*) as cnt FROM test_many")
+        row = db.fetchone()
+        assert row['cnt'] >= 3
+        
+        db.execute("DROP TABLE IF EXISTS test_many")
+        db.commit()
+    
+    def test_lastrowid(self):
+        """Testa lastrowid"""
+        db = DatabaseConnection.get_instance()
+        
+        db.execute("CREATE TABLE IF NOT EXISTS test_lastid (id INTEGER PRIMARY KEY, val TEXT)")
+        db.commit()
+        
+        db.execute("INSERT INTO test_lastid (val) VALUES (?)", ("test",))
+        db.commit()
+        
+        last_id = db.lastrowid()
+        assert isinstance(last_id, int)
+        assert last_id > 0
+        
+        db.execute("DROP TABLE IF EXISTS test_lastid")
+        db.commit()
+    
+    def test_gavetas_table_exists(self):
+        """Testa que tabela de gavetas existe"""
+        db = DatabaseConnection.get_instance()
+        
+        db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='gavetas'")
+        row = db.fetchone()
+        
+        assert row is not None
+    
+    def test_historico_gavetas_table_exists(self):
+        """Testa que tabela de histórico existe"""
+        db = DatabaseConnection.get_instance()
+        
+        db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='historico_gavetas'")
+        row = db.fetchone()
+        
+        assert row is not None
+    
+    def test_auditoria_table_exists(self):
+        """Testa que tabela de auditoria existe"""
+        db = DatabaseConnection.get_instance()
+        
+        db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='auditoria'")
+        row = db.fetchone()
+        
+        assert row is not None
+    
+    def test_cache_size_configured(self):
+        """Testa que cache size está configurado"""
+        db = DatabaseConnection.get_instance()
+        db.execute("PRAGMA cache_size")
+        row = db.fetchone()
+        
+        # Cache size pode ser negativo (em KB) ou positivo (em páginas)
+        assert row[0] != 0

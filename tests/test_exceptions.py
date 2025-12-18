@@ -229,3 +229,131 @@ class TestExceptionRaising:
         except DatabaseError as exc:
             assert exc.__cause__ is not None
             assert isinstance(exc.__cause__, ValueError)
+
+
+class TestDatabaseExceptions:
+    """Testes para exceções de banco de dados"""
+    
+    def test_migration_error(self):
+        """Testa MigrationError"""
+        exc = MigrationError("v1_to_v2", "syntax error")
+        assert exc.code == "MIGRATION_ERROR"
+        assert "v1_to_v2" in exc.message
+        assert exc.details["migration"] == "v1_to_v2"
+        assert exc.details["reason"] == "syntax error"
+    
+    def test_integrity_error(self):
+        """Testa IntegrityError"""
+        exc = IntegrityError("unique_username")
+        assert exc.code == "INTEGRITY_ERROR"
+        assert "unique_username" in exc.message
+
+
+class TestDrawerExceptions:
+    """Testes para exceções de gaveta"""
+    
+    def test_drawer_not_found_error(self):
+        """Testa DrawerNotFoundError"""
+        exc = DrawerNotFoundError(5)
+        assert exc.code == "DRAWER_NOT_FOUND"
+        assert exc.details["drawer_id"] == 5
+        assert "5" in exc.message
+    
+    def test_drawer_state_error(self):
+        """Testa DrawerStateError"""
+        exc = DrawerStateError(1, "aberta", "abrir")
+        assert exc.code == "DRAWER_STATE_ERROR"
+        assert exc.details["drawer_id"] == 1
+        assert exc.details["current_state"] == "aberta"
+        assert exc.details["requested_state"] == "abrir"
+
+
+class TestAuditExceptions:
+    """Testes para exceções de auditoria"""
+    
+    def test_audit_log_error(self):
+        """Testa AuditLogError"""
+        exc = AuditLogError("LOGIN", "database unavailable")
+        assert exc.code == "AUDIT_LOG_ERROR"
+        assert exc.details["action"] == "LOGIN"
+        assert exc.details["reason"] == "database unavailable"
+
+
+class TestConfigExceptions:
+    """Testes para exceções de configuração"""
+    
+    def test_missing_config_error(self):
+        """Testa MissingConfigError"""
+        exc = MissingConfigError("DATABASE_URL")
+        assert exc.code == "MISSING_CONFIG"
+        assert exc.details["config_key"] == "DATABASE_URL"
+        assert "DATABASE_URL" in exc.message
+    
+    def test_invalid_config_error(self):
+        """Testa InvalidConfigError"""
+        exc = InvalidConfigError("TIMEOUT", -1, "must be positive")
+        assert exc.code == "INVALID_CONFIG"
+        assert exc.details["config_key"] == "TIMEOUT"
+        assert exc.details["reason"] == "must be positive"
+
+
+class TestValidationExceptions:
+    """Testes para exceções de validação"""
+    
+    def test_invalid_username_error(self):
+        """Testa InvalidUsernameError"""
+        exc = InvalidUsernameError("ab@c", "contains special chars")
+        assert exc.code == "INVALID_USERNAME"
+        assert exc.details["username"] == "ab@c"
+        assert exc.details["reason"] == "contains special chars"
+    
+    def test_invalid_input_error(self):
+        """Testa InvalidInputError"""
+        exc = InvalidInputError("email", "not@valid", "invalid format")
+        assert exc.code == "INVALID_INPUT"
+        assert exc.details["field"] == "email"
+        assert exc.details["reason"] == "invalid format"
+    
+    def test_invalid_user_data_error(self):
+        """Testa InvalidUserDataError"""
+        exc = InvalidUserDataError("nome", "cannot be empty")
+        assert exc.code == "INVALID_USER_DATA"
+        assert exc.details["field"] == "nome"
+        assert exc.details["reason"] == "cannot be empty"
+
+
+class TestSessionExceptions:
+    """Testes para exceções de sessão"""
+    
+    def test_session_expired_error(self):
+        """Testa SessionExpiredError"""
+        exc = SessionExpiredError()
+        assert exc.code == "SESSION_EXPIRED"
+        assert "expirada" in exc.message.lower()
+    
+    def test_session_expired_error_custom_message(self):
+        """Testa SessionExpiredError com mensagem customizada"""
+        exc = SessionExpiredError("Sessão encerrada por inatividade")
+        assert "inatividade" in exc.message
+
+
+class TestBaseExceptionFeatures:
+    """Testes para features da exceção base"""
+    
+    def test_ozempic_error_with_details(self):
+        """Testa OzempicError com detalhes"""
+        details = {"key": "value", "number": 42}
+        exc = OzempicError("Test", "TEST_CODE", details)
+        assert exc.details == details
+    
+    def test_to_dict_error_class_name(self):
+        """Testa que to_dict inclui nome da classe"""
+        exc = LastAdminError()
+        result = exc.to_dict()
+        assert result["error"] == "LastAdminError"
+    
+    def test_inheritance_preserves_details(self):
+        """Testa que herança preserva detalhes"""
+        exc = AccountLockedError("user1", "2025-01-01", 3)
+        assert "user1" in str(exc)
+        assert exc.details["username"] == "user1"

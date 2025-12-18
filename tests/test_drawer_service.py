@@ -222,3 +222,50 @@ class TestPaginatedResultEdgeCases:
         assert result.total_pages == 0
         assert result.has_next is False
         assert result.has_previous is False
+
+
+class TestDrawerServiceAdditional:
+    """Testes adicionais para DrawerService"""
+    
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Setup para cada teste"""
+        self.service = DrawerService()
+        yield
+    
+    def test_get_drawer_state_invalid_number(self):
+        """Testa estado de gaveta com número inválido"""
+        state = self.service.get_drawer_state(-1)
+        assert state is None or isinstance(state, DrawerState)
+    
+    def test_get_drawer_state_large_number(self):
+        """Testa estado de gaveta com número grande"""
+        state = self.service.get_drawer_state(9999)
+        assert state is None or isinstance(state, DrawerState)
+    
+    def test_get_all_drawer_states_zero(self):
+        """Testa obtenção de 0 gavetas"""
+        states = self.service.get_all_drawer_states(0)
+        assert isinstance(states, list)
+    
+    def test_get_all_drawer_states_many(self):
+        """Testa obtenção de muitas gavetas"""
+        states = self.service.get_all_drawer_states(20)
+        assert isinstance(states, list)
+
+
+class TestDrawerStateAdditional:
+    """Testes adicionais para DrawerState"""
+    
+    def test_drawer_state_basic(self):
+        """Testa DrawerState básico"""
+        state = DrawerState(numero=1, esta_aberta=True)
+        assert state.numero == 1
+        assert state.esta_aberta is True
+    
+    def test_drawer_state_closed(self):
+        """Testa DrawerState fechado"""
+        state = DrawerState(numero=2, esta_aberta=False)
+        assert state.numero == 2
+        assert state.esta_aberta is False
+        assert state.status_display == "Fechada"

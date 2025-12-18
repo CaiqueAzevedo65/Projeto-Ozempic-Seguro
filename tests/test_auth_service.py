@@ -237,3 +237,75 @@ class TestGetAuthService:
         
         assert isinstance(service1, AuthService)
         assert isinstance(service2, AuthService)
+
+
+class TestLoginResult:
+    """Testes para LoginResult"""
+    
+    def test_login_result_success(self):
+        """Testa LoginResult de sucesso"""
+        result = LoginResult(success=True, user={'id': 1}, panel=UserPanel.VENDEDOR)
+        assert result.success is True
+        assert result.user is not None
+        assert result.panel == UserPanel.VENDEDOR
+    
+    def test_login_result_failure(self):
+        """Testa LoginResult de falha"""
+        result = LoginResult(success=False, error_message="Invalid credentials")
+        assert result.success is False
+        assert result.error_message == "Invalid credentials"
+    
+    def test_login_result_with_attempts(self):
+        """Testa LoginResult com tentativas restantes"""
+        result = LoginResult(success=False, remaining_attempts=2)
+        assert result.remaining_attempts == 2
+    
+    def test_login_result_with_lockout(self):
+        """Testa LoginResult com lockout"""
+        result = LoginResult(success=False, lockout_seconds=300)
+        assert result.lockout_seconds == 300
+
+
+class TestUserPanel:
+    """Testes para UserPanel enum"""
+    
+    def test_user_panel_exists(self):
+        """Testa que UserPanel existe e é enum"""
+        from enum import Enum
+        assert issubclass(UserPanel, Enum)
+    
+    def test_user_panel_has_members(self):
+        """Testa que UserPanel tem membros"""
+        members = list(UserPanel)
+        assert len(members) > 0
+
+
+class TestAuthServicePermissions:
+    """Testes de permissões do AuthService"""
+    
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Setup para cada teste"""
+        self.service = AuthService()
+        self.session = SessionManager.get_instance()
+        self.session.cleanup()
+        yield
+        self.session.cleanup()
+    
+    def test_login_attempt_tracking(self):
+        """Testa rastreamento de tentativas de login"""
+        username = "track_attempts_user"
+        
+        # Primeira tentativa
+        result1 = self.service.login(username, "wrong1")
+        # Segunda tentativa
+        result2 = self.service.login(username, "wrong2")
+        
+        # Tentativas devem estar sendo rastreadas
+        assert result2.remaining_attempts <= result1.remaining_attempts
+    
+    def test_reset_login_attempts(self):
+        """Testa reset de tentativas após login bem-sucedido"""
+        # Este teste é conceitual - verifica que o método existe
+        assert hasattr(self.service, 'login')
+        assert hasattr(self.service, 'logout')

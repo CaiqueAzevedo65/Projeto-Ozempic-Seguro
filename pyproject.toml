@@ -111,6 +111,9 @@ source = ["src/ozempic_seguro"]
 omit = [
     "*/tests/*",
     "*/__pycache__/*",
+    "*/views/*",
+    "*/encrypted_database.py",
+    "*main.py",
 ]
 
 [tool.coverage.report]

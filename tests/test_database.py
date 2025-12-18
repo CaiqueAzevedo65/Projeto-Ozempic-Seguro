@@ -220,3 +220,245 @@ class TestDatabaseManager:
                         db.conn.close()
                     DatabaseManager._instance = None
                     DatabaseConnection._instance = None
+
+
+class TestDatabaseManagerDeprecatedMethods:
+    """Testes para métodos deprecated do DatabaseManager"""
+    
+    @pytest.fixture(autouse=True)
+    def setup_db(self):
+        """Setup do banco para testes"""
+        from ozempic_seguro.repositories.database import DatabaseManager
+        from ozempic_seguro.repositories.connection import DatabaseConnection
+        
+        DatabaseManager._instance = None
+        DatabaseConnection._instance = None
+        
+        self.temp_dir = tempfile.mkdtemp()
+        self.db_path = os.path.join(self.temp_dir, 'test.db')
+        
+        self.patcher = patch.object(DatabaseConnection, '_get_db_path', return_value=self.db_path)
+        self.patcher.start()
+        
+        self.db = DatabaseManager()
+        
+        yield
+        
+        self.patcher.stop()
+        if hasattr(self.db, 'conn'):
+            try:
+                self.db.conn.close()
+            except:
+                pass
+        DatabaseManager._instance = None
+        DatabaseConnection._instance = None
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+    
+    def test_criar_usuario_deprecated(self):
+        """Testa método deprecated criar_usuario"""
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = self.db.criar_usuario('test_dep', 'senha123', 'Test User', 'vendedor')
+            deprecation_warnings = [x for x in w if issubclass(x.category, DeprecationWarning)]
+            assert len(deprecation_warnings) >= 1
+    
+    def test_autenticar_usuario_deprecated(self):
+        """Testa método deprecated autenticar_usuario"""
+        import warnings
+        # Primeiro criar usuário
+        self.db._users.create_user('auth_test', 'senha123', 'Auth Test', 'vendedor')
+        
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = self.db.autenticar_usuario('auth_test', 'senha123')
+            assert len(w) == 1
+            assert issubclass(w[-1].category, DeprecationWarning)
+    
+    def test_get_usuarios_deprecated(self):
+        """Testa método deprecated get_usuarios"""
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = self.db.get_usuarios()
+            deprecation_warnings = [x for x in w if issubclass(x.category, DeprecationWarning)]
+            assert len(deprecation_warnings) >= 1
+            assert isinstance(result, list)
+    
+    def test_get_estado_gaveta_deprecated(self):
+        """Testa método deprecated get_estado_gaveta"""
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = self.db.get_estado_gaveta(1)
+            assert len(w) == 1
+            assert issubclass(w[-1].category, DeprecationWarning)
+    
+    def test_set_estado_gaveta_deprecated(self):
+        """Testa método deprecated set_estado_gaveta"""
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = self.db.set_estado_gaveta(1, True, 'administrador', 1)
+            deprecation_warnings = [x for x in w if issubclass(x.category, DeprecationWarning)]
+            assert len(deprecation_warnings) >= 1
+    
+    def test_get_historico_gaveta_deprecated(self):
+        """Testa método deprecated get_historico_gaveta"""
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = self.db.get_historico_gaveta(1)
+            assert len(w) == 1
+            assert issubclass(w[-1].category, DeprecationWarning)
+    
+    def test_get_historico_paginado_deprecated(self):
+        """Testa método deprecated get_historico_paginado"""
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = self.db.get_historico_paginado(1, 0, 10)
+            assert len(w) == 1
+            assert issubclass(w[-1].category, DeprecationWarning)
+    
+    def test_get_total_historico_deprecated(self):
+        """Testa método deprecated get_total_historico"""
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = self.db.get_total_historico(1)
+            assert len(w) == 1
+            assert issubclass(w[-1].category, DeprecationWarning)
+    
+    def test_get_todo_historico_deprecated(self):
+        """Testa método deprecated get_todo_historico"""
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = self.db.get_todo_historico()
+            assert len(w) == 1
+            assert issubclass(w[-1].category, DeprecationWarning)
+    
+    def test_get_todo_historico_paginado_deprecated(self):
+        """Testa método deprecated get_todo_historico_paginado"""
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = self.db.get_todo_historico_paginado(0, 10)
+            assert len(w) == 1
+            assert issubclass(w[-1].category, DeprecationWarning)
+    
+    def test_get_total_todo_historico_deprecated(self):
+        """Testa método deprecated get_total_todo_historico"""
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = self.db.get_total_todo_historico()
+            assert len(w) == 1
+            assert issubclass(w[-1].category, DeprecationWarning)
+    
+    def test_registrar_auditoria_deprecated(self):
+        """Testa método deprecated registrar_auditoria"""
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = self.db.registrar_auditoria(1, 'LOGIN', 'usuarios')
+            deprecation_warnings = [x for x in w if issubclass(x.category, DeprecationWarning)]
+            assert len(deprecation_warnings) >= 1
+    
+    def test_buscar_logs_auditoria_deprecated(self):
+        """Testa método deprecated buscar_logs_auditoria"""
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = self.db.buscar_logs_auditoria()
+            assert len(w) == 1
+            assert issubclass(w[-1].category, DeprecationWarning)
+    
+    def test_contar_logs_auditoria_deprecated(self):
+        """Testa método deprecated contar_logs_auditoria"""
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = self.db.contar_logs_auditoria()
+            assert len(w) == 1
+            assert issubclass(w[-1].category, DeprecationWarning)
+    
+    def test_close_method(self):
+        """Testa método close"""
+        # O método close não deve lançar exceção
+        self.db.close()
+    
+    def test_english_aliases(self):
+        """Testa aliases em inglês"""
+        import warnings
+        with warnings.catch_warnings(record=True):
+            warnings.simplefilter("always")
+            # Testar que aliases existem e funcionam
+            assert hasattr(self.db, 'create_user')
+            assert hasattr(self.db, 'authenticate_user')
+            assert hasattr(self.db, 'get_users')
+            assert hasattr(self.db, 'get_drawer_state')
+            assert hasattr(self.db, 'set_drawer_state')
+            assert hasattr(self.db, 'create_audit_log')
+
+
+class TestDatabaseManagerAdditional:
+    """Testes adicionais para DatabaseManager"""
+    
+    @pytest.fixture(autouse=True)
+    def setup_db(self):
+        """Setup do banco para testes"""
+        from ozempic_seguro.repositories.database import DatabaseManager
+        from ozempic_seguro.repositories.connection import DatabaseConnection
+        
+        DatabaseManager._instance = None
+        DatabaseConnection._instance = None
+        
+        self.temp_dir = tempfile.mkdtemp()
+        self.db_path = os.path.join(self.temp_dir, 'test.db')
+        
+        self.patcher = patch.object(DatabaseConnection, '_get_db_path', return_value=self.db_path)
+        self.patcher.start()
+        
+        self.db = DatabaseManager()
+        
+        yield
+        
+        self.patcher.stop()
+        if hasattr(self.db, 'conn'):
+            try:
+                self.db.conn.close()
+            except:
+                pass
+        DatabaseManager._instance = None
+        DatabaseConnection._instance = None
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+    
+    def test_singleton_pattern(self):
+        """Testa padrão singleton"""
+        from ozempic_seguro.repositories.database import DatabaseManager
+        db2 = DatabaseManager()
+        assert self.db is db2
+    
+    def test_cursor_property(self):
+        """Testa propriedade cursor"""
+        assert self.db.cursor is not None
+    
+    def test_conn_property(self):
+        """Testa propriedade conn"""
+        assert self.db.conn is not None
+    
+    def test_get_drawer_history_deprecated(self):
+        """Testa método deprecated get_drawer_history"""
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = self.db.get_drawer_history(1)
+            if len(w) > 0:
+                assert issubclass(w[-1].category, DeprecationWarning)
+    
+    def test_has_connection(self):
+        """Testa que tem conexão ativa"""
+        assert self.db.conn is not None
+        assert self.db.cursor is not None

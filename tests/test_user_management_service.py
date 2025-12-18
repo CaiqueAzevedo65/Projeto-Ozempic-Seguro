@@ -276,3 +276,98 @@ class TestGetUserManagementService:
         
         assert isinstance(service1, UserManagementService)
         assert isinstance(service2, UserManagementService)
+
+
+class TestUserManagementServiceAdditional:
+    """Testes adicionais para UserManagementService"""
+    
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Setup para cada teste"""
+        self.service = UserManagementService()
+        yield
+    
+    def test_user_data_tipo_display_vendedor(self):
+        """Testa tipo_display para vendedor"""
+        user = UserData(1, "123", "Test", "vendedor", True, "2025-01-01")
+        assert user.tipo_display == "Vendedor"
+    
+    def test_user_data_tipo_display_repositor(self):
+        """Testa tipo_display para repositor"""
+        user = UserData(1, "123", "Test", "repositor", True, "2025-01-01")
+        assert user.tipo_display == "Repositor"
+    
+    def test_user_data_tipo_display_administrador(self):
+        """Testa tipo_display para administrador"""
+        user = UserData(1, "123", "Test", "administrador", True, "2025-01-01")
+        assert user.tipo_display == "Administrador"
+    
+    def test_user_data_tipo_display_tecnico(self):
+        """Testa tipo_display para tecnico"""
+        user = UserData(1, "123", "Test", "tecnico", True, "2025-01-01")
+        assert user.tipo_display == "Tecnico"
+    
+    def test_user_data_status_display_ativo(self):
+        """Testa status_display para ativo"""
+        user = UserData(1, "123", "Test", "vendedor", True, "2025-01-01")
+        assert user.status_display == "Ativo"
+    
+    def test_user_data_status_display_inativo(self):
+        """Testa status_display para inativo"""
+        user = UserData(1, "123", "Test", "vendedor", False, "2025-01-01")
+        assert user.status_display == "Inativo"
+    
+    def test_operation_result_success(self):
+        """Testa OperationResult de sucesso"""
+        result = OperationResult(True, "Operação realizada")
+        assert result.success is True
+        assert result.message == "Operação realizada"
+    
+    def test_operation_result_failure(self):
+        """Testa OperationResult de falha"""
+        result = OperationResult(False, "Erro na operação")
+        assert result.success is False
+        assert result.message == "Erro na operação"
+
+
+class TestUserDataProperties:
+    """Testes para propriedades de UserData"""
+    
+    def test_user_data_can_be_modified_admin(self):
+        """Testa que admin pode ser modificado"""
+        user = UserData(1, "admin", "Admin", "administrador", True, "2025-01-01")
+        assert user.can_be_modified is True
+    
+    def test_user_data_can_be_modified_repositor(self):
+        """Testa que repositor pode ser modificado"""
+        user = UserData(1, "repo", "Repositor", "repositor", True, "2025-01-01")
+        assert user.can_be_modified is True
+    
+    def test_user_data_can_be_deleted_admin(self):
+        """Testa que admin pode ser excluído"""
+        user = UserData(1, "admin", "Admin", "administrador", True, "2025-01-01")
+        assert user.can_be_deleted is True
+    
+    def test_user_data_can_be_deleted_repositor(self):
+        """Testa que repositor pode ser excluído"""
+        user = UserData(1, "repo", "Repositor", "repositor", True, "2025-01-01")
+        assert user.can_be_deleted is True
+    
+    def test_user_data_is_repositor(self):
+        """Testa identificação de repositor"""
+        user = UserData(1, "repo", "Repositor", "repositor", True, "2025-01-01")
+        assert user.tipo == "repositor"
+    
+    def test_user_data_data_criacao_with_time(self):
+        """Testa data de criação com hora"""
+        user = UserData(1, "test", "Test", "vendedor", True, "2025-01-01 15:30:00")
+        assert "2025-01-01" in user.data_criacao_display
+
+
+class TestGetUserManagementService:
+    """Testes para get_user_management_service"""
+    
+    def test_get_service_returns_instance(self):
+        """Testa que retorna instância"""
+        service = get_user_management_service()
+        assert isinstance(service, UserManagementService)

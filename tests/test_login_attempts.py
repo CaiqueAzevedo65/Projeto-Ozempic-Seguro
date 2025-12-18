@@ -192,3 +192,53 @@ class TestLoginAttemptsManagerEdgeCases:
         
         remaining_user1 = self.manager.get_remaining_attempts(user1)
         assert remaining_user1 == Config.Security.MAX_LOGIN_ATTEMPTS - 2
+    
+    def test_get_remaining_time_minutes_not_locked(self):
+        """Testa tempo restante quando não está bloqueado"""
+        username = "user_not_locked_time"
+        remaining = self.manager.get_remaining_time_minutes(username)
+        assert remaining == 0
+    
+    def test_get_remaining_time_seconds_not_locked(self):
+        """Testa tempo restante em segundos quando não está bloqueado"""
+        username = "user_not_locked_seconds"
+        remaining = self.manager.get_remaining_time_seconds(username)
+        assert remaining == 0
+    
+    def test_get_remaining_time_minutes_with_attempts(self):
+        """Testa tempo restante com tentativas mas não bloqueado"""
+        username = "user_attempts_no_lock"
+        self.manager.record_attempt(username, success=False)
+        remaining = self.manager.get_remaining_time_minutes(username)
+        assert remaining == 0
+    
+    def test_get_remaining_time_seconds_with_attempts(self):
+        """Testa tempo em segundos com tentativas mas não bloqueado"""
+        username = "user_attempts_no_lock_sec"
+        self.manager.record_attempt(username, success=False)
+        remaining = self.manager.get_remaining_time_seconds(username)
+        assert remaining == 0
+    
+    def test_is_locked_unknown_user(self):
+        """Testa is_locked para usuário desconhecido"""
+        assert self.manager.is_locked("unknown_user_xyz") is False
+    
+    def test_reset_unknown_user(self):
+        """Testa reset para usuário desconhecido"""
+        self.manager.reset("unknown_reset_user")
+        # Não deve lançar exceção
+    
+    def test_get_status_message_new_user(self):
+        """Testa mensagem de status para usuário novo"""
+        status = self.manager.get_status_message("brand_new_user")
+        assert status['locked'] is False
+        assert status['remaining_attempts'] == Config.Security.MAX_LOGIN_ATTEMPTS
+    
+    def test_get_status_message_with_remaining(self):
+        """Testa mensagem de status com tentativas restantes"""
+        username = "user_with_remaining"
+        self.manager.record_attempt(username, success=False)
+        
+        status = self.manager.get_status_message(username)
+        assert status['locked'] is False
+        assert status['remaining_attempts'] < Config.Security.MAX_LOGIN_ATTEMPTS

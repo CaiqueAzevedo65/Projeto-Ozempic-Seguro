@@ -229,3 +229,67 @@ class TestCachedDecorator:
         # Cache de posts ainda existe
         stats_after = get_cache_stats()
         assert stats_after['size'] == 1
+
+
+class TestCacheEdgeCases:
+    """Testes para casos extremos do cache"""
+    
+    def test_cache_none_value(self):
+        """Testa cache de valor None"""
+        cache = MemoryCache()
+        cache.set("none_key", None)
+        
+        # Deve retornar None (valor armazenado)
+        # Precisamos distinguir entre None armazenado e chave inexistente
+        assert "none_key" in cache._cache
+    
+    def test_cache_complex_types(self):
+        """Testa cache de tipos complexos"""
+        cache = MemoryCache()
+        
+        # Lista
+        cache.set("list", [1, 2, 3])
+        assert cache.get("list") == [1, 2, 3]
+        
+        # Dict
+        cache.set("dict", {"a": 1, "b": 2})
+        assert cache.get("dict") == {"a": 1, "b": 2}
+        
+        # Tuple
+        cache.set("tuple", (1, 2, 3))
+        assert cache.get("tuple") == (1, 2, 3)
+    
+    def test_cache_overwrite(self):
+        """Testa sobrescrita de valor"""
+        cache = MemoryCache()
+        
+        cache.set("key", "value1")
+        assert cache.get("key") == "value1"
+        
+        cache.set("key", "value2")
+        assert cache.get("key") == "value2"
+    
+    def test_cache_hit_rate_zero_requests(self):
+        """Testa hit rate com zero requisições"""
+        cache = MemoryCache()
+        stats = cache.get_stats()
+        
+        assert stats['hits'] == 0
+        assert stats['misses'] == 0
+    
+    def test_cache_default_ttl(self):
+        """Testa TTL padrão"""
+        cache = MemoryCache(default_ttl=300)
+        cache.set("key", "value")
+        
+        # Deve ter TTL definido
+        assert cache.get("key") == "value"
+    
+    def test_get_cache_stats_function(self):
+        """Testa função get_cache_stats"""
+        stats = get_cache_stats()
+        
+        assert isinstance(stats, dict)
+        assert 'size' in stats
+        assert 'hits' in stats
+        assert 'misses' in stats

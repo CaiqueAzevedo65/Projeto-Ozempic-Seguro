@@ -204,3 +204,131 @@ class TestEnvironmentConfig:
         assert 'log_level' in config
         assert 'detailed_logging' in config
         assert 'session_timeout' in config
+
+
+class TestConfigAdditional:
+    """Testes adicionais para configurações"""
+    
+    def test_security_name_length_constraints(self):
+        """Testa constraints de tamanho de nome"""
+        assert SecurityConfig.MIN_NAME_LENGTH >= 2
+        assert SecurityConfig.MAX_NAME_LENGTH > SecurityConfig.MIN_NAME_LENGTH
+    
+    def test_security_audit_settings(self):
+        """Testa configurações de auditoria"""
+        assert isinstance(SecurityConfig.ENABLE_DETAILED_LOGGING, bool)
+        assert isinstance(SecurityConfig.LOG_IP_ADDRESSES, bool)
+        assert isinstance(SecurityConfig.LOG_SYSTEM_INFO, bool)
+    
+    def test_security_backup_settings(self):
+        """Testa configurações de backup"""
+        assert isinstance(SecurityConfig.BACKUP_ENABLED, bool)
+        assert SecurityConfig.BACKUP_RETENTION_DAYS > 0
+    
+    def test_database_wal_mode(self):
+        """Testa configuração WAL mode"""
+        assert isinstance(DatabaseConfig.ENABLE_WAL_MODE, bool)
+    
+    def test_database_foreign_keys(self):
+        """Testa configuração foreign keys"""
+        assert isinstance(DatabaseConfig.ENABLE_FOREIGN_KEYS, bool)
+    
+    def test_database_auto_backup(self):
+        """Testa configuração de auto backup"""
+        assert isinstance(DatabaseConfig.AUTO_BACKUP, bool)
+        assert DatabaseConfig.BACKUP_INTERVAL_HOURS > 0
+    
+    def test_ui_theme_settings(self):
+        """Testa configurações de tema"""
+        assert UIConfig.THEME_MODE in ['light', 'dark']
+        assert UIConfig.THEME_COLOR is not None
+    
+    def test_ui_font_family(self):
+        """Testa configuração de fonte"""
+        assert UIConfig.FONT_FAMILY is not None
+        assert len(UIConfig.FONT_FAMILY) > 0
+    
+    def test_ui_sidebar_width(self):
+        """Testa largura do sidebar"""
+        assert UIConfig.SIDEBAR_WIDTH > 0
+    
+    def test_ui_content_padding(self):
+        """Testa padding de conteúdo"""
+        assert UIConfig.CONTENT_PADDING >= 0
+    
+    def test_ui_login_colors(self):
+        """Testa cores de login"""
+        assert UIConfig.LOGIN_FRAME_COLOR is not None
+        assert UIConfig.LOGIN_FRAME_COLOR.startswith('#')
+    
+    def test_ui_login_entry_dimensions(self):
+        """Testa dimensões de entrada de login"""
+        assert UIConfig.LOGIN_ENTRY_WIDTH > 0
+        assert UIConfig.LOGIN_ENTRY_HEIGHT > 0
+    
+    def test_ui_status_colors(self):
+        """Testa cores de status"""
+        assert UIConfig.SUCCESS_BG is not None
+        assert UIConfig.SUCCESS_TEXT is not None
+        assert UIConfig.WARNING_BG is not None
+        assert UIConfig.WARNING_TEXT is not None
+        assert UIConfig.ERROR_BG is not None
+        assert UIConfig.ERROR_TEXT is not None
+    
+    def test_ui_text_colors(self):
+        """Testa cores de texto"""
+        assert UIConfig.TEXT_PRIMARY is not None
+        assert UIConfig.TEXT_SECONDARY is not None
+        assert UIConfig.TEXT_LIGHT is not None
+    
+    def test_ui_border_colors(self):
+        """Testa cores de borda"""
+        assert UIConfig.BORDER_COLOR is not None
+        assert UIConfig.BORDER_LIGHT is not None
+    
+    def test_ui_toast_settings(self):
+        """Testa configurações de toast"""
+        assert UIConfig.TOAST_START_X > 0
+        assert UIConfig.TOAST_END_X > 0
+        assert UIConfig.TOAST_Y >= 0
+        assert UIConfig.TOAST_ANIMATION_STEP > 0
+        assert UIConfig.TOAST_ANIMATION_INTERVAL > 0
+        assert UIConfig.TOAST_DEFAULT_DURATION > 0
+    
+    def test_ui_transition_color(self):
+        """Testa cor de transição"""
+        assert UIConfig.TRANSITION_OVERLAY_COLOR is not None
+    
+    def test_logging_console_level(self):
+        """Testa nível de log de console"""
+        valid_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+        assert LoggingConfig.CONSOLE_LOG_LEVEL in valid_levels
+    
+    def test_logging_rotation(self):
+        """Testa configuração de rotação de logs"""
+        assert isinstance(LoggingConfig.LOG_ROTATION, bool)
+    
+    def test_logging_colors(self):
+        """Testa configuração de cores de console"""
+        assert isinstance(LoggingConfig.ENABLE_CONSOLE_COLORS, bool)
+    
+    def test_logging_backup_count(self):
+        """Testa contagem de backup de logs"""
+        assert LoggingConfig.LOG_FILE_BACKUP_COUNT > 0
+    
+    def test_app_debug_mode(self):
+        """Testa modo debug"""
+        assert isinstance(AppConfig.ENABLE_DEBUG_MODE, bool)
+    
+    def test_app_update_check(self):
+        """Testa verificação de updates"""
+        assert isinstance(AppConfig.CHECK_FOR_UPDATES, bool)
+    
+    def test_app_caching(self):
+        """Testa configuração de cache"""
+        assert isinstance(AppConfig.ENABLE_CACHING, bool)
+        assert AppConfig.CACHE_TTL_SECONDS > 0
+    
+    def test_app_migrations_dir(self):
+        """Testa diretório de migrações"""
+        assert AppConfig.MIGRATIONS_DIR is not None
