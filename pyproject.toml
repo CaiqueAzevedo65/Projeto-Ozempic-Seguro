@@ -1,6 +1,6 @@
 [project]
 name = "ozempic-seguro"
-version = "1.3.2"
+version = "1.3.3"
 description = "Sistema de gerenciamento de gavetas para controle seguro de medicamentos termolábeis"
 readme = "README.md"
 license = {text = "MIT"}
