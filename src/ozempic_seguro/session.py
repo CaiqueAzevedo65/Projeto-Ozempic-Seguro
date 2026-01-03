@@ -1,11 +1,12 @@
 """
 Gerenciador de sessão do sistema Ozempic Seguro.
 
-NOTA: Este módulo foi refatorado. A implementação agora está em session/.
-Este arquivo mantém compatibilidade com imports existentes.
-
-Para novos desenvolvimentos, importe de:
-    from ozempic_seguro.session import SessionManager
+.. deprecated:: 1.3.3
+    Este módulo é mantido apenas para compatibilidade.
+    Para novos desenvolvimentos, importe diretamente do pacote:
+        from ozempic_seguro.session import SessionManager
+    
+    Será removido em versão futura.
 """
 # Re-export do pacote session para compatibilidade
 from .session.session_manager import SessionManager

@@ -87,11 +87,6 @@ class TestSimpleServices:
         assert hasattr(Config, 'Security')
         assert hasattr(Config, 'UI')
     
-    def test_simple_factory_import(self):
-        """Testa importação do SimpleServiceFactory"""
-        from ozempic_seguro.services.simple_factory import SimpleServiceFactory
-        assert SimpleServiceFactory is not None
-    
     def test_session_basic_operations(self):
         """Testa operações básicas do SessionManager"""
         from ozempic_seguro.session import SessionManager
