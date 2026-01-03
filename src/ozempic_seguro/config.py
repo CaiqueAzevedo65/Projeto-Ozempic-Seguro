@@ -157,13 +157,18 @@ class LoggingConfig:
 
 
 def _get_version() -> str:
-    """Obtém versão do pacote via importlib.metadata"""
+    """Obtém versão do pacote via importlib.metadata ou setuptools-scm"""
     try:
         from importlib.metadata import version
 
         return version("ozempic-seguro")
     except Exception:
-        return "1.3.4"  # Fallback
+        try:
+            from ._version import version as scm_version
+
+            return scm_version
+        except Exception:
+            return "1.3.4"  # Fallback
 
 
 class AppConfig:

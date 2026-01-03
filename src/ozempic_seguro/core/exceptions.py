@@ -224,7 +224,7 @@ class DatabaseError(OzempicError):
         super().__init__(message, code, details)
 
 
-class ConnectionError(DatabaseError):
+class DatabaseConnectionError(DatabaseError):
     """Erro de conexão com o banco de dados"""
 
     def __init__(self, db_path: Optional[str] = None):
@@ -376,7 +376,7 @@ __all__ = [
     "InvalidInputError",
     # Database
     "DatabaseError",
-    "ConnectionError",
+    "DatabaseConnectionError",
     "MigrationError",
     "IntegrityError",
     # Drawer

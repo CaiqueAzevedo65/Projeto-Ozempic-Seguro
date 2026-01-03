@@ -10,12 +10,13 @@ repos:
         language_version: python3.13
         args: ['--line-length=100']
 
-  # Linting com Flake8
-  - repo: https://github.com/pycqa/flake8
-    rev: 7.1.1
+  # Linting e formatação com Ruff (substitui flake8 + isort)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
     hooks:
-      - id: flake8
-        args: ['--max-line-length=100', '--ignore=E501,W503']
+      - id: ruff
+        args: ['--fix']
+      - id: ruff-format
 
   # Type checking com MyPy
   - repo: https://github.com/pre-commit/mirrors-mypy
@@ -36,10 +37,3 @@ repos:
         args: ['--maxkb=1000']
       - id: check-merge-conflict
       - id: debug-statements
-
-  # Ordenação de imports
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        args: ['--profile=black', '--line-length=100']

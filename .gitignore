@@ -79,6 +79,9 @@ coverage.xml
 .mypy_cache/
 .dmypy.json
 
+# setuptools-scm generated version file
+src/ozempic_seguro/_version.py
+
 # Pyre type checker
 .pyre/
 

@@ -6,7 +6,7 @@ import pytest
 from ozempic_seguro.core.exceptions import (
     OzempicError,
     DatabaseError,
-    ConnectionError,
+    DatabaseConnectionError,
     AuthenticationError,
     InvalidCredentialsError,
     AccountLockedError,
@@ -60,9 +60,9 @@ class TestDatabaseExceptions:
             raise DatabaseError("DB error")
 
     def test_connection_error(self):
-        """Testa ConnectionError"""
-        with pytest.raises(ConnectionError):
-            raise ConnectionError()
+        """Testa DatabaseConnectionError"""
+        with pytest.raises(DatabaseConnectionError):
+            raise DatabaseConnectionError()
 
     def test_database_error_inheritance(self):
         """Testa herança de DatabaseError"""

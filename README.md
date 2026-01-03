@@ -28,6 +28,24 @@ cp .env.example .env && python run.py
 - Sanitização SQL/XSS, RBAC (4 tipos de usuário)
 - Auditoria completa com IP e timestamps
 
+## Variáveis de Ambiente
+
+Copie `.env.example` para `.env` e configure conforme necessário:
+
+| Variável | Descrição | Padrão | Obrigatória |
+|----------|-----------|--------|-------------|
+| `OZEMPIC_ENV` | Ambiente de execução (`development` ou `production`) | `production` | Não |
+| `OZEMPIC_ADMIN_USERNAME` | Username do administrador padrão | `00` | Sim* |
+| `OZEMPIC_ADMIN_PASSWORD` | Senha do administrador padrão | - | Sim* |
+| `OZEMPIC_TECNICO_USERNAME` | Username do técnico padrão | `01` | Sim* |
+| `OZEMPIC_TECNICO_PASSWORD` | Senha do técnico padrão | - | Sim* |
+| `OZEMPIC_BCRYPT_ROUNDS` | Rounds do bcrypt para hashing | `12` | Não |
+| `OZEMPIC_SESSION_TIMEOUT` | Timeout de sessão em minutos | `10` | Não |
+| `OZEMPIC_MAX_LOGIN_ATTEMPTS` | Máximo de tentativas de login | `3` | Não |
+| `OZEMPIC_LOCKOUT_DURATION` | Duração do bloqueio em minutos | `5` | Não |
+
+> **⚠️ IMPORTANTE**: Altere as senhas padrão em produção!
+
 ## Testes
 
 ```bash
