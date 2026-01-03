@@ -39,79 +39,87 @@ class GavetaService:
             cls._instance = cls()
         return cls._instance
 
-    def get_estado(self, gaveta_id: int) -> bool:
-        """Retorna o estado atual de uma gaveta"""
-        return self._repository.get_state(gaveta_id)
+    def get_state(self, drawer_id: int) -> bool:
+        """Returns the current state of a drawer"""
+        return self._repository.get_state(drawer_id)
 
-    def set_estado(self, gaveta_id: int, estado: bool, usuario_tipo: str) -> Tuple[bool, str]:
-        """Define o estado de uma gaveta"""
-        return self._repository.set_state(gaveta_id, estado, usuario_tipo)
+    def set_state(self, drawer_id: int, state: bool, user_type: str) -> Tuple[bool, str]:
+        """Sets the state of a drawer"""
+        return self._repository.set_state(drawer_id, state, user_type)
 
-    def fechar_gaveta(self, gaveta_id: int, usuario_tipo: str, usuario_id: Optional[int] = None) -> Tuple[bool, str]:
-        """Fecha uma gaveta (usado pelo Repositor)"""
-        return self._repository.set_state(gaveta_id, False, usuario_tipo, usuario_id)
+    def close_drawer(self, drawer_id: int, user_type: str, user_id: Optional[int] = None) -> Tuple[bool, str]:
+        """Closes a drawer (used by Repositor)"""
+        return self._repository.set_state(drawer_id, False, user_type, user_id)
 
-    def abrir_gaveta(self, gaveta_id: int, usuario_tipo: str, usuario_id: Optional[int] = None) -> Tuple[bool, str]:
+    def open_drawer(self, drawer_id: int, user_type: str, user_id: Optional[int] = None) -> Tuple[bool, str]:
         """
-        Abre uma gaveta (usado pelo Vendedor e Administrador).
+        Opens a drawer (used by Vendedor and Administrador).
         
-        Aplica regra de negócio: bloqueia sistema por 5 minutos após abertura
-        por vendedor ou administrador.
+        Business rule: blocks system for 5 minutes after opening
+        by vendedor or administrador.
         """
-        # Verifica se o sistema está bloqueado
-        if usuario_tipo in ['vendedor', 'administrador'] and self._session_manager.is_blocked():
-            tempo_restante = self._session_manager.get_remaining_time()
-            minutos = tempo_restante // 60
-            segundos = tempo_restante % 60
-            return False, f"Sistema bloqueado por {minutos}:{segundos:02d} minutos após a abertura da gaveta."
+        if user_type in ['vendedor', 'administrador'] and self._session_manager.is_blocked():
+            remaining = self._session_manager.get_remaining_time()
+            minutes = remaining // 60
+            seconds = remaining % 60
+            return False, f"Sistema bloqueado por {minutes}:{seconds:02d} minutos após a abertura da gaveta."
         
         try:
-            # Obtém o ID do usuário da sessão atual se não foi fornecido
-            if usuario_id is None:
-                usuario_id = self._session_manager.get_user_id()
+            if user_id is None:
+                user_id = self._session_manager.get_user_id()
                 
-            # Abre a gaveta e registra o histórico
-            resultado = self._repository.set_state(gaveta_id, True, usuario_tipo, usuario_id)
+            result = self._repository.set_state(drawer_id, True, user_type, user_id)
             
-            # Se for vendedor ou administrador, bloqueia o sistema por 5 minutos
-            if usuario_tipo in ['vendedor', 'administrador']:
+            if user_type in ['vendedor', 'administrador']:
                 self._session_manager.block_for_minutes(5)
-                logger.info(f"Drawer {gaveta_id} opened by {usuario_tipo}, system blocked for 5 minutes")
-                return True, f"Gaveta {gaveta_id} aberta com sucesso! O sistema será bloqueado por 5 minutos."
+                logger.info(f"Drawer {drawer_id} opened by {user_type}, system blocked for 5 minutes")
+                return True, f"Gaveta {drawer_id} aberta com sucesso! O sistema será bloqueado por 5 minutos."
                 
-            return resultado[0] if isinstance(resultado, tuple) else resultado, f"Gaveta {gaveta_id} aberta com sucesso!"
+            return result[0] if isinstance(result, tuple) else result, f"Gaveta {drawer_id} aberta com sucesso!"
         except Exception as e:
-            logger.error(f"Error opening drawer {gaveta_id}: {e}")
+            logger.error(f"Error opening drawer {drawer_id}: {e}")
             return False, f"Erro ao abrir a gaveta: {str(e)}"
     
-    def get_historico(self, gaveta_id: int, limite: int = 10) -> List[Tuple]:
-        """Obtém o histórico de alterações de uma gaveta"""
-        return self._repository.get_history(gaveta_id, limite)
+    def get_history(self, drawer_id: int, limit: int = 10) -> List[Tuple]:
+        """Gets the history of changes for a drawer"""
+        return self._repository.get_history(drawer_id, limit)
     
-    def get_historico_paginado(self, gaveta_id: int, offset: int = 0, limit: int = 20) -> List[Tuple]:
-        """Obtém o histórico de alterações de uma gaveta com paginação"""
-        return self._repository.get_history_paginated(gaveta_id, offset, limit)
+    def get_history_paginated(self, drawer_id: int, offset: int = 0, limit: int = 20) -> List[Tuple]:
+        """Gets the history of changes for a drawer with pagination"""
+        return self._repository.get_history_paginated(drawer_id, offset, limit)
     
-    def get_total_historico(self, gaveta_id: int) -> int:
-        """Retorna o número total de registros de histórico para uma gaveta"""
-        return self._repository.count_history(gaveta_id)
+    def count_history(self, drawer_id: int) -> int:
+        """Returns the total number of history records for a drawer"""
+        return self._repository.count_history(drawer_id)
     
-    def get_todo_historico(self) -> List[Tuple]:
-        """Retorna todo o histórico de todas as gavetas"""
+    def get_all_history(self) -> List[Tuple]:
+        """Returns all history from all drawers"""
         try:
             return self._repository.get_all_history()
         except Exception as e:
             logger.error(f"Error fetching all history: {e}")
             return []
     
-    def get_todo_historico_paginado(self, offset: int = 0, limit: int = 20) -> List[Tuple]:
-        """Retorna o histórico de acessos paginado para todas as gavetas"""
+    def get_all_history_paginated(self, offset: int = 0, limit: int = 20) -> List[Tuple]:
+        """Returns paginated history for all drawers"""
         return self._repository.get_all_history_paginated(offset, limit)
     
-    def get_total_todo_historico(self) -> int:
-        """Retorna o número total de registros de histórico de todas as gavetas"""
+    def count_all_history(self) -> int:
+        """Returns the total number of history records from all drawers"""
         return self._repository.count_all_history()
 
+    # Aliases for backward compatibility (deprecated)
+    get_estado = get_state
+    set_estado = set_state
+    fechar_gaveta = close_drawer
+    abrir_gaveta = open_drawer
+    get_historico = get_history
+    get_historico_paginado = get_history_paginated
+    get_total_historico = count_history
+    get_todo_historico = get_all_history
+    get_todo_historico_paginado = get_all_history_paginated
+    get_total_todo_historico = count_all_history
 
-# Alias para compatibilidade com código existente
+
+# Alias for backward compatibility
 GavetaStateManager = GavetaService

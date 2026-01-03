@@ -65,10 +65,10 @@ class TestGavetaServiceOperations:
     def test_fechar_gaveta(self):
         """Testa fechamento de gaveta"""
         # Primeiro abre
-        self.service.abrir_gaveta(4, 'administrador')
+        self.service.open_drawer(4, 'administrador')
         
         # Depois fecha
-        resultado = self.service.fechar_gaveta(4, 'administrador', usuario_id=1)
+        resultado = self.service.close_drawer(4, 'administrador', user_id=1)
         
         assert isinstance(resultado, tuple)
     
@@ -125,7 +125,7 @@ class TestGavetaServiceHistory:
     
     def test_get_historico(self):
         """Testa obtenção de histórico"""
-        historico = self.service.get_historico(1, limite=10)
+        historico = self.service.get_history(1, limit=10)
         
         assert isinstance(historico, list)
     

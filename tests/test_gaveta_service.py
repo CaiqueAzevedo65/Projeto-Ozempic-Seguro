@@ -33,7 +33,7 @@ class TestGavetaService:
     
     def test_get_historico(self):
         """Testa obtenção de histórico de gaveta"""
-        historico = self.service.get_historico(1, limite=10)
+        historico = self.service.get_history(1, limit=10)
         assert isinstance(historico, list)
     
     def test_get_historico_paginado(self):
