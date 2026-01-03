@@ -161,7 +161,7 @@ def _get_version() -> str:
         from importlib.metadata import version
         return version("ozempic-seguro")
     except Exception:
-        return "1.3.2"  # Fallback
+        return "1.3.3"  # Fallback
 
 
 class AppConfig:

@@ -25,8 +25,8 @@ class AppLogger:
     
     def _setup_logger(self):
         """Configura o logger principal"""
-        # Criar diretório de logs
-        log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'logs')
+        # Criar diretório de logs na raiz do projeto (não em src/)
+        log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 'logs')
         os.makedirs(log_dir, exist_ok=True)
         
         # Configurar logger
