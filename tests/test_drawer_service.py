@@ -132,8 +132,11 @@ class TestDrawerServiceMethods:
     @pytest.fixture(autouse=True)
     def setup(self):
         """Setup para cada teste"""
+        from ozempic_seguro.services.gaveta_service import GavetaService
+        GavetaService._instance = None  # Reset singleton
         self.service = DrawerService()
         yield
+        GavetaService._instance = None  # Cleanup
     
     def test_set_drawer_state_open(self):
         """Testa definir gaveta como aberta"""

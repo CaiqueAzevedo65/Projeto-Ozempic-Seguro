@@ -153,9 +153,15 @@ class BaseService(ABC):
     
     @property
     def database_manager(self):
-        """Lazy loading do DatabaseManager"""
+        """
+        Lazy loading do DatabaseManager.
+        
+        .. deprecated:: 1.3.4
+            Use repositórios específicos (UserRepository, etc) ao invés de DatabaseManager.
+        """
         if self._database_manager is None:
-            self._database_manager = ServiceFactory.get_database_manager()
+            from ..repositories.database import DatabaseManager
+            self._database_manager = DatabaseManager()
         return self._database_manager
     
     @abstractmethod

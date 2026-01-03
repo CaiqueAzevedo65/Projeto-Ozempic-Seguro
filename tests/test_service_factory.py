@@ -94,12 +94,6 @@ class TestServiceFactory:
         
         assert service is not None
     
-    def test_get_database_manager(self):
-        """Testa obtenção de DatabaseManager"""
-        manager = ServiceFactory.get_database_manager()
-        
-        assert manager is not None
-    
     def test_get_session_manager(self):
         """Testa obtenção de SessionManager"""
         manager = ServiceFactory.get_session_manager()
@@ -203,12 +197,6 @@ class TestServiceFactoryAdditional:
         status = ServiceFactory.get_service_status()
         # Verificar que foi resetado
         assert isinstance(status, dict)
-    
-    def test_database_manager_singleton(self):
-        """Testa que DatabaseManager é singleton"""
-        manager1 = ServiceFactory.get_database_manager()
-        manager2 = ServiceFactory.get_database_manager()
-        assert manager1 is manager2
     
     def test_session_manager_singleton(self):
         """Testa que SessionManager é singleton"""

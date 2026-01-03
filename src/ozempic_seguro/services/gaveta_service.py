@@ -2,13 +2,93 @@
 Serviço de gavetas: lógica de negócio para manipulação de gavetas.
 
 Responsável por gerenciar estado das gavetas e histórico de operações.
+Este é o serviço principal - DrawerService é deprecated e delega para cá.
 """
 from typing import Optional, List, Tuple, Any
+from dataclasses import dataclass
 
 from ..repositories.gaveta_repository import GavetaRepository
 from ..session import SessionManager
 from ..core.logger import logger
 
+
+# =============================================================================
+# DTOs (Data Transfer Objects)
+# =============================================================================
+
+@dataclass
+class DrawerState:
+    """Estado de uma gaveta"""
+    numero: int
+    esta_aberta: bool
+    ultimo_usuario: Optional[str] = None
+    ultima_acao: Optional[str] = None
+    
+    @property
+    def status_display(self) -> str:
+        """Retorna status formatado"""
+        return "Aberta" if self.esta_aberta else "Fechada"
+
+
+@dataclass
+class DrawerHistoryItem:
+    """Item do histórico de gaveta"""
+    data_hora: str
+    gaveta_id: int
+    acao: str
+    usuario: str
+    
+    @property
+    def data_hora_display(self) -> str:
+        """Retorna data/hora formatada"""
+        try:
+            if isinstance(self.data_hora, str):
+                return self.data_hora
+            return str(self.data_hora)
+        except Exception:
+            return "N/A"
+    
+    @property
+    def acao_display(self) -> str:
+        """Retorna ação formatada"""
+        acoes = {
+            'aberta': 'Abriu',
+            'fechada': 'Fechou',
+            'abrir': 'Abriu',
+            'fechar': 'Fechou',
+        }
+        return acoes.get(self.acao.lower(), self.acao.capitalize())
+
+
+@dataclass
+class PaginatedResult:
+    """Resultado paginado genérico"""
+    items: List[Any]
+    total: int
+    page: int
+    per_page: int
+    
+    @property
+    def total_pages(self) -> int:
+        """Calcula total de páginas"""
+        if self.per_page <= 0:
+            return 0
+        return (self.total + self.per_page - 1) // self.per_page
+    
+    @property
+    def has_next(self) -> bool:
+        """Verifica se há próxima página"""
+        return self.page < self.total_pages
+    
+    @property
+    def has_previous(self) -> bool:
+        """Verifica se há página anterior"""
+        return self.page > 1
+
+
+# =============================================================================
+# Service
+# =============================================================================
 
 class GavetaService:
     """

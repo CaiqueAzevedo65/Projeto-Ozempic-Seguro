@@ -124,15 +124,6 @@ class ServiceFactory:
         return _registry.get_service('audit_service', create_audit_service)
     
     @staticmethod
-    def get_database_manager():
-        """Retorna instância singleton de DatabaseManager"""
-        def create_database_manager():
-            from ..repositories.database import DatabaseManager
-            return DatabaseManager()
-        
-        return _registry.get_service('database_manager', create_database_manager)
-    
-    @staticmethod
     def get_session_manager():
         """Retorna instância singleton de SessionManager"""
         def create_session_manager():

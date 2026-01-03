@@ -1,118 +1,41 @@
 """
-Serviço de gavetas - Lógica de gerenciamento de gavetas separada das views.
+Serviço de gavetas - View Service para componentes de UI.
 
-Responsabilidades:
-- Obter estado das gavetas
-- Alterar estado das gavetas
-- Obter histórico de ações
-- Paginação de histórico
+.. deprecated:: 1.3.4
+    Este módulo delega para GavetaService.
+    Para novos desenvolvimentos, use GavetaService diretamente.
+
+Mantido para compatibilidade com views existentes.
 """
-from typing import Optional, Dict, Any, List, Tuple
-from dataclasses import dataclass, field
-from datetime import datetime
+from typing import Optional, List, Tuple
 
-from ..repositories.gaveta_repository import GavetaRepository
+from .gaveta_service import (
+    GavetaService,
+    DrawerState,
+    DrawerHistoryItem,
+    PaginatedResult,
+)
 from ..core.logger import logger
-
-
-@dataclass
-class DrawerHistoryItem:
-    """Item do histórico de gaveta"""
-    data_hora: str
-    gaveta_id: int
-    acao: str
-    usuario: str
-    
-    @property
-    def data_hora_display(self) -> str:
-        """Retorna data/hora formatada"""
-        try:
-            if isinstance(self.data_hora, str):
-                return self.data_hora
-            return str(self.data_hora)
-        except Exception:
-            return "N/A"
-    
-    @property
-    def acao_display(self) -> str:
-        """Retorna ação formatada"""
-        acoes = {
-            'aberta': 'Abriu',
-            'fechada': 'Fechou',
-            'abrir': 'Abriu',
-            'fechar': 'Fechou',
-        }
-        return acoes.get(self.acao.lower(), self.acao.capitalize())
-
-
-@dataclass
-class PaginatedResult:
-    """Resultado paginado"""
-    items: List[Any]
-    total: int
-    page: int
-    per_page: int
-    
-    @property
-    def total_pages(self) -> int:
-        """Calcula total de páginas"""
-        if self.per_page <= 0:
-            return 0
-        return (self.total + self.per_page - 1) // self.per_page
-    
-    @property
-    def has_next(self) -> bool:
-        """Verifica se há próxima página"""
-        return self.page < self.total_pages
-    
-    @property
-    def has_previous(self) -> bool:
-        """Verifica se há página anterior"""
-        return self.page > 1
-
-
-@dataclass
-class DrawerState:
-    """Estado de uma gaveta"""
-    numero: int
-    esta_aberta: bool
-    ultimo_usuario: Optional[str] = None
-    ultima_acao: Optional[str] = None
-    
-    @property
-    def status_display(self) -> str:
-        """Retorna status formatado"""
-        return "Aberta" if self.esta_aberta else "Fechada"
 
 
 class DrawerService:
     """
-    Serviço de gavetas.
+    Serviço de gavetas (View Service).
     
-    Encapsula toda a lógica de gavetas que estava nas views.
+    .. deprecated:: 1.3.4
+        Delega para GavetaService. Use GavetaService diretamente.
     """
     
     DEFAULT_PAGE_SIZE = 20
     
     def __init__(self):
-        self._repo = GavetaRepository()
+        self._service = GavetaService.get_instance()
     
     def get_drawer_state(self, drawer_number: int) -> Optional[DrawerState]:
-        """
-        Obtém estado de uma gaveta.
-        
-        Args:
-            drawer_number: Número da gaveta
-            
-        Returns:
-            DrawerState ou None
-        """
+        """Obtém estado de uma gaveta."""
         try:
-            is_open = self._repo.get_state(drawer_number)
-            return DrawerState(
-                numero=drawer_number,
-                esta_aberta=is_open
-            )
+            is_open = self._service.get_state(drawer_number)
+            return DrawerState(numero=drawer_number, esta_aberta=is_open)
         except Exception as e:
             logger.error(f"Error getting drawer state: {e}")
             return None
@@ -143,32 +66,11 @@ class DrawerService:
         user_type: str,
         user_id: Optional[int] = None
     ) -> Tuple[bool, str]:
-        """
-        Define estado de uma gaveta.
-        
-        Args:
-            drawer_number: Número da gaveta
-            is_open: Se está aberta
-            user_type: Tipo do usuário
-            user_id: ID do usuário (opcional)
-            
-        Returns:
-            Tuple (sucesso, mensagem)
-        """
-        try:
-            estado = 'aberta' if is_open else 'fechada'
-            success = self._repo.set_state(drawer_number, estado, user_type, user_id)
-            
-            if success:
-                action = "aberta" if is_open else "fechada"
-                logger.info(f"Drawer {drawer_number} {action} by user type {user_type}")
-                return True, f"Gaveta {drawer_number} {action} com sucesso"
-            else:
-                return False, "Erro ao alterar estado da gaveta"
-                
-        except Exception as e:
-            logger.error(f"Error setting drawer state: {e}")
-            return False, f"Erro: {str(e)}"
+        """Define estado de uma gaveta."""
+        if is_open:
+            return self._service.open_drawer(drawer_number, user_type, user_id)
+        else:
+            return self._service.close_drawer(drawer_number, user_type, user_id)
     
     def get_drawer_history(
         self,
@@ -176,22 +78,12 @@ class DrawerService:
         page: int = 1,
         per_page: int = DEFAULT_PAGE_SIZE
     ) -> PaginatedResult:
-        """
-        Obtém histórico de uma gaveta com paginação.
-        
-        Args:
-            drawer_number: Número da gaveta
-            page: Página atual
-            per_page: Itens por página
-            
-        Returns:
-            PaginatedResult com histórico
-        """
+        """Obtém histórico de uma gaveta com paginação."""
         try:
             offset = (page - 1) * per_page
             
-            history_raw = self._repo.get_history_paginated(drawer_number, offset, per_page)
-            total = self._repo.count_history(drawer_number)
+            history_raw = self._service.get_history_paginated(drawer_number, offset, per_page)
+            total = self._service.count_history(drawer_number)
             
             items = [
                 DrawerHistoryItem(
@@ -219,21 +111,12 @@ class DrawerService:
         page: int = 1,
         per_page: int = DEFAULT_PAGE_SIZE
     ) -> PaginatedResult:
-        """
-        Obtém histórico de todas as gavetas com paginação.
-        
-        Args:
-            page: Página atual
-            per_page: Itens por página
-            
-        Returns:
-            PaginatedResult com histórico
-        """
+        """Obtém histórico de todas as gavetas com paginação."""
         try:
             offset = (page - 1) * per_page
             
-            history_raw = self._repo.get_all_history_paginated(offset, per_page)
-            total = self._repo.count_all_history()
+            history_raw = self._service.get_all_history_paginated(offset, per_page)
+            total = self._service.count_all_history()
             
             items = [
                 DrawerHistoryItem(
