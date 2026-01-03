@@ -14,16 +14,16 @@ def reset_database():
     """
     Remove o banco de dados existente e cria um novo com as configurações iniciais,
     incluindo um usuário administrador padrão.
-    
+
     Returns:
         bool: True se sucesso, False se erro
     """
     # Obtém o caminho do banco de dados
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    data_dir = os.path.join(base_dir, 'data')
+    data_dir = os.path.join(base_dir, "data")
     os.makedirs(data_dir, exist_ok=True)
-    db_path = os.path.join(data_dir, 'ozempic_seguro.db')
-    
+    db_path = os.path.join(data_dir, "ozempic_seguro.db")
+
     # Remove o banco de dados existente, se existir
     if os.path.exists(db_path):
         try:
@@ -32,13 +32,14 @@ def reset_database():
         except Exception as e:
             print(f"Erro ao remover o banco de dados existente: {e}")
             return False
-    
+
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
-        
+
         # Tabela de usuários
-        cursor.execute('''
+        cursor.execute(
+            """
         CREATE TABLE IF NOT EXISTS usuarios (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL UNIQUE,
@@ -48,20 +49,24 @@ def reset_database():
             ativo BOOLEAN DEFAULT 1,
             data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-        ''')
-        
+        """
+        )
+
         # Tabela de gavetas
-        cursor.execute('''
+        cursor.execute(
+            """
         CREATE TABLE IF NOT EXISTS gavetas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             numero_gaveta TEXT NOT NULL UNIQUE,
             esta_aberta BOOLEAN NOT NULL DEFAULT 0,
             ultima_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-        ''')
-        
+        """
+        )
+
         # Tabela de histórico de gavetas
-        cursor.execute('''
+        cursor.execute(
+            """
         CREATE TABLE IF NOT EXISTS historico_gavetas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             gaveta_id INTEGER,
@@ -71,10 +76,12 @@ def reset_database():
             FOREIGN KEY (gaveta_id) REFERENCES gavetas (id),
             FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
         )
-        ''')
-        
+        """
+        )
+
         # Tabela de auditoria
-        cursor.execute('''
+        cursor.execute(
+            """
         CREATE TABLE IF NOT EXISTS auditoria (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             usuario_id INTEGER,
@@ -87,46 +94,49 @@ def reset_database():
             data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
         )
-        ''')
-        
+        """
+        )
+
         # Tabela de migrations
-        cursor.execute('''
+        cursor.execute(
+            """
         CREATE TABLE IF NOT EXISTS migrations (
             version INTEGER PRIMARY KEY,
             name TEXT NOT NULL,
             applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-        ''')
-        
+        """
+        )
+
         # Cria usuário administrador padrão com bcrypt
         senha_hash = hash_password("1234")
         cursor.execute(
-            'INSERT INTO usuarios (username, senha_hash, nome_completo, tipo) VALUES (?, ?, ?, ?)',
-            ('00', senha_hash, 'ADMINISTRADOR', 'administrador')
+            "INSERT INTO usuarios (username, senha_hash, nome_completo, tipo) VALUES (?, ?, ?, ?)",
+            ("00", senha_hash, "ADMINISTRADOR", "administrador"),
         )
-        
+
         # Cria usuário técnico padrão
         senha_hash_tecnico = hash_password("1234")
         cursor.execute(
-            'INSERT INTO usuarios (username, senha_hash, nome_completo, tipo) VALUES (?, ?, ?, ?)',
-            ('01', senha_hash_tecnico, 'TÉCNICO', 'tecnico')
+            "INSERT INTO usuarios (username, senha_hash, nome_completo, tipo) VALUES (?, ?, ?, ?)",
+            ("01", senha_hash_tecnico, "TÉCNICO", "tecnico"),
         )
-        
+
         conn.commit()
-        
+
         print("\nBanco de dados recriado com sucesso!")
         print("\nCredenciais de acesso:")
         print("  Administrador: 00 / 1234")
         print("  Técnico: 01 / 1234")
         print("\nPor segurança, altere as senhas após o primeiro login.")
-        
+
         return True
-        
+
     except Exception as e:
         print(f"Erro ao recriar o banco de dados: {e}")
         return False
     finally:
-        if 'conn' in locals():
+        if "conn" in locals():
             conn.close()
 
 
@@ -137,10 +147,10 @@ if __name__ == "__main__":
     print("  1. Remover o banco de dados existente")
     print("  2. Criar um novo banco de dados")
     print("  3. Adicionar usuários padrão (admin: 00/1234, técnico: 01/1234)\n")
-    
+
     confirmacao = input("Deseja continuar? (s/n): ").strip().lower()
-    
-    if confirmacao == 's':
+
+    if confirmacao == "s":
         if reset_database():
             print("\nOperação concluída com sucesso!")
         else:

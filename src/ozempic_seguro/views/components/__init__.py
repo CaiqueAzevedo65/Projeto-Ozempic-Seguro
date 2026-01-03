@@ -22,26 +22,26 @@ from .loading import LoadingOverlay, SplashScreen, TransitionOverlay
 
 __all__ = [
     # Common
-    'Header',
-    'ImageCache', 
-    'MainButton',
+    "Header",
+    "ImageCache",
+    "MainButton",
     # Buttons
-    'ModernButton',
-    'VoltarButton',
-    'FinalizarSessaoButton',
+    "ModernButton",
+    "VoltarButton",
+    "FinalizarSessaoButton",
     # Dialogs
-    'ModernConfirmDialog',
-    'ToastNotification',
+    "ModernConfirmDialog",
+    "ToastNotification",
     # Layouts
-    'ResponsiveFrame',
-    'ResponsiveButtonGrid',
+    "ResponsiveFrame",
+    "ResponsiveButtonGrid",
     # Gavetas
-    'GavetaButton',
-    'GavetaButtonGrid',
+    "GavetaButton",
+    "GavetaButtonGrid",
     # Keyboard
-    'TecladoVirtual',
+    "TecladoVirtual",
     # Loading
-    'LoadingOverlay',
-    'SplashScreen',
-    'TransitionOverlay',
+    "LoadingOverlay",
+    "SplashScreen",
+    "TransitionOverlay",
 ]

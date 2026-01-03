@@ -1,4 +1,3 @@
-import pytest
 from ozempic_seguro.repositories.security import hash_password, verify_password
 from ozempic_seguro.core.validators import Validators
 
@@ -10,7 +9,7 @@ class TestSecurity:
         """Testa se hash_password cria hash bcrypt válido"""
         password = "test_password_123"
         hashed = hash_password(password)
-        
+
         assert hashed is not None
         assert hashed.startswith("$2b$")  # bcrypt prefix
         assert len(hashed) >= 60  # bcrypt hash length
@@ -19,14 +18,14 @@ class TestSecurity:
         """Testa verificação de senha correta"""
         password = "correct_password"
         hashed = hash_password(password)
-        
+
         assert verify_password(password, hashed) is True
 
     def test_verify_password_incorrect(self):
         """Testa verificação de senha incorreta"""
         password = "correct_password"
         hashed = hash_password(password)
-        
+
         assert verify_password("wrong_password", hashed) is False
 
     def test_hash_password_different_salts(self):
@@ -34,7 +33,7 @@ class TestSecurity:
         password = "same_password"
         hash1 = hash_password(password)
         hash2 = hash_password(password)
-        
+
         assert hash1 != hash2  # Different salts
         assert verify_password(password, hash1) is True
         assert verify_password(password, hash2) is True
@@ -43,7 +42,7 @@ class TestSecurity:
         """Testa compatibilidade com senhas legacy SHA256"""
         # Simular hash legacy (SHA256 + salt)
         legacy_hash = "legacy_hash_format"
-        
+
         # Por enquanto, deve retornar False para hashes inválidos
         assert verify_password("any_password", legacy_hash) is False
 
@@ -55,7 +54,7 @@ class TestInputValidator:
         """Testa sanitização de caracteres perigosos"""
         dangerous = "'; DROP TABLE users; --"
         sanitized = Validators.sanitize_string(dangerous)
-        
+
         assert "DROP TABLE" not in sanitized
         assert "--" not in sanitized
 
@@ -63,7 +62,7 @@ class TestInputValidator:
         """Testa que texto seguro é preservado"""
         safe_text = "João da Silva 123"
         sanitized = Validators.sanitize_string(safe_text)
-        
+
         # O texto é escapado por segurança mas preservado
         assert "João da Silva 123" in sanitized or "Jo" in sanitized
 
@@ -93,15 +92,19 @@ class TestInputValidator:
         assert Validators.validate_password("123").is_valid is False  # Too short
         assert Validators.validate_password("a" * 129).is_valid is False  # Too long
         # Testes de modo estrito (requer maiúscula, minúscula e número)
-        assert Validators.validate_password("password123", strict=True).is_valid is False  # No uppercase
-        assert Validators.validate_password("PASSWORD123", strict=True).is_valid is False  # No lowercase
+        assert (
+            Validators.validate_password("password123", strict=True).is_valid is False
+        )  # No uppercase
+        assert (
+            Validators.validate_password("PASSWORD123", strict=True).is_valid is False
+        )  # No lowercase
         assert Validators.validate_password("Password", strict=True).is_valid is False  # No digit
 
     def test_escape_html(self):
         """Testa escape de HTML"""
         html_text = "<script>alert('XSS')</script>"
         escaped = Validators.sanitize_string(html_text)
-        
+
         assert "<script>" not in escaped
         assert "&lt;script&gt;" in escaped
         assert "&lt;/script&gt;" in escaped
@@ -112,7 +115,7 @@ class TestInputValidator:
         assert Validators.validate_password("123", strict=True).is_valid is False
         assert Validators.validate_password("password", strict=True).is_valid is False
         assert Validators.validate_password("12345678", strict=True).is_valid is False
-        
+
         # Senhas fortes (8+ chars, maiúscula, minúscula e números)
         assert Validators.validate_password("Password123", strict=True).is_valid is True
         assert Validators.validate_password("SecurePass2024", strict=True).is_valid is True

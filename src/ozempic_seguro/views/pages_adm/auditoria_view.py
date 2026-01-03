@@ -2,61 +2,61 @@ import customtkinter
 from tkinter import ttk
 from datetime import datetime, timedelta
 from ...services.audit_view_service import get_audit_view_service, AuditFilter
-from ..components import Header
 from ...core.logger import logger
+
 
 class AuditoriaFrame(customtkinter.CTkFrame):
     BG_COLOR = "#3B6A7D"
-    
+
     def __init__(self, master, voltar_callback=None, *args, **kwargs):
         self.voltar_callback = voltar_callback
         super().__init__(master, fg_color=self.BG_COLOR, *args, **kwargs)
         self.audit_view_service = get_audit_view_service()
-        
+
         # Criar overlay para esconder construção
         self._overlay = customtkinter.CTkFrame(master, fg_color=self.BG_COLOR)
         self._overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
         self._overlay.lift()
         master.update_idletasks()
-        
+
         self.pack(fill="both", expand=True)
-        
+
         # Variáveis para filtros
         self.filtro_acao = customtkinter.StringVar(value="Todas")
         self.filtro_data_inicio = customtkinter.StringVar()
         self.filtro_data_fim = customtkinter.StringVar()
-        
+
         # Definir data padrão (últimos 7 dias)
         data_fim = datetime.now()
         data_inicio = data_fim - timedelta(days=7)
         self.filtro_data_inicio.set(data_inicio.strftime("%Y-%m-%d"))
         self.filtro_data_fim.set(data_fim.strftime("%Y-%m-%d"))
-        
+
         self.criar_topo()
         self.criar_filtros()
         self.criar_tabela()
         self.carregar_dados()
         self.criar_botao_voltar()
-        
+
         # Remover overlay após tudo estar pronto
         self.update_idletasks()
         self._overlay.destroy()
-    
+
     def criar_topo(self):
         """Cria o cabeçalho da página"""
         # Frame para o cabeçalho
         self.header_frame = customtkinter.CTkFrame(self, fg_color="transparent")
         self.header_frame.pack(fill="x", padx=20, pady=10)
-        
+
         # Título
         self.titulo = customtkinter.CTkLabel(
             self.header_frame,
             text="Registro de Auditoria",
             font=("Arial", 24, "bold"),
-            text_color="white"
+            text_color="white",
         )
         self.titulo.pack(side="left")
-        
+
         # Botão de atualizar
         self.btn_atualizar = customtkinter.CTkButton(
             self.header_frame,
@@ -65,64 +65,51 @@ class AuditoriaFrame(customtkinter.CTkFrame):
             width=120,
             height=35,
             fg_color="#28a745",
-            hover_color="#218838"
+            hover_color="#218838",
         )
         self.btn_atualizar.pack(side="right", padx=10)
-    
+
     def criar_filtros(self):
         """Cria os controles de filtro"""
         # Frame para os filtros
         self.filtros_frame = customtkinter.CTkFrame(self, fg_color="#2c4d5c")
         self.filtros_frame.pack(fill="x", padx=20, pady=(0, 10), ipady=10)
-        
+
         # Filtro por ação
         customtkinter.CTkLabel(
-            self.filtros_frame,
-            text="Ação:",
-            text_color="white",
-            font=("Arial", 12, "bold")
+            self.filtros_frame, text="Ação:", text_color="white", font=("Arial", 12, "bold")
         ).grid(row=0, column=0, padx=10, pady=5, sticky="w")
-        
+
         # Ações disponíveis do serviço
         self.cmb_acao = customtkinter.CTkComboBox(
             self.filtros_frame,
             values=self.audit_view_service.get_available_actions(),
             variable=self.filtro_acao,
             width=150,
-            state="readonly"
+            state="readonly",
         )
         self.cmb_acao.grid(row=0, column=1, padx=5, pady=5, sticky="w")
-        
+
         # Filtro por data de início
         customtkinter.CTkLabel(
-            self.filtros_frame,
-            text="Data Início:",
-            text_color="white",
-            font=("Arial", 12, "bold")
+            self.filtros_frame, text="Data Início:", text_color="white", font=("Arial", 12, "bold")
         ).grid(row=0, column=2, padx=10, pady=5, sticky="w")
-        
+
         self.entry_data_inicio = customtkinter.CTkEntry(
-            self.filtros_frame,
-            textvariable=self.filtro_data_inicio,
-            width=120
+            self.filtros_frame, textvariable=self.filtro_data_inicio, width=120
         )
         self.entry_data_inicio.grid(row=0, column=3, padx=5, pady=5, sticky="w")
-        
+
         # Filtro por data de fim
         customtkinter.CTkLabel(
-            self.filtros_frame,
-            text="Data Fim:",
-            text_color="white",
-            font=("Arial", 12, "bold")
+            self.filtros_frame, text="Data Fim:", text_color="white", font=("Arial", 12, "bold")
         ).grid(row=0, column=4, padx=10, pady=5, sticky="w")
-        
+
         self.entry_data_fim = customtkinter.CTkEntry(
-            self.filtros_frame,
-            textvariable=self.filtro_data_fim,
-            width=120
+            self.filtros_frame, textvariable=self.filtro_data_fim, width=120
         )
         self.entry_data_fim.grid(row=0, column=5, padx=5, pady=5, sticky="w")
-        
+
         # Botão de aplicar filtros
         self.btn_aplicar = customtkinter.CTkButton(
             self.filtros_frame,
@@ -131,46 +118,44 @@ class AuditoriaFrame(customtkinter.CTkFrame):
             width=120,
             height=30,
             fg_color="#17a2b8",
-            hover_color="#138496"
+            hover_color="#138496",
         )
         self.btn_aplicar.grid(row=0, column=6, padx=10, pady=5, sticky="e")
-    
+
     def criar_tabela(self):
         """Cria a tabela para exibir os registros de auditoria"""
         # Frame para a tabela
         self.tabela_frame = customtkinter.CTkFrame(self, fg_color="white")
         self.tabela_frame.pack(fill="both", expand=True, padx=20, pady=(0, 100))
-        
+
         # Criar Treeview com barra de rolagem
         self.tree_scroll = ttk.Scrollbar(self.tabela_frame)
         self.tree_scroll.pack(side="right", fill="y")
-        
+
         # Definir estilo para a árvore
         style = ttk.Style()
-        style.configure("Treeview", 
-                        background="#ffffff",
-                        foreground="black",
-                        rowheight=25,
-                        fieldbackground="#ffffff",
-                        font=('Arial', 10))
-        
-        style.configure("Treeview.Heading", 
-                        font=('Arial', 10, 'bold'))
-        
+        style.configure(
+            "Treeview",
+            background="#ffffff",
+            foreground="black",
+            rowheight=25,
+            fieldbackground="#ffffff",
+            font=("Arial", 10),
+        )
+
+        style.configure("Treeview.Heading", font=("Arial", 10, "bold"))
+
         # Criar a árvore
         self.tree = ttk.Treeview(
-            self.tabela_frame,
-            yscrollcommand=self.tree_scroll.set,
-            selectmode="extended",
-            height=20
+            self.tabela_frame, yscrollcommand=self.tree_scroll.set, selectmode="extended", height=20
         )
-        
+
         # Configurar a barra de rolagem
         self.tree_scroll.config(command=self.tree.yview)
-        
+
         # Definir colunas
-        self.tree['columns'] = ("data", "usuario", "acao", "tabela", "id_afetado", "detalhes")
-        
+        self.tree["columns"] = ("data", "usuario", "acao", "tabela", "id_afetado", "detalhes")
+
         # Formatar colunas
         self.tree.column("#0", width=0, stretch=False)
         self.tree.column("data", anchor="w", width=150)
@@ -179,7 +164,7 @@ class AuditoriaFrame(customtkinter.CTkFrame):
         self.tree.column("tabela", anchor="w", width=100)
         self.tree.column("id_afetado", anchor="center", width=80)
         self.tree.column("detalhes", anchor="w", width=300)
-        
+
         # Cabeçalhos
         self.tree.heading("data", text="Data/Hora", anchor="w")
         self.tree.heading("usuario", text="Usuário", anchor="w")
@@ -187,30 +172,30 @@ class AuditoriaFrame(customtkinter.CTkFrame):
         self.tree.heading("tabela", text="Tabela", anchor="w")
         self.tree.heading("id_afetado", text="ID Afetado", anchor="center")
         self.tree.heading("detalhes", text="Detalhes", anchor="w")
-        
+
         # Adicionar a árvore ao frame
         self.tree.pack(fill="both", expand=True, padx=5, pady=5)
-        
+
         # Adicionar evento de clique duplo para ver detalhes
         self.tree.bind("<Double-1>", self.mostrar_detalhes)
-    
+
     def carregar_dados(self, aplicar_filtros=False):
         """Carrega os dados da tabela de auditoria usando AuditViewService"""
         # Limpar a árvore
         for item in self.tree.get_children():
             self.tree.delete(item)
-        
+
         # Criar filtro usando o serviço
         filtro = AuditFilter(
             acao=self.filtro_acao.get(),
             data_inicio=self.filtro_data_inicio.get(),
-            data_fim=self.filtro_data_fim.get()
+            data_fim=self.filtro_data_fim.get(),
         )
-        
+
         try:
             # Obter os registros de auditoria usando o serviço
             result = self.audit_view_service.get_logs(filter=filtro)
-            
+
             # Preencher a tabela com os registros
             for log_item in result.items:
                 # Formatar detalhes
@@ -218,117 +203,105 @@ class AuditoriaFrame(customtkinter.CTkFrame):
                 if log_item.dados_novos:
                     try:
                         import json
-                        dados = json.loads(log_item.dados_novos) if isinstance(log_item.dados_novos, str) else log_item.dados_novos
+
+                        dados = (
+                            json.loads(log_item.dados_novos)
+                            if isinstance(log_item.dados_novos, str)
+                            else log_item.dados_novos
+                        )
                         if isinstance(dados, dict):
                             detalhes = ", ".join([f"{k}: {v}" for k, v in dados.items()])
                     except Exception:
                         detalhes = str(log_item.dados_novos)[:50]
-                
+
                 # Inserir na árvore
                 self.tree.insert(
-                    "", "end",
+                    "",
+                    "end",
                     values=(
                         log_item.data_hora_display,
                         log_item.usuario,
                         log_item.acao_display,
                         log_item.tabela,
                         log_item.id_afetado or "",
-                        detalhes
+                        detalhes,
                     ),
-                    tags=('linha',)
+                    tags=("linha",),
                 )
-            
+
             # Configurar tags para cores alternadas
-            self.tree.tag_configure('linha', background='white')
-            self.tree.tag_configure('linha_alternada', background='#f0f0f0')
-            
+            self.tree.tag_configure("linha", background="white")
+            self.tree.tag_configure("linha_alternada", background="#f0f0f0")
+
             # Alternar cores das linhas
             for i, item in enumerate(self.tree.get_children()):
-                tag = 'linha_alternada' if i % 2 == 0 else 'linha'
+                tag = "linha_alternada" if i % 2 == 0 else "linha"
                 self.tree.item(item, tags=(tag,))
-                    
+
         except Exception as e:
             logger.error(f"Erro ao carregar dados de auditoria: {e}")
-    
+
     def formatar_detalhes_resumido(self, registro):
         """Formata os detalhes do registro para exibição resumida"""
-        acao = registro.get('acao', '').lower()
-        
-        if acao == 'login':
+        acao = registro.get("acao", "").lower()
+
+        if acao == "login":
             return "Login realizado com sucesso"
-        elif acao == 'logout':
+        elif acao == "logout":
             return "Logout realizado"
-        elif acao == 'criar':
+        elif acao == "criar":
             return "Novo usuário criado"
-        elif acao == 'atualizar':
+        elif acao == "atualizar":
             return "Dados do usuário atualizados"
-        elif acao == 'excluir':
+        elif acao == "excluir":
             return "Usuário removido"
-            
+
         return ""
-    
+
     def aplicar_filtros(self):
         """Aplica os filtros selecionados"""
         self.carregar_dados(aplicar_filtros=True)
-    
+
     def mostrar_detalhes(self, event):
         """Mostra os detalhes completos do registro selecionado"""
         item = self.tree.selection()[0]
-        valores = self.tree.item(item, 'values')
-        
+        valores = self.tree.item(item, "values")
+
         # Criar janela de detalhes
         janela = customtkinter.CTkToplevel(self)
         janela.title("Detalhes do Registro")
         janela.geometry("600x400")
         janela.grab_set()
-        
+
         # Frame para os detalhes
         frame_detalhes = customtkinter.CTkFrame(janela, fg_color="white")
         frame_detalhes.pack(fill="both", expand=True, padx=10, pady=10)
-        
+
         # Exibir os detalhes
         customtkinter.CTkLabel(
-            frame_detalhes,
-            text=f"Data/Hora: {valores[0]}",
-            font=("Arial", 12),
-            anchor="w"
+            frame_detalhes, text=f"Data/Hora: {valores[0]}", font=("Arial", 12), anchor="w"
         ).pack(fill="x", padx=10, pady=5)
-        
+
         customtkinter.CTkLabel(
-            frame_detalhes,
-            text=f"Usuário: {valores[1]}",
-            font=("Arial", 12),
-            anchor="w"
+            frame_detalhes, text=f"Usuário: {valores[1]}", font=("Arial", 12), anchor="w"
         ).pack(fill="x", padx=10, pady=5)
-        
+
         customtkinter.CTkLabel(
-            frame_detalhes,
-            text=f"Ação: {valores[2]}",
-            font=("Arial", 12),
-            anchor="w"
+            frame_detalhes, text=f"Ação: {valores[2]}", font=("Arial", 12), anchor="w"
         ).pack(fill="x", padx=10, pady=5)
-        
+
         customtkinter.CTkLabel(
-            frame_detalhes,
-            text=f"Tabela: {valores[3]}",
-            font=("Arial", 12),
-            anchor="w"
+            frame_detalhes, text=f"Tabela: {valores[3]}", font=("Arial", 12), anchor="w"
         ).pack(fill="x", padx=10, pady=5)
-        
+
         customtkinter.CTkLabel(
-            frame_detalhes,
-            text=f"ID Afetado: {valores[4]}",
-            font=("Arial", 12),
-            anchor="w"
+            frame_detalhes, text=f"ID Afetado: {valores[4]}", font=("Arial", 12), anchor="w"
         ).pack(fill="x", padx=10, pady=5)
-        
+
         customtkinter.CTkLabel(
-            frame_detalhes,
-            text=f"Detalhes: {valores[5]}",
-            font=("Arial", 12),
-            anchor="w"
+            frame_detalhes, text=f"Detalhes: {valores[5]}", font=("Arial", 12), anchor="w"
         ).pack(fill="x", padx=10, pady=5)
-        
+
         # Botão para fechar
         btn_fechar = customtkinter.CTkButton(
             janela,
@@ -337,11 +310,12 @@ class AuditoriaFrame(customtkinter.CTkFrame):
             width=100,
             height=35,
             fg_color="#6c757d",
-            hover_color="#5a6268"
+            hover_color="#5a6268",
         )
         btn_fechar.pack(pady=10)
-    
+
     def criar_botao_voltar(self):
         """Cria o botão de voltar"""
         from ..components import VoltarButton
+
         VoltarButton(self, self.voltar_callback)

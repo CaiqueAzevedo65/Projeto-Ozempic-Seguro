@@ -2,6 +2,7 @@ import customtkinter
 from tkinter import messagebox
 from .components import Header, VoltarButton
 
+
 class IniciarSessaoFrame(customtkinter.CTkFrame):
     def __init__(self, master, show_login_callback, voltar_callback=None, *args, **kwargs):
         super().__init__(master, fg_color="#346172", *args, **kwargs)
@@ -18,18 +19,18 @@ class IniciarSessaoFrame(customtkinter.CTkFrame):
     def criar_botao_login(self):
         main_frame = customtkinter.CTkFrame(self, fg_color="#346172")
         main_frame.place(relx=0.5, rely=0.5, anchor="center")
-        
+
         btn_login = customtkinter.CTkButton(
-            main_frame, 
-            text="Iniciar Sessão", 
+            main_frame,
+            text="Iniciar Sessão",
             font=("Arial", 16, "bold"),
-            width=300, 
-            height=60, 
+            width=300,
+            height=60,
             corner_radius=15,
-            fg_color="white", 
+            fg_color="white",
             text_color="black",
-            hover_color="#e0e0e0", 
-            command=self.show_login_callback
+            hover_color="#e0e0e0",
+            command=self.show_login_callback,
         )
         btn_login.pack(pady=20)
 
