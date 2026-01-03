@@ -163,7 +163,7 @@ def _get_version() -> str:
 
         return version("ozempic-seguro")
     except Exception:
-        return "1.3.3"  # Fallback
+        return "1.3.4"  # Fallback
 
 
 class AppConfig:
