@@ -3,7 +3,7 @@ Serviço de usuários: camada de negócio isolada entre controllers e repositori
 
 Utiliza exceções customizadas para tratamento de erros consistente.
 """
-from typing import Optional, Tuple, List, Dict
+from typing import Optional, Tuple, List, Dict, Any
 import datetime
 
 from ..repositories.user_repository import UserRepository
@@ -115,7 +115,7 @@ class UserService(BaseService):
 
         return True
 
-    def authenticate(self, username: str, senha: str, endereco_ip: Optional[str] = None) -> Dict:
+    def authenticate(self, username: str, senha: str, endereco_ip: Optional[str] = None) -> Dict[str, Any]:
         """
         Autentica usuário com validação robusta, controle de força bruta e logs detalhados.
 
@@ -204,7 +204,7 @@ class UserService(BaseService):
                 dados_novos=security_context,
                 endereco_ip=security_context.get("ip_address"),
             )
-            return user
+            return dict(user)
         else:
             # Registra tentativa falhada para controle de força bruta
             session_manager.record_login_attempt(username, success=False)
@@ -272,9 +272,10 @@ class UserService(BaseService):
             return True, "Usuário excluído com sucesso!"
         raise UserNotFoundError(usuario_id)
 
-    def get_all_users(self) -> List[Dict]:
+    def get_all_users(self) -> List[Dict[Any, Any]]:
         """Retorna lista de todos os usuários."""
-        return self.user_repo.get_users()
+        result = self.user_repo.get_users()
+        return list(result) if result else []
 
     def update_password(
         self, usuario_id: int, nova_senha: str, admin_user_id: Optional[int] = None

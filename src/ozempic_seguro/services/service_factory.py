@@ -20,7 +20,7 @@ Exemplo de uso:
 """
 from __future__ import annotations
 
-from typing import Dict, Any, TypeVar, Callable
+from typing import Dict, Any, TypeVar, Callable, cast
 import threading
 
 from ..core.logger import logger, log_exceptions
@@ -52,11 +52,11 @@ class ServiceRegistry:
             # Verificar mocks primeiro (para testes)
             if service_name in self._mocks:
                 logger.debug(f"Returning mock service: {service_name}")
-                return self._mocks[service_name]
+                return cast(T, self._mocks[service_name])
 
             # Verificar se já existe
             if service_name in self._services:
-                return self._services[service_name]
+                return cast(T, self._services[service_name])
 
             # Validar configurações uma vez
             if not self._config_validated:

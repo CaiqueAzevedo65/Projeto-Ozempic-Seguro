@@ -131,7 +131,8 @@ class AuthService:
         Returns:
             Dict com status (locked, remaining_attempts, message)
         """
-        return self._session_manager.get_login_status_message(username)
+        result = self._session_manager.get_login_status_message(username)
+        return dict(result) if result else {}
 
     def get_lockout_remaining_seconds(self, username: str) -> int:
         """
@@ -143,7 +144,8 @@ class AuthService:
         Returns:
             Segundos restantes ou 0 se não bloqueado
         """
-        return self._session_manager.get_lockout_remaining_seconds(username)
+        result = self._session_manager.get_lockout_remaining_seconds(username)
+        return int(result) if result else 0
 
     def is_user_locked(self, username: str) -> bool:
         """
@@ -155,15 +157,16 @@ class AuthService:
         Returns:
             True se bloqueado
         """
-        return self._session_manager.is_user_locked(username)
+        return bool(self._session_manager.is_user_locked(username))
 
     def get_current_user(self) -> Optional[Dict[str, Any]]:
         """Retorna usuário atual logado"""
-        return self._session_manager.get_current_user()
+        result = self._session_manager.get_current_user()
+        return dict(result) if result else None
 
     def is_logged_in(self) -> bool:
         """Verifica se há usuário logado"""
-        return self._session_manager.is_logged_in()
+        return bool(self._session_manager.is_logged_in())
 
     def _get_user_panel(self, user: Dict[str, Any]) -> UserPanel:
         """

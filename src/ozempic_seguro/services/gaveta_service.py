@@ -208,7 +208,8 @@ class GavetaService:
 
     def count_all_history(self) -> int:
         """Returns the total number of history records from all drawers"""
-        return self._repository.count_all_history()
+        result = self._repository.count_all_history()
+        return int(result) if result else 0
 
     # Aliases for backward compatibility (deprecated)
     get_estado = get_state

@@ -246,12 +246,12 @@ class BaseRepository(ABC):
 class ConfigurableComponent(ABC):
     """Classe base para componentes configuráveis"""
 
-    def __init__(self, config_section: str = None):
+    def __init__(self, config_section: Optional[str] = None):
         self.config_section = config_section
         self._config = Config
         self._logger = logger
 
-    def get_config_value(self, key: str, default: Any = None) -> Any:
+    def get_config_value(self, key: str, default: Optional[Any] = None) -> Any:
         """
         Obtém valor de configuração de forma segura
 
@@ -303,7 +303,7 @@ class ValidatedMixin:
                 name=input_data.get("name"),
                 user_type=input_data.get("user_type"),
             )
-            return result["valid"]
+            return bool(result["valid"])
         except Exception as e:
             logger.error(f"Validation error: {str(e)}")
             return False
@@ -323,7 +323,7 @@ class AuditedMixin:
             self._security_logger = ServiceFactory.get_security_logger()
         return self._security_logger
 
-    def log_user_action(self, action: str, context: Dict[str, Any] = None) -> None:
+    def log_user_action(self, action: str, context: Optional[Dict[str, Any]] = None) -> None:
         """Registra ação do usuário para auditoria"""
         try:
             self.security_logger.log_user_action(action, context or {})

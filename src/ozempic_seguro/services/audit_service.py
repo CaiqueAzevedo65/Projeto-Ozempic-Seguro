@@ -1,7 +1,7 @@
 """
 Serviço de auditoria: camada de negócio isolada para logs de auditoria.
 """
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 
 from ..repositories.audit_repository import AuditRepository
 
@@ -19,11 +19,12 @@ class AuditService:
         filtro_tabela: Optional[str] = None,
         data_inicio: Optional[str] = None,
         data_fim: Optional[str] = None,
-    ) -> List[Dict]:
+    ) -> List[Dict[Any, Any]]:
         """Retorna logs de auditoria com filtros e paginação."""
-        return self.audit_repo.get_logs(
+        result = self.audit_repo.get_logs(
             offset, limit, filtro_usuario, filtro_acao, filtro_tabela, data_inicio, data_fim
         )
+        return list(result) if result else []
 
     def count_logs(
         self,
@@ -34,9 +35,10 @@ class AuditService:
         data_fim: Optional[str] = None,
     ) -> int:
         """Retorna o total de logs que correspondem aos filtros."""
-        return self.audit_repo.count_logs(
+        result = self.audit_repo.count_logs(
             filtro_usuario, filtro_acao, filtro_tabela, data_inicio, data_fim
         )
+        return int(result) if result is not None else 0
 
     def create_log(
         self,
@@ -49,6 +51,7 @@ class AuditService:
         endereco_ip: Optional[str] = None,
     ) -> Optional[int]:
         """Registra um log de auditoria e retorna o ID do registro."""
-        return self.audit_repo.create_log(
+        result = self.audit_repo.create_log(
             usuario_id, acao, tabela_afetada, id_afetado, dados_anteriores, dados_novos, endereco_ip
         )
+        return int(result) if result is not None else None
