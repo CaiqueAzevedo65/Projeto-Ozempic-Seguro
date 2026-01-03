@@ -160,7 +160,7 @@ class UserService(BaseService):
                 raise InvalidCredentialsError(username, "Formato de senha inválido")
             
         # Verificar se usuário está bloqueado por tentativas excessivas
-        from ..session import SessionManager
+        from ..session.session_manager import SessionManager
         session_manager = SessionManager.get_instance()
         
         if session_manager.is_user_locked(username):

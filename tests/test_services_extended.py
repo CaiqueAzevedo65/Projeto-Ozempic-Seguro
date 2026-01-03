@@ -9,7 +9,7 @@ from ozempic_seguro.services.user_management_service import UserManagementServic
 from ozempic_seguro.services.gaveta_service import GavetaService, DrawerState, PaginatedResult
 from ozempic_seguro.services.timer_control_service import TimerControlService, TimerStatus
 from ozempic_seguro.services.audit_view_service import AuditViewService, AuditFilter
-from ozempic_seguro.session import SessionManager
+from ozempic_seguro.session.session_manager import SessionManager
 
 
 class TestAuthServiceExtended:

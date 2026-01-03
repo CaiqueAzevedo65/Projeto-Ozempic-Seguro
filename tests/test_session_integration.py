@@ -3,7 +3,7 @@ Testes de integração para módulo session.
 """
 import pytest
 
-from ozempic_seguro.session import SessionManager
+from ozempic_seguro.session.session_manager import SessionManager
 from ozempic_seguro.session.login_attempts import LoginAttemptsManager
 from ozempic_seguro.session.timer_manager import TimerManager
 from ozempic_seguro.config import Config

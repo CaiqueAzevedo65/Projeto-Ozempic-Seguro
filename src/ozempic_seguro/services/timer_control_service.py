@@ -10,7 +10,7 @@ Responsabilidades:
 from typing import Optional, Dict, Any, Tuple
 from dataclasses import dataclass
 
-from ..session import SessionManager
+from ..session.session_manager import SessionManager
 from ..core.logger import logger
 
 

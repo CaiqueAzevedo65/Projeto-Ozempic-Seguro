@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 from ozempic_seguro.repositories.database import DatabaseManager
 from ozempic_seguro.services.user_service import UserService
 from ozempic_seguro.services.audit_service import AuditService
-from ozempic_seguro.session import SessionManager
+from ozempic_seguro.session.session_manager import SessionManager
 
 
 @pytest.fixture

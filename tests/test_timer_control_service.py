@@ -8,7 +8,7 @@ from ozempic_seguro.services.timer_control_service import (
     TimerStatus,
     get_timer_control_service,
 )
-from ozempic_seguro.session import SessionManager
+from ozempic_seguro.session.session_manager import SessionManager
 
 
 class TestTimerStatus:

@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 from ozempic_seguro.services.gaveta_service import GavetaService
-from ozempic_seguro.session import SessionManager
+from ozempic_seguro.session.session_manager import SessionManager
 
 
 class TestGavetaServiceOperations:

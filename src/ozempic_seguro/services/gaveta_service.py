@@ -7,7 +7,7 @@ from typing import Optional, List, Tuple, Any
 from dataclasses import dataclass
 
 from ..repositories.gaveta_repository import GavetaRepository
-from ..session import SessionManager
+from ..session.session_manager import SessionManager
 from ..core.logger import logger
 
 

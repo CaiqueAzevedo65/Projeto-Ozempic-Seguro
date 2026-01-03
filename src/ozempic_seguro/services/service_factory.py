@@ -127,7 +127,7 @@ class ServiceFactory:
     def get_session_manager():
         """Retorna instância singleton de SessionManager"""
         def create_session_manager():
-            from ..session import SessionManager
+            from ..session.session_manager import SessionManager
             return SessionManager.get_instance()
         
         return _registry.get_service('session_manager', create_session_manager)

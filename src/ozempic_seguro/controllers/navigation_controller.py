@@ -3,7 +3,7 @@ from ..views.pages_iniciais.tela_toque_view import TelaToqueFrame
 from ..views.pages_iniciais.tela_logo_view import TelaLogoFrame
 from ..views.iniciar_sessao_view import IniciarSessaoFrame
 from ..views.login_view import LoginFrame
-from ..session import SessionManager
+from ..session.session_manager import SessionManager
 from ..core.logger import logger
 
 

@@ -3,7 +3,7 @@ Testes simplificados para SessionManager.
 """
 import pytest
 from datetime import datetime, timedelta
-from ozempic_seguro.session import SessionManager
+from ozempic_seguro.session.session_manager import SessionManager
 
 
 class TestSessionSimple:

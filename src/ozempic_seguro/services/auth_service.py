@@ -11,7 +11,7 @@ from typing import Optional, Dict, Any, Tuple
 from dataclasses import dataclass
 from enum import Enum
 
-from ..session import SessionManager
+from ..session.session_manager import SessionManager
 from .user_service import UserService
 from ..core.logger import logger
 from ..core.exceptions import (

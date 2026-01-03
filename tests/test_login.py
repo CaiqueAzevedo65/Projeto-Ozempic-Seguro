@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 from ozempic_seguro.repositories.database import DatabaseManager
 from ozempic_seguro.repositories.user_repository import UserRepository
 from ozempic_seguro.repositories.security import verify_password
-from ozempic_seguro.session import SessionManager
+from ozempic_seguro.session.session_manager import SessionManager
 
 def test_login():
     print("=== TESTE DE AUTENTICAÇÃO ===\n")

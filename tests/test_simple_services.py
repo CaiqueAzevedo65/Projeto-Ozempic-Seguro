@@ -25,7 +25,7 @@ class TestSimpleServices:
     
     def test_session_manager_import(self):
         """Testa importação do SessionManager"""
-        from ozempic_seguro.session import SessionManager
+        from ozempic_seguro.session.session_manager import SessionManager
         assert SessionManager is not None
     
     def test_database_manager_singleton(self):
@@ -89,7 +89,7 @@ class TestSimpleServices:
     
     def test_session_basic_operations(self):
         """Testa operações básicas do SessionManager"""
-        from ozempic_seguro.session import SessionManager
+        from ozempic_seguro.session.session_manager import SessionManager
         
         # Reset singleton
         SessionManager._instance = None

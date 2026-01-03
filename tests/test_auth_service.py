@@ -9,7 +9,7 @@ from ozempic_seguro.services.auth_service import (
     UserPanel,
     get_auth_service,
 )
-from ozempic_seguro.session import SessionManager
+from ozempic_seguro.session.session_manager import SessionManager
 
 
 class TestAuthService:

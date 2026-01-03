@@ -109,6 +109,23 @@ class SessionManager:
         return cls._instance
 ```
 
+### 5. DTOs (Data Transfer Objects)
+Cada service expõe DTOs para comunicação com views:
+
+| Service | DTOs |
+|---------|------|
+| `GavetaService` | `DrawerState`, `DrawerHistoryItem`, `PaginatedResult` |
+| `AuthService` | `LoginResult`, `UserPanel` (enum) |
+| `UserManagementService` | `UserData`, `OperationResult` |
+| `UserRegistrationService` | `RegistrationResult` |
+| `TimerControlService` | `TimerStatus` |
+| `AuditViewService` | `AuditLogItem`, `AuditFilter`, `PaginatedAuditResult` |
+
+```python
+from services.gaveta_service import GavetaService, DrawerState, PaginatedResult
+from services.auth_service import AuthService, LoginResult
+```
+
 ## Segurança
 
 ### Autenticação

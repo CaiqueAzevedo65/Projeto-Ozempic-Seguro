@@ -24,7 +24,7 @@ def _preload_images() -> None:
 
 def _setup_audit_callback() -> None:
     """Configura callback de auditoria para SessionManager (evita import circular)"""
-    from .session import SessionManager
+    from .session.session_manager import SessionManager
     from .services.audit_service import AuditService
     
     audit_service = AuditService()
@@ -89,7 +89,7 @@ class MainApp(customtkinter.CTk):
                 self.nav_controller.cleanup()
             
             # Limpar session manager
-            from .session import SessionManager
+            from .session.session_manager import SessionManager
             session = SessionManager.get_instance()
             session.cleanup()
             
