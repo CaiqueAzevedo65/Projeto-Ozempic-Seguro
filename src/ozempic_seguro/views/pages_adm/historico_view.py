@@ -1,6 +1,6 @@
 import customtkinter
 from ..components import Header, VoltarButton
-from ...services.drawer_service import get_drawer_service
+from ...services.gaveta_service import GavetaService, DrawerHistoryItem, PaginatedResult
 from ...core.logger import logger
 
 class HistoricoView(customtkinter.CTkFrame):
@@ -10,7 +10,7 @@ class HistoricoView(customtkinter.CTkFrame):
         super().__init__(master, fg_color=self.BG_COLOR, **kwargs)
         self.voltar_callback = voltar_callback
         self.tipo_usuario = tipo_usuario
-        self.drawer_service = get_drawer_service()
+        self._gaveta_service = GavetaService.get_instance()
         self.current_page = 1
         self.items_per_page = 20
         
@@ -139,23 +139,21 @@ class HistoricoView(customtkinter.CTkFrame):
             # Calcula o offset com base na página atual
             offset = (self.current_page - 1) * self.items_per_page
             
-            # Obtém os dados paginados usando DrawerService
-            result = self.drawer_service.get_all_history(
-                page=self.current_page,
-                per_page=self.items_per_page
-            )
+            # Obtém os dados paginados usando GavetaService
+            history_raw = self._gaveta_service.get_all_history_paginated(offset, self.items_per_page)
+            total = self._gaveta_service.count_all_history()
             
             # Atualiza controles de paginação
-            self.atualizar_controles_paginacao(result.total)
+            self.atualizar_controles_paginacao(total)
             
             # Adicionar itens
-            for idx, item in enumerate(result.items):
+            for idx, h in enumerate(history_raw):
                 self.adicionar_linha(
                     scrollable_frame,
-                    item.data_hora,
-                    item.gaveta_id,
-                    item.acao,
-                    item.usuario,
+                    h[0],  # data_hora
+                    h[1],  # gaveta_id
+                    h[2],  # acao
+                    h[3],  # usuario
                     idx % 2 == 0  # Alternar cor de fundo
                 )
         except Exception as e:

@@ -6,7 +6,7 @@ from tkinter import messagebox
 from PIL import Image
 import os
 
-from ...services.drawer_service import get_drawer_service
+from ...services.gaveta_service import GavetaService, DrawerState
 from ...services.timer_control_service import get_timer_control_service
 from ...services.auth_service import get_auth_service
 
@@ -51,7 +51,7 @@ class GavetaButton:
         self.frame = customtkinter.CTkFrame(master, fg_color="transparent")
         self.frame.pack(expand=True, fill="both")
         
-        self.drawer_service = get_drawer_service()
+        self._gaveta_service = GavetaService.get_instance()
         self.timer_service = get_timer_control_service()
         self.auth_service = get_auth_service()
         self.tipo_usuario = tipo_usuario
@@ -86,16 +86,14 @@ class GavetaButton:
 
     def atualizar_imagem(self):
         """Atualiza a imagem do botão baseado no estado atual"""
-        state = self.drawer_service.get_drawer_state(int(self.gaveta_id))
-        esta_aberta = state.esta_aberta if state else False
+        esta_aberta = self._gaveta_service.get_state(int(self.gaveta_id))
         self.btn_gaveta.configure(
             image=self.gaveta_aberta if esta_aberta else self.gaveta_fechada
         )
 
     def manipular_estado(self):
         """Manipula o estado da gaveta baseado no tipo de usuário"""
-        state = self.drawer_service.get_drawer_state(int(self.gaveta_id))
-        estado_atual = state.esta_aberta if state else False
+        estado_atual = self._gaveta_service.get_state(int(self.gaveta_id))
         
         current_user = self.auth_service.get_current_user()
         user_id = current_user.get('id') if current_user else None
@@ -104,8 +102,8 @@ class GavetaButton:
             if not estado_atual:
                 self._abrir_gaveta_com_confirmacao()
             else:
-                sucesso, mensagem = self.drawer_service.set_drawer_state(
-                    int(self.gaveta_id), False, self.tipo_usuario, user_id
+                sucesso, mensagem = self._gaveta_service.close_drawer(
+                    int(self.gaveta_id), self.tipo_usuario, user_id
                 )
                 messagebox.showinfo("Sucesso" if sucesso else "Aviso", mensagem)
                 if sucesso:
@@ -119,8 +117,8 @@ class GavetaButton:
         
         elif self.tipo_usuario == 'repositor':
             if estado_atual:
-                sucesso, mensagem = self.drawer_service.set_drawer_state(
-                    int(self.gaveta_id), False, self.tipo_usuario, user_id
+                sucesso, mensagem = self._gaveta_service.close_drawer(
+                    int(self.gaveta_id), self.tipo_usuario, user_id
                 )
                 messagebox.showinfo("Sucesso" if sucesso else "Aviso", mensagem)
                 if sucesso:
@@ -135,8 +133,8 @@ class GavetaButton:
         if not self.timer_service.is_timer_enabled():
             current_user = self.auth_service.get_current_user()
             user_id = current_user.get('id') if current_user else None
-            sucesso, mensagem = self.drawer_service.set_drawer_state(
-                int(self.gaveta_id), True, self.tipo_usuario, user_id
+            sucesso, mensagem = self._gaveta_service.open_drawer(
+                int(self.gaveta_id), self.tipo_usuario, user_id
             )
             messagebox.showinfo("Sucesso" if sucesso else "Aviso", mensagem)
             if sucesso:
@@ -211,8 +209,8 @@ class GavetaButton:
         current_user = self.auth_service.get_current_user()
         user_id = current_user.get('id') if current_user else None
         
-        sucesso, mensagem = self.drawer_service.set_drawer_state(
-            int(self.gaveta_id), True, self.tipo_usuario, user_id
+        sucesso, mensagem = self._gaveta_service.open_drawer(
+            int(self.gaveta_id), self.tipo_usuario, user_id
         )
         messagebox.showinfo("Sucesso" if sucesso else "Aviso", mensagem)
         if sucesso:
@@ -268,21 +266,22 @@ class GavetaButton:
         self._carregar_historico()
     
     def _carregar_historico(self):
-        """Carrega os itens do histórico para a página atual usando DrawerService"""
+        """Carrega os itens do histórico para a página atual usando GavetaService"""
         for widget in self.frame_historico.winfo_children():
             widget.destroy()
         
-        result = self.drawer_service.get_drawer_history(
-            int(self.gaveta_id), page=self.pagina_atual, per_page=self.itens_por_pagina
+        offset = (self.pagina_atual - 1) * self.itens_por_pagina
+        history_raw = self._gaveta_service.get_history_paginated(
+            int(self.gaveta_id), offset, self.itens_por_pagina
         )
-        
-        total_paginas = max(1, result.total_pages)
+        total = self._gaveta_service.count_history(int(self.gaveta_id))
+        total_paginas = max(1, (total + self.itens_por_pagina - 1) // self.itens_por_pagina)
         
         self.lbl_pagina.configure(text=f"Página {self.pagina_atual} de {total_paginas}")
         self.btn_anterior.configure(state="disabled" if self.pagina_atual == 1 else "normal")
         self.btn_proximo.configure(state="disabled" if self.pagina_atual >= total_paginas else "normal")
         
-        if not result.items:
+        if not history_raw:
             customtkinter.CTkLabel(
                 self.frame_historico,
                 text="Nenhum registro de histórico para esta gaveta.",
@@ -290,8 +289,11 @@ class GavetaButton:
             ).pack(pady=10)
             return
         
-        for item in result.items:
-            acao_texto = item.acao_display
+        for h in history_raw:
+            acao = h[2] if len(h) > 2 else ''
+            acao_texto = {'aberta': 'Abriu', 'fechada': 'Fechou'}.get(acao.lower(), acao.capitalize())
+            usuario = h[3] if len(h) > 3 else ''
+            data_hora = h[0] if h else ''
             
             frame_item = customtkinter.CTkFrame(
                 self.frame_historico, fg_color="#f0f0f0", corner_radius=5
@@ -300,7 +302,7 @@ class GavetaButton:
             
             customtkinter.CTkLabel(
                 frame_item,
-                text=f"{item.data_hora} - {acao_texto} por {item.usuario}",
+                text=f"{data_hora} - {acao_texto} por {usuario}",
                 anchor="w", justify="left"
             ).pack(fill="x", padx=5, pady=5)
     

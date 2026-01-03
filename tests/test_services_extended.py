@@ -6,7 +6,7 @@ import pytest
 from ozempic_seguro.services.auth_service import AuthService, LoginResult, UserPanel
 from ozempic_seguro.services.user_registration_service import UserRegistrationService, RegistrationResult
 from ozempic_seguro.services.user_management_service import UserManagementService, UserData, OperationResult
-from ozempic_seguro.services.drawer_service import DrawerService, DrawerState, PaginatedResult
+from ozempic_seguro.services.gaveta_service import GavetaService, DrawerState, PaginatedResult
 from ozempic_seguro.services.timer_control_service import TimerControlService, TimerStatus
 from ozempic_seguro.services.audit_view_service import AuditViewService, AuditFilter
 from ozempic_seguro.session import SessionManager
@@ -96,31 +96,6 @@ class TestUserManagementServiceExtended:
         """Testa exclusão com ID zero"""
         result = self.service.delete_user(0)
         assert result.success is False
-
-
-class TestDrawerServiceExtended:
-    """Testes estendidos para DrawerService"""
-    
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        """Setup para cada teste"""
-        self.service = DrawerService()
-        yield
-    
-    def test_get_all_drawer_states_default(self):
-        """Testa obtenção de estados com valor padrão"""
-        states = self.service.get_all_drawer_states()
-        assert len(states) == 10
-    
-    def test_get_all_drawer_states_custom(self):
-        """Testa obtenção de estados com valor customizado"""
-        states = self.service.get_all_drawer_states(3)
-        assert len(states) == 3
-    
-    def test_get_drawer_history_page_2(self):
-        """Testa histórico página 2"""
-        result = self.service.get_drawer_history(1, page=2)
-        assert result.page == 2
 
 
 class TestTimerControlServiceExtended:

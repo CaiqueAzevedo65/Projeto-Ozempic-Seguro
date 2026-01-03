@@ -2,7 +2,6 @@
 Serviço de gavetas: lógica de negócio para manipulação de gavetas.
 
 Responsável por gerenciar estado das gavetas e histórico de operações.
-Este é o serviço principal - DrawerService é deprecated e delega para cá.
 """
 from typing import Optional, List, Tuple, Any
 from dataclasses import dataclass
